@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../main.dart';
 import '../utils/globals.dart';
+import '../utils/image_cropper_util.dart';
 
 part 'settings_ui_components.dart';
 part 'settings_modals.dart';
@@ -151,17 +152,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _customThemeBgPath;
   double _customThemeBgBlur = 25.0;
   double _customThemeBgDim = 0.65;
-  double _customThemeBgScale = 1.0;
-  double _customThemeBgOffsetX = 0.0;
-  double _customThemeBgOffsetY = 0.0;
   String _customThemeStyle = 'dark';
   String _playerBackgroundStyle = 'gradient';
   String? _playerCustomBgPath;
   double _playerCustomBgBlur = 0.0;
   double _playerCustomBgDim = 0.4;
-  double _playerCustomBgScale = 1.0;
-  double _playerCustomBgOffsetX = 0.0;
-  double _playerCustomBgOffsetY = 0.0;
   Future<List<SongModel>>? _songsFuture;
 
   Color get _activeAccentColor {
@@ -366,18 +361,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _customThemeBgPath = prefs.getString('customThemeBgPath');
       _customThemeBgBlur = prefs.getDouble('customThemeBgBlur') ?? 25.0;
       _customThemeBgDim = prefs.getDouble('customThemeBgDim') ?? 0.65;
-      _customThemeBgScale = prefs.getDouble('customThemeBgScale') ?? 1.0;
-      _customThemeBgOffsetX = prefs.getDouble('customThemeBgOffsetX') ?? 0.0;
-      _customThemeBgOffsetY = prefs.getDouble('customThemeBgOffsetY') ?? 0.0;
       _customThemeStyle = prefs.getString('customThemeStyle') ?? 'dark';
       _playerBackgroundStyle =
           prefs.getString('playerBackgroundStyle') ?? 'gradient';
       _playerCustomBgPath = prefs.getString('playerCustomBgPath');
       _playerCustomBgBlur = prefs.getDouble('playerCustomBgBlur') ?? 0.0;
       _playerCustomBgDim = prefs.getDouble('playerCustomBgDim') ?? 0.4;
-      _playerCustomBgScale = prefs.getDouble('playerCustomBgScale') ?? 1.0;
-      _playerCustomBgOffsetX = prefs.getDouble('playerCustomBgOffsetX') ?? 0.0;
-      _playerCustomBgOffsetY = prefs.getDouble('playerCustomBgOffsetY') ?? 0.0;
     });
   }
 
@@ -393,11 +382,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setInt(key, value);
     widget
         .onSettingsChanged(); // Trigger reload of settings without full library rescan
-  }
-
-  Future<void> _saveDouble(String key, double value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(key, value);
   }
 
   @override
@@ -609,21 +593,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 source: ImageSource.gallery,
                               );
                               if (image != null) {
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                await prefs.setString(
-                                  'customThemeBgPath',
-                                  image.path,
-                                );
-                                setState(() {
-                                  _customThemeBgPath = image.path;
-                                });
-                                widget.onSetCustomThemeBgPath(image.path);
-                                showFlowToast(
-                                  FlowStrings.get(
-                                    'custom_theme_wallpaper_updated',
-                                  ),
-                                );
+                                if (!context.mounted) return;
+                                final croppedPath =
+                                    await ImageCropperUtil.cropImage(
+                                      context: context,
+                                      sourcePath: image.path,
+                                    );
+                                if (croppedPath != null) {
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  await prefs.setString(
+                                    'customThemeBgPath',
+                                    croppedPath,
+                                  );
+                                  setState(() {
+                                    _customThemeBgPath = croppedPath;
+                                  });
+                                  widget.onSetCustomThemeBgPath(croppedPath);
+                                  showFlowToast(
+                                    FlowStrings.get('wallpaper_updated'),
+                                  );
+                                }
                               }
                             },
                           ),
@@ -645,8 +635,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             }
                             return Center(
                               child: Container(
-                                width: 140,
-                                height: 220,
+                                width: 144,
+                                height: 256,
                                 decoration: BoxDecoration(
                                   color: isMockLight
                                       ? Colors.white
@@ -678,16 +668,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                               sigmaX: _customThemeBgBlur / 2.0,
                                               sigmaY: _customThemeBgBlur / 2.0,
                                             ),
-                                            child: Transform.scale(
-                                              scale: _customThemeBgScale,
-                                              alignment: Alignment(
-                                                _customThemeBgOffsetX,
-                                                _customThemeBgOffsetY,
-                                              ),
-                                              child: Image.file(
-                                                File(_customThemeBgPath!),
-                                                fit: BoxFit.cover,
-                                              ),
+                                            child: Image.file(
+                                              File(_customThemeBgPath!),
+                                              fit: BoxFit.cover,
                                             ),
                                           ),
                                         ),
@@ -832,17 +815,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        // Overlay Theme Style Selector
-                        Text(
-                          FlowStrings.get('overlay_theme_style'),
-                          style: TextStyle(
-                            color: isLight ? Colors.black54 : Colors.white70,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: _activeFont,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
+
                         Row(
                           children: [
                             Expanded(child: _buildStylePill('dark', 'Dark')),
@@ -937,131 +910,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             widget.onSetCustomThemeBgDim(val);
                           },
                         ),
-                        // Zoom Scale
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              FlowStrings.get('zoom_scale'),
-                              style: TextStyle(
-                                color: isLight
-                                    ? Colors.black54
-                                    : Colors.white70,
-                                fontSize: 13,
-                                fontFamily: _activeFont,
-                              ),
-                            ),
-                            Text(
-                              '${_customThemeBgScale.toStringAsFixed(1)}x',
-                              style: TextStyle(
-                                color: isLight
-                                    ? Colors.black38
-                                    : Colors.white38,
-                                fontSize: 13,
-                                fontFamily: _activeFont,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Slider(
-                          value: _customThemeBgScale,
-                          min: 1.0,
-                          max: 3.0,
-                          activeColor: _activeAccentColor,
-                          inactiveColor: isLight
-                              ? Colors.black.withOpacity(0.08)
-                              : Colors.white10,
-                          onChanged: (val) {
-                            setState(() {
-                              _customThemeBgScale = val;
-                            });
-                            widget.onSetCustomThemeBgScale(val);
-                          },
-                        ),
-                        // Pan X
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              FlowStrings.get('pan_horizontal'),
-                              style: TextStyle(
-                                color: isLight
-                                    ? Colors.black54
-                                    : Colors.white70,
-                                fontSize: 13,
-                                fontFamily: _activeFont,
-                              ),
-                            ),
-                            Text(
-                              '${(_customThemeBgOffsetX * 100).toInt()}%',
-                              style: TextStyle(
-                                color: isLight
-                                    ? Colors.black38
-                                    : Colors.white38,
-                                fontSize: 13,
-                                fontFamily: _activeFont,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Slider(
-                          value: _customThemeBgOffsetX,
-                          min: -1.0,
-                          max: 1.0,
-                          activeColor: _activeAccentColor,
-                          inactiveColor: isLight
-                              ? Colors.black.withOpacity(0.08)
-                              : Colors.white10,
-                          onChanged: (val) {
-                            setState(() {
-                              _customThemeBgOffsetX = val;
-                            });
-                            _saveDouble('customThemeBgOffsetX', val);
-                            customThemeBgOffsetXNotifier.value = val;
-                          },
-                        ),
-                        // Pan Y
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              FlowStrings.get('pan_vertical'),
-                              style: TextStyle(
-                                color: isLight
-                                    ? Colors.black54
-                                    : Colors.white70,
-                                fontSize: 13,
-                                fontFamily: _activeFont,
-                              ),
-                            ),
-                            Text(
-                              '${(_customThemeBgOffsetY * 100).toInt()}%',
-                              style: TextStyle(
-                                color: isLight
-                                    ? Colors.black38
-                                    : Colors.white38,
-                                fontSize: 13,
-                                fontFamily: _activeFont,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Slider(
-                          value: _customThemeBgOffsetY,
-                          min: -1.0,
-                          max: 1.0,
-                          activeColor: _activeAccentColor,
-                          inactiveColor: isLight
-                              ? Colors.black.withOpacity(0.08)
-                              : Colors.white10,
-                          onChanged: (val) {
-                            setState(() {
-                              _customThemeBgOffsetY = val;
-                            });
-                            _saveDouble('customThemeBgOffsetY', val);
-                            customThemeBgOffsetYNotifier.value = val;
-                          },
-                        ),
                       ] else ...[
                         const SizedBox(height: 12),
                         Center(
@@ -1136,19 +984,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 source: ImageSource.gallery,
                               );
                               if (image != null) {
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                await prefs.setString(
-                                  'playerCustomBgPath',
-                                  image.path,
-                                );
-                                setState(() {
-                                  _playerCustomBgPath = image.path;
-                                });
-                                widget.onSetPlayerCustomBgPath(image.path);
-                                showFlowToast(
-                                  FlowStrings.get('wallpaper_updated'),
-                                );
+                                if (!context.mounted) return;
+                                final croppedPath =
+                                    await ImageCropperUtil.cropImage(
+                                      context: context,
+                                      sourcePath: image.path,
+                                    );
+                                if (croppedPath != null) {
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  await prefs.setString(
+                                    'playerCustomBgPath',
+                                    croppedPath,
+                                  );
+                                  setState(() {
+                                    _playerCustomBgPath = croppedPath;
+                                  });
+                                  widget.onSetPlayerCustomBgPath(croppedPath);
+                                  showFlowToast(
+                                    FlowStrings.get('wallpaper_updated'),
+                                  );
+                                }
                               }
                             },
                           ),
@@ -1159,8 +1015,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 12),
                         Center(
                           child: Container(
-                            width: 140,
-                            height: 220,
+                            width: 144,
+                            height: 256,
                             decoration: BoxDecoration(
                               color: const Color(0xFF0A0A0A),
                               borderRadius: BorderRadius.circular(16),
@@ -1188,16 +1044,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           sigmaX: _playerCustomBgBlur,
                                           sigmaY: _playerCustomBgBlur,
                                         ),
-                                        child: Transform.scale(
-                                          scale: _playerCustomBgScale,
-                                          alignment: Alignment(
-                                            _playerCustomBgOffsetX,
-                                            _playerCustomBgOffsetY,
-                                          ),
-                                          child: Image.file(
-                                            File(_playerCustomBgPath!),
-                                            fit: BoxFit.cover,
-                                          ),
+                                        child: Image.file(
+                                          File(_playerCustomBgPath!),
+                                          fit: BoxFit.cover,
                                         ),
                                       ),
                                     ),
@@ -1210,16 +1059,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       ),
                                     ),
                                   ),
-                                  Center(
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 24,
+                                      horizontal: 16,
+                                    ),
                                     child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
                                         Container(
-                                          width: 44,
-                                          height: 44,
+                                          width: 90,
+                                          height: 90,
                                           decoration: BoxDecoration(
-                                            color: Colors.white24,
+                                            color: Colors.white10,
                                             borderRadius: BorderRadius.circular(
                                               8,
                                             ),
@@ -1227,16 +1079,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                               color: Colors.white24,
                                               width: 0.5,
                                             ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.2,
+                                                ),
+                                                blurRadius: 10,
+                                                offset: const Offset(0, 4),
+                                              ),
+                                            ],
                                           ),
                                           child: const Icon(
                                             Icons.music_note,
-                                            color: Colors.white70,
-                                            size: 18,
+                                            color: Colors.white54,
+                                            size: 24,
                                           ),
                                         ),
-                                        const SizedBox(height: 12),
+                                        const Spacer(),
                                         Container(
-                                          width: 65,
+                                          width: 80,
                                           height: 6,
                                           decoration: BoxDecoration(
                                             color: Colors.white,
@@ -1247,7 +1108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         ),
                                         const SizedBox(height: 6),
                                         Container(
-                                          width: 45,
+                                          width: 50,
                                           height: 4,
                                           decoration: BoxDecoration(
                                             color: Colors.white54,
@@ -1257,26 +1118,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           ),
                                         ),
                                         const SizedBox(height: 16),
+                                        Container(
+                                          width: double.infinity,
+                                          height: 2,
+                                          color: Colors.white30,
+                                          child: Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Container(
+                                              width: 40,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
                                         const Row(
                                           mainAxisAlignment:
-                                              MainAxisAlignment.center,
+                                              MainAxisAlignment.spaceEvenly,
                                           children: [
                                             Icon(
                                               Icons.skip_previous,
                                               color: Colors.white70,
-                                              size: 10,
+                                              size: 16,
                                             ),
-                                            SizedBox(width: 8),
                                             Icon(
-                                              Icons.play_arrow,
+                                              Icons.play_circle_fill,
                                               color: Colors.white,
-                                              size: 12,
+                                              size: 32,
                                             ),
-                                            SizedBox(width: 8),
                                             Icon(
                                               Icons.skip_next,
                                               color: Colors.white70,
-                                              size: 10,
+                                              size: 16,
                                             ),
                                           ],
                                         ),
@@ -1354,107 +1226,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             _playerCustomBgDim = val;
                           });
                           widget.onSetPlayerCustomBgDim(val);
-                        },
-                      ),
-                      // Zoom Scale
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            FlowStrings.get('zoom_scale'),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                            ),
-                          ),
-                          Text(
-                            '${_playerCustomBgScale.toStringAsFixed(1)}x',
-                            style: const TextStyle(
-                              color: Colors.white38,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Slider(
-                        value: _playerCustomBgScale,
-                        min: 1.0,
-                        max: 3.0,
-                        activeColor: _activeAccentColor,
-                        inactiveColor: Colors.white10,
-                        onChanged: (val) {
-                          setState(() {
-                            _playerCustomBgScale = val;
-                          });
-                          widget.onSetPlayerCustomBgScale(val);
-                        },
-                      ),
-                      // Pan X
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            FlowStrings.get('pan_horizontal'),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                            ),
-                          ),
-                          Text(
-                            '${(_playerCustomBgOffsetX * 100).toInt()}%',
-                            style: const TextStyle(
-                              color: Colors.white38,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Slider(
-                        value: _playerCustomBgOffsetX,
-                        min: -1.0,
-                        max: 1.0,
-                        activeColor: _activeAccentColor,
-                        inactiveColor: Colors.white10,
-                        onChanged: (val) {
-                          setState(() {
-                            _playerCustomBgOffsetX = val;
-                          });
-                          _saveDouble('playerCustomBgOffsetX', val);
-                          playerCustomBgOffsetXNotifier.value = val;
-                        },
-                      ),
-                      // Pan Y
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            FlowStrings.get('pan_vertical'),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                            ),
-                          ),
-                          Text(
-                            '${(_playerCustomBgOffsetY * 100).toInt()}%',
-                            style: const TextStyle(
-                              color: Colors.white38,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Slider(
-                        value: _playerCustomBgOffsetY,
-                        min: -1.0,
-                        max: 1.0,
-                        activeColor: _activeAccentColor,
-                        inactiveColor: Colors.white10,
-                        onChanged: (val) {
-                          setState(() {
-                            _playerCustomBgOffsetY = val;
-                          });
-                          _saveDouble('playerCustomBgOffsetY', val);
-                          playerCustomBgOffsetYNotifier.value = val;
                         },
                       ),
                     ],

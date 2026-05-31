@@ -55,6 +55,7 @@ class FlowStrings {
 
     // Smart Playlists
     'favourites': {'en': 'Favourites', 'id': 'Favorit', 'ja': 'お気に入り'},
+    'selected': {'en': 'Selected', 'id': 'Terpilih', 'ja': '選択済み'},
     'recently_added': {
       'en': 'Recently Added',
       'id': 'Baru Ditambahkan',
@@ -105,6 +106,11 @@ class FlowStrings {
       'ja': 'お気に入りから削除',
     },
     'play_next': {'en': 'Play Next', 'id': 'Putar Selanjutnya', 'ja': '次に再生'},
+    'cannot_play_next_active': {
+      'en': 'Cannot play next the currently active track',
+      'id': 'Tidak bisa menambahkan lagu yang sedang aktif',
+      'ja': '現在再生中の曲は次に追加できません',
+    },
     'add_to_queue': {
       'en': 'Add to Queue',
       'id': 'Tambah ke Antrian',

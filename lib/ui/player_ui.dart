@@ -224,12 +224,14 @@ extension _PlayerUI on _MainScreenState {
                       child: AnimatedDefaultTextStyle(
                         duration: const Duration(milliseconds: 350),
                         curve: Curves.easeOutCubic,
-                        style: TextStyle(
+                        style: GoogleFonts.getFont(
+                          activeFontNotifier.value == 'Spotify Style'
+                              ? 'Figtree'
+                              : activeFontNotifier.value == 'Apple Music Style'
+                              ? 'Inter'
+                              : 'Plus Jakarta Sans',
                           fontSize: 26,
-                          fontWeight: isHighlighted
-                              ? FontWeight.w800
-                              : FontWeight.w600,
-                          fontFamily: _activeFont,
+                          fontWeight: FontWeight.bold,
                           color: isHighlighted
                               ? Colors.white
                               : Colors.white.withValues(alpha: 0.35),
@@ -265,11 +267,7 @@ extension _PlayerUI on _MainScreenState {
             const SizedBox(height: 12),
             Text(
               'No lyrics found online.',
-              style: TextStyle(
-                color: Colors.white54,
-                fontFamily: _activeFont,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.white54, fontSize: 14),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -296,10 +294,14 @@ extension _PlayerUI on _MainScreenState {
         child: Text(
           _currentLyricsPlain!,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: GoogleFonts.getFont(
+            activeFontNotifier.value == 'Spotify Style'
+                ? 'Figtree'
+                : activeFontNotifier.value == 'Apple Music Style'
+                ? 'Inter'
+                : 'Plus Jakarta Sans',
             fontSize: 20,
             height: 1.8,
-            fontFamily: _activeFont,
             color: Colors.white.withValues(alpha: 0.85),
             fontWeight: FontWeight.w600,
           ),
@@ -342,11 +344,7 @@ extension _PlayerUI on _MainScreenState {
           ),
           title: Text(
             'Edit/Add Lyrics',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontFamily: _activeFont,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -356,11 +354,7 @@ extension _PlayerUI on _MainScreenState {
               children: [
                 Text(
                   'Paste plain lyrics or synced LRC format lyrics below.',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
-                    fontFamily: _activeFont,
-                  ),
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -812,8 +806,11 @@ extension _PlayerUI on _MainScreenState {
                                     Icons.more_vert,
                                     color: Colors.white54,
                                   ),
-                                  onPressed: () =>
-                                      _showTrackOptions(context, currentTrack),
+                                  onPressed: () => _showTrackOptions(
+                                    context,
+                                    currentTrack,
+                                    isFromPlayer: true,
+                                  ),
                                 ),
                         ),
                       ],

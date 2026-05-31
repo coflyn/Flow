@@ -709,7 +709,7 @@ extension SettingsModals on _SettingsScreenState {
                                       fit: BoxFit.scaleDown,
                                       alignment: Alignment.centerLeft,
                                       child: Text(
-                                        FlowStrings.get('library'),
+                                        'Flow',
                                         style: previewTextStyle(
                                           size: 32,
                                           weight: FontWeight.w800,
@@ -1605,31 +1605,42 @@ extension SettingsModals on _SettingsScreenState {
                                     source: ImageSource.gallery,
                                   );
                                   if (image != null) {
-                                    final prefs =
-                                        await SharedPreferences.getInstance();
-                                    await prefs.setString(
-                                      'playerBackgroundStyle',
-                                      'custom',
-                                    );
-                                    await prefs.setString(
-                                      'playerCustomBgPath',
-                                      image.path,
-                                    );
                                     if (!context.mounted) return;
-                                    setState(() {
-                                      _playerBackgroundStyle = 'custom';
-                                      _playerCustomBgPath = image.path;
-                                    });
-                                    setModalState(() {
-                                      _playerBackgroundStyle = 'custom';
-                                      _playerCustomBgPath = image.path;
-                                    });
-                                    widget.onSetPlayerBackgroundStyle('custom');
-                                    widget.onSetPlayerCustomBgPath(image.path);
-                                    showFlowToast(
-                                      'Custom wallpaper background set!',
-                                    );
-                                    Navigator.pop(context);
+                                    final croppedPath =
+                                        await ImageCropperUtil.cropImage(
+                                          context: context,
+                                          sourcePath: image.path,
+                                        );
+                                    if (croppedPath != null) {
+                                      final prefs =
+                                          await SharedPreferences.getInstance();
+                                      await prefs.setString(
+                                        'playerBackgroundStyle',
+                                        'custom',
+                                      );
+                                      await prefs.setString(
+                                        'playerCustomBgPath',
+                                        croppedPath,
+                                      );
+                                      if (!context.mounted) return;
+                                      setState(() {
+                                        _playerBackgroundStyle = 'custom';
+                                        _playerCustomBgPath = croppedPath;
+                                      });
+                                      setModalState(() {
+                                        _playerBackgroundStyle = 'custom';
+                                      });
+                                      widget.onSetPlayerBackgroundStyle(
+                                        'custom',
+                                      );
+                                      widget.onSetPlayerCustomBgPath(
+                                        croppedPath,
+                                      );
+                                      showFlowToast(
+                                        'Custom wallpaper background set!',
+                                      );
+                                      Navigator.pop(context);
+                                    }
                                   }
                                 }
                               } else {
@@ -1909,12 +1920,19 @@ extension SettingsModals on _SettingsScreenState {
             source: ImageSource.gallery,
           );
           if (image != null) {
-            await prefs.setString('customThemeBgPath', image.path);
-            setState(() {
-              _customThemeBgPath = image.path;
-            });
-            widget.onSetCustomThemeBgPath(image.path);
-            showFlowToast(FlowStrings.get('custom_theme_wallpaper_updated'));
+            if (!mounted) return;
+            final croppedPath = await ImageCropperUtil.cropImage(
+              context: context,
+              sourcePath: image.path,
+            );
+            if (croppedPath != null) {
+              await prefs.setString('customThemeBgPath', croppedPath);
+              setState(() {
+                _customThemeBgPath = croppedPath;
+              });
+              widget.onSetCustomThemeBgPath(croppedPath);
+              showFlowToast(FlowStrings.get('wallpaper_updated'));
+            }
           }
         }
       },

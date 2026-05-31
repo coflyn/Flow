@@ -741,7 +741,7 @@ extension _DetailViewsUI on _MainScreenState {
   }
 
   String _formatTotalDuration(int ms) {
-    final seconds = (ms / 1000).round();
+    final seconds = ms ~/ 1000;
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
 

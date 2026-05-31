@@ -465,6 +465,8 @@ extension _TabsUI on _MainScreenState {
           _animatedTrackIds.add(track.id);
         }
 
+        final isMultiSelected = _multiSelectedTrackIds.contains(track.id);
+
         return _FadeInSlideUp(
           animate: shouldAnimate,
           delay: Duration(milliseconds: staggerIndex * 35),
@@ -472,10 +474,18 @@ extension _TabsUI on _MainScreenState {
             key: ValueKey("list_item_${track.id}"),
             margin: const EdgeInsets.only(bottom: 4),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? Colors.white.withValues(alpha: 0.03)
-                  : Colors.transparent,
+              color: isMultiSelected
+                  ? _activeAccentColor.withValues(alpha: 0.15)
+                  : (isSelected
+                        ? Colors.white.withValues(alpha: 0.03)
+                        : Colors.transparent),
               borderRadius: BorderRadius.circular(8),
+              border: isMultiSelected
+                  ? Border.all(
+                      color: _activeAccentColor.withValues(alpha: 0.5),
+                      width: 1,
+                    )
+                  : Border.all(color: Colors.transparent, width: 1),
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.only(
@@ -484,8 +494,17 @@ extension _TabsUI on _MainScreenState {
                 top: 4,
                 bottom: 4,
               ),
+              onLongPress: () {
+                _searchFocusNode.unfocus();
+                _toggleMultiSelect(track.id);
+              },
               onTap: () {
                 _searchFocusNode.unfocus();
+                if (_multiSelectedTrackIds.isNotEmpty) {
+                  _toggleMultiSelect(track.id);
+                  return;
+                }
+
                 _updatePlayingFrom();
                 if (fullQueueList != null) {
                   final realIndex = fullQueueList.indexOf(track);

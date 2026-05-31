@@ -220,6 +220,82 @@ extension _MainUIComponents on _MainScreenState {
     );
   }
 
+  Widget _buildMultiSelectHeader() {
+    final isLight = isAppLight;
+    final textColor = isLight ? const Color(0xFF1A1A1A) : Colors.white;
+    final iconColor = isLight ? Colors.black87 : Colors.white;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      color: isLight
+          ? Colors.black.withValues(alpha: 0.05)
+          : _activeAccentColor.withValues(alpha: 0.1),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.close, color: iconColor),
+                onPressed: _clearMultiSelect,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${_multiSelectedTrackIds.length} ${FlowStrings.get('selected')}',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: Icon(Icons.select_all, color: iconColor),
+                onPressed: () {
+                  setState(() {
+                    if (_multiSelectedTrackIds.length == _allTracks.length) {
+                      _multiSelectedTrackIds.clear();
+                    } else {
+                      _multiSelectedTrackIds.addAll(
+                        _allTracks.map((t) => t.id),
+                      );
+                    }
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _activeAccentColor,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    // Collect selected tracks
+                    final selectedTracks = _allTracks
+                        .where((t) => _multiSelectedTrackIds.contains(t.id))
+                        .toList();
+                    _showAddToPlaylistModal(context, selectedTracks);
+                    _clearMultiSelect();
+                  },
+                  icon: const Icon(Icons.playlist_add),
+                  label: Text(FlowStrings.get('add_to_playlist')),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Padding(

@@ -25,6 +25,7 @@ import 'widgets/custom_track_shape.dart';
 import 'screens/settings_screen.dart';
 import 'utils/globals.dart';
 import 'utils/artwork_cache.dart';
+import 'utils/image_cropper_util.dart';
 part 'ui/player_ui.dart';
 part 'ui/detail_views_ui.dart';
 part 'ui/tabs_ui.dart';
@@ -280,6 +281,24 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   String? _selectedArtistDetail;
   String? _selectedAlbumDetail;
   String? _selectedPlaylistDetail;
+
+  final Set<String> _multiSelectedTrackIds = {};
+
+  void _toggleMultiSelect(String trackId) {
+    setState(() {
+      if (_multiSelectedTrackIds.contains(trackId)) {
+        _multiSelectedTrackIds.remove(trackId);
+      } else {
+        _multiSelectedTrackIds.add(trackId);
+      }
+    });
+  }
+
+  void _clearMultiSelect() {
+    setState(() {
+      _multiSelectedTrackIds.clear();
+    });
+  }
 
   late PageController _pageController;
   int _currentPageIndex = 0;
@@ -621,9 +640,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildHeader(),
-                          _buildSearchBar(),
-                          _buildFilterCapsules(),
+                          if (_multiSelectedTrackIds.isNotEmpty)
+                            _buildMultiSelectHeader()
+                          else ...[
+                            _buildHeader(),
+                            _buildSearchBar(),
+                            _buildFilterCapsules(),
+                          ],
                           Expanded(child: _buildBodyContent()),
                         ],
                       ),

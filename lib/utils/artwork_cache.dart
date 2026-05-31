@@ -32,18 +32,34 @@ class ArtworkCacheManager {
 
     final future = () async {
       Uint8List? bytes;
-      try {
-        bytes = await _audioQuery.queryArtwork(
-          int.parse(trackId),
-          ArtworkType.AUDIO,
-          size: 200,
-          quality: 50,
-        );
-      } catch (e) {
-        bytes = null;
+      for (int i = 0; i < 3; i++) {
+        try {
+          bytes = await _audioQuery.queryArtwork(
+            int.parse(trackId),
+            ArtworkType.AUDIO,
+            size: 200,
+            quality: 50,
+          );
+
+          if (bytes != null) {
+            _memoryCache[trackId] = bytes;
+            break;
+          } else {
+            if (i == 2) {
+              _memoryCache[trackId] = null;
+            } else {
+              await Future.delayed(const Duration(milliseconds: 100));
+            }
+          }
+        } catch (e) {
+          if (i == 2) {
+            _memoryCache[trackId] = null;
+          } else {
+            await Future.delayed(const Duration(milliseconds: 100));
+          }
+        }
       }
 
-      _memoryCache[trackId] = bytes;
       _inFlight.remove(trackId);
       return bytes;
     }();
@@ -65,20 +81,17 @@ class ArtworkCacheManager {
       final customPath = overrides[trackId]?['coverPath'];
 
       if (customPath != null && customPath.isNotEmpty) {
-        // Pre-resolve the low-res version into Flutter's native ImageCache
         final file = File(customPath);
         if (await file.exists()) {
           final provider = ResizeImage(FileImage(file), width: 144);
           provider.resolve(const ImageConfiguration());
         }
       } else {
-        // Fetch and cache the native MediaStore thumbnail into our custom memory cache
         if (!_memoryCache.containsKey(trackId)) {
           await fetchAndCacheNativeArtwork(trackId);
         }
       }
 
-      // Small yield to prevent blocking the main isolate UI thread
       await Future.delayed(const Duration(milliseconds: 5));
     }
 

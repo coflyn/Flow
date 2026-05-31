@@ -2,7 +2,11 @@
 part of '../main.dart';
 
 extension _ModalsTrackUI on _MainScreenState {
-  void _showTrackOptions(BuildContext context, Track track) {
+  void _showTrackOptions(
+    BuildContext context,
+    Track track, {
+    bool isFromPlayer = false,
+  }) {
     final isLight = isAppLight;
     showModalBottomSheet(
       context: context,
@@ -68,28 +72,44 @@ extension _ModalsTrackUI on _MainScreenState {
                         : Colors.white10,
                     height: 1,
                   ),
-                  _buildOptionItem(
-                    Icons.playlist_play,
-                    FlowStrings.get('play_next'),
-                    () {
-                      Navigator.pop(context);
-                      if (_playbackQueue.isNotEmpty) {
-                        _moveTrackInQueue(track, _currentIndex + 1);
-                        showFlowToast(FlowStrings.get('added_play_next'));
-                      }
-                    },
-                  ),
-                  _buildOptionItem(
-                    Icons.queue_music,
-                    FlowStrings.get('add_to_queue'),
-                    () {
-                      Navigator.pop(context);
-                      if (_playbackQueue.isNotEmpty) {
-                        _moveTrackInQueue(track, _playbackQueue.length);
-                        showFlowToast(FlowStrings.get('added_songs_to_queue'));
-                      }
-                    },
-                  ),
+                  if (!isFromPlayer) ...[
+                    _buildOptionItem(
+                      Icons.playlist_play,
+                      FlowStrings.get('play_next'),
+                      () {
+                        Navigator.pop(context);
+                        if (_playingTrack?.id == track.id) {
+                          showFlowToast(
+                            FlowStrings.get('cannot_play_next_active'),
+                          );
+                          return;
+                        }
+                        if (_playbackQueue.isNotEmpty) {
+                          _moveTrackInQueue(track, _currentIndex + 1);
+                          showFlowToast(FlowStrings.get('added_play_next'));
+                        }
+                      },
+                    ),
+                    _buildOptionItem(
+                      Icons.queue_music,
+                      FlowStrings.get('add_to_queue'),
+                      () {
+                        Navigator.pop(context);
+                        if (_playingTrack?.id == track.id) {
+                          showFlowToast(
+                            FlowStrings.get('cannot_play_next_active'),
+                          );
+                          return;
+                        }
+                        if (_playbackQueue.isNotEmpty) {
+                          _moveTrackInQueue(track, _playbackQueue.length);
+                          showFlowToast(
+                            FlowStrings.get('added_songs_to_queue'),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                   _buildOptionItem(
                     Icons.playlist_add,
                     FlowStrings.get('add_to_playlist'),
@@ -715,15 +735,27 @@ extension _ModalsTrackUI on _MainScreenState {
                   FlowStrings.get('play_next'),
                   () {
                     Navigator.pop(context);
+                    if (tracks.length == 1 &&
+                        _playingTrack?.id == tracks.first.id) {
+                      showFlowToast(FlowStrings.get('cannot_play_next_active'));
+                      return;
+                    }
                     if (tracks.isNotEmpty) {
                       int insertPos = _currentIndex + 1;
+                      int addedCount = 0;
                       for (final track in tracks) {
+                        if (_playingTrack?.id == track.id) continue;
                         _moveTrackInQueue(track, insertPos);
                         insertPos++;
+                        addedCount++;
                       }
-                      showFlowToast(
-                        "Added ${tracks.length} tracks to play next",
-                      );
+                      if (addedCount > 0) {
+                        showFlowToast("Added $addedCount tracks to play next");
+                      } else {
+                        showFlowToast(
+                          FlowStrings.get('cannot_play_next_active'),
+                        );
+                      }
                     }
                   },
                 ),
@@ -907,6 +939,9 @@ extension _ModalsTrackUI on _MainScreenState {
                   final nav = Navigator.of(context);
                   setState(() {
                     _sortBy = value;
+                    _animatedTrackIds.addAll(_allTracks.map((t) => t.id));
+                    _animatedArtistIds.addAll(_allTracks.map((t) => t.artist));
+                    _animatedAlbumIds.addAll(_allTracks.map((t) => t.album));
                   });
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setString('sortBy', value);
@@ -1529,7 +1564,16 @@ extension _ModalsTrackUI on _MainScreenState {
         final XFile? image = await _imagePicker.pickImage(
           source: ImageSource.gallery,
         );
-        return image?.path;
+        if (image != null) {
+          if (!context.mounted) return null;
+          final cropped = await ImageCropperUtil.cropImage(
+            context: context,
+            sourcePath: image.path,
+            squareOnly: true,
+          );
+          return cropped;
+        }
+        return null;
       } else if (source == 'song') {
         if (!context.mounted) return null;
         return await _showSongCoverPicker(context);
