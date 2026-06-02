@@ -2,6 +2,7 @@
 import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -26,6 +27,7 @@ import 'screens/settings_screen.dart';
 import 'utils/globals.dart';
 import 'utils/artwork_cache.dart';
 import 'utils/image_cropper_util.dart';
+import 'package:flow/l10n/app_localizations.dart';
 part 'ui/player_ui.dart';
 part 'ui/detail_views_ui.dart';
 part 'ui/tabs_ui.dart';
@@ -64,7 +66,7 @@ void main() async {
     isBackgroundInitialized = false;
   }
 
-  runApp(const FlowApp());
+  runApp(const ProviderScope(child: FlowApp()));
 }
 
 class FlowApp extends StatelessWidget {
@@ -135,6 +137,11 @@ class FlowApp extends StatelessWidget {
                                 return MaterialApp(
                                   title: 'Flow',
                                   debugShowCheckedModeBanner: false,
+                                  localizationsDelegates:
+                                      AppLocalizations.localizationsDelegates,
+                                  supportedLocales:
+                                      AppLocalizations.supportedLocales,
+                                  locale: Locale(lang),
                                   builder: (context, child) {
                                     return MediaQuery(
                                       data: MediaQuery.of(
@@ -321,27 +328,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   double? _dragValue;
   Color? _dominantColor;
   ValueNotifier<Color?> get _dominantColorNotifier => dominantColorNotifier;
-  String _playerBackgroundStyle = 'gradient';
-  final ValueNotifier<String> _playerBackgroundStyleNotifier =
-      ValueNotifier<String>('gradient');
-  String? _playerCustomBgPath;
-  final ValueNotifier<String?> _playerCustomBgPathNotifier =
-      ValueNotifier<String?>(null);
-  double _playerCustomBgBlur = 0.0;
-  final ValueNotifier<double> _playerCustomBgBlurNotifier =
-      ValueNotifier<double>(0.0);
-  double _playerCustomBgDim = 0.4;
-  final ValueNotifier<double> _playerCustomBgDimNotifier =
-      ValueNotifier<double>(0.4);
-  double _playerCustomBgScale = 1.0;
-  final ValueNotifier<double> _playerCustomBgScaleNotifier =
-      ValueNotifier<double>(1.0);
-  String _themeAccentPreset = 'spotify';
   String _themeMode = 'dark';
   String _customThemeBg = 'dynamic';
   String? _customThemeBgPath;
-  ValueNotifier<String?> get _customThemeBgPathNotifier =>
-      customThemeBgPathNotifier;
   double _customThemeBgBlur = 25.0;
   final ValueNotifier<double> _customThemeBgBlurNotifier =
       customThemeBgBlurNotifier;
@@ -367,11 +356,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Color get _activeAccentColor {
-    if (_themeAccentPreset == 'dynamic') {
+    if (themeAccentPresetNotifier.value == 'dynamic') {
       final baseColor = _dominantColor ?? const Color(0xFF8E8E93);
       return _ensureLuminance(baseColor);
     }
-    switch (_themeAccentPreset) {
+    switch (themeAccentPresetNotifier.value) {
       case 'spotify':
         return const Color(0xFF1DB954);
       case 'apple':
@@ -423,7 +412,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       session.becomingNoisyEventStream.listen((_) {
         if (_pauseOnDisconnect && _audioPlayer.playing) {
           _pauseWithFade();
-          showFlowToast(FlowStrings.get('toast_headphones_unplugged'));
+          showFlowToast(
+            lookupAppLocalizations(
+              Locale(FlowStrings.currentLang),
+            ).toastHeadphonesUnplugged,
+          );
         }
       });
 
@@ -631,25 +624,36 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 },
               ),
               SafeArea(
-                child: _isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          color: _activeAccentColor,
-                        ),
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_multiSelectedTrackIds.isNotEmpty)
+                      _buildMultiSelectHeader()
+                    else ...[
+                      _buildHeader(),
+                      _buildSearchBar(),
+                      _buildFilterCapsules(),
+                    ],
+                    Expanded(
+                      child: Stack(
                         children: [
-                          if (_multiSelectedTrackIds.isNotEmpty)
-                            _buildMultiSelectHeader()
-                          else ...[
-                            _buildHeader(),
-                            _buildSearchBar(),
-                            _buildFilterCapsules(),
-                          ],
-                          Expanded(child: _buildBodyContent()),
+                          _buildBodyContent(),
+                          if (_isLoading)
+                            Positioned.fill(
+                              child: Container(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: _activeAccentColor,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
+                    ),
+                  ],
+                ),
               ),
 
               Positioned.fill(

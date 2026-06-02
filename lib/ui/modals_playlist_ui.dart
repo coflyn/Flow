@@ -76,9 +76,8 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                         _saveUserPlaylists();
                                       });
                                       showFlowToast(
-                                        FlowStrings.get(
-                                              'toast_added_songs_to_simple',
-                                            )
+                                        AppLocalizations.of(context)
+                                            .toastAddedSongsToSimple
                                             .replaceFirst(
                                               '{}',
                                               '${selectedTrackIds.length}',
@@ -97,8 +96,8 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                   },
                             child: Text(
                               predefinedTargetPlaylist != null
-                                  ? FlowStrings.get('save')
-                                  : FlowStrings.get('next'),
+                                  ? AppLocalizations.of(context).save
+                                  : AppLocalizations.of(context).next,
                               style: TextStyle(
                                 color: selectedTrackIds.isEmpty
                                     ? (isLight
@@ -244,7 +243,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                         children: [
                           Expanded(
                             child: Text(
-                              '${FlowStrings.get('edit_playlist_title')} "$playlistName"',
+                              '${AppLocalizations.of(context).editPlaylistTitle} "$playlistName"',
                               style: TextStyle(
                                 color: isLight
                                     ? const Color(0xFF1A1A1A)
@@ -262,7 +261,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                               Navigator.pop(context);
                             },
                             child: Text(
-                              FlowStrings.get('done'),
+                              AppLocalizations.of(context).done,
                               style: TextStyle(
                                 color: _activeAccentColor,
                                 fontWeight: FontWeight.bold,
@@ -303,7 +302,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                               color: isLight ? Colors.black87 : Colors.white,
                             ),
                             label: Text(
-                              FlowStrings.get('add_songs'),
+                              AppLocalizations.of(context).addSongs,
                               style: TextStyle(
                                 color: isLight ? Colors.black87 : Colors.white,
                                 fontSize: 12,
@@ -343,8 +342,8 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                   },
                             child: Text(
                               isAllSelected
-                                  ? FlowStrings.get('deselect_all')
-                                  : FlowStrings.get('select_all'),
+                                  ? AppLocalizations.of(context).deselectAll
+                                  : AppLocalizations.of(context).selectAll,
                               style: TextStyle(
                                 color: isLight
                                     ? Colors.black54
@@ -366,9 +365,9 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                             ? const Color(0xFFF0F0F3)
                                             : const Color(0xFF1E1E1E),
                                         title: Text(
-                                          FlowStrings.get(
-                                            'remove_songs_confirm',
-                                          ),
+                                          AppLocalizations.of(
+                                            context,
+                                          ).removeSongsConfirm,
                                           style: TextStyle(
                                             color: isLight
                                                 ? const Color(0xFF1A1A1A)
@@ -377,7 +376,9 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                           ),
                                         ),
                                         content: Text(
-                                          FlowStrings.get('remove_songs_body'),
+                                          AppLocalizations.of(
+                                            context,
+                                          ).removeSongsBody,
                                           style: TextStyle(
                                             color: isLight
                                                 ? Colors.black54
@@ -389,7 +390,9 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                           TextButton(
                                             onPressed: () => Navigator.pop(ctx),
                                             child: Text(
-                                              FlowStrings.get('cancel'),
+                                              AppLocalizations.of(
+                                                context,
+                                              ).cancel,
                                               style: TextStyle(
                                                 color: isLight
                                                     ? Colors.black38
@@ -415,13 +418,15 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                                 context,
                                               ); // Close sheet
                                               showFlowToast(
-                                                FlowStrings.get(
-                                                  'removed_songs_toast',
-                                                ),
+                                                AppLocalizations.of(
+                                                  context,
+                                                ).removedSongsToast,
                                               );
                                             },
                                             child: Text(
-                                              FlowStrings.get('remove'),
+                                              AppLocalizations.of(
+                                                context,
+                                              ).remove,
                                               style: TextStyle(
                                                 color: Colors.redAccent,
                                                 fontWeight: FontWeight.bold,
@@ -439,7 +444,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                   ? Colors.redAccent
                                   : (isLight ? Colors.black12 : Colors.white24),
                             ),
-                            tooltip: FlowStrings.get('delete'),
+                            tooltip: AppLocalizations.of(context).delete,
                           ),
                         ],
                       ),
@@ -454,7 +459,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                       child: playlistSongs.isEmpty
                           ? Center(
                               child: Text(
-                                FlowStrings.get('no_songs_in_playlist'),
+                                AppLocalizations.of(context).noSongsInPlaylist,
                                 style: TextStyle(
                                   color: isLight
                                       ? Colors.black38
@@ -556,7 +561,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
-                      FlowStrings.get('add_to_playlist'),
+                      AppLocalizations.of(context).addToPlaylist,
                       style: TextStyle(
                         color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontSize: 18,
@@ -574,7 +579,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                   ListTile(
                     leading: Icon(Icons.add, color: _activeAccentColor),
                     title: Text(
-                      FlowStrings.get('create_new_playlist'),
+                      AppLocalizations.of(context).createNewPlaylist,
                       style: TextStyle(
                         color: _activeAccentColor,
                         fontFamily: _activeFont,
@@ -620,6 +625,13 @@ extension _ModalsPlaylistUI on _MainScreenState {
                             )) {
                               _userPlaylists[playlistName]!.add(track.id);
                               addedCount++;
+                              if (_MainScreenState
+                                      .mainScreenState!
+                                      ._playingFromName ==
+                                  playlistName) {
+                                _MainScreenState.mainScreenState!
+                                    ._addTrackToQueueDynamically(track.id);
+                              }
                             } else {
                               skippedCount++;
                             }
@@ -633,36 +645,48 @@ extension _ModalsPlaylistUI on _MainScreenState {
                         if (tracksToAdd.length == 1) {
                           if (skippedCount > 0) {
                             showFlowToast(
-                              FlowStrings.get('toast_song_already_in_playlist')
-                                  .replaceFirst('{}', tracksToAdd.first.title)
-                                  .replaceFirst('{}', playlistName),
+                              AppLocalizations.of(context)
+                                  .toastSongAlreadyInPlaylist
+                                  .replaceFirst(
+                                    '[placeholder]',
+                                    tracksToAdd.first.title,
+                                  )
+                                  .replaceFirst('[placeholder]', playlistName),
                             );
                           } else {
                             showFlowToast(
-                              FlowStrings.get('toast_added_song_to')
-                                  .replaceFirst('{}', tracksToAdd.first.title)
-                                  .replaceFirst('{}', playlistName),
+                              AppLocalizations.of(context).toastAddedSongTo
+                                  .replaceFirst(
+                                    '[placeholder]',
+                                    tracksToAdd.first.title,
+                                  )
+                                  .replaceFirst('[placeholder]', playlistName),
                             );
                           }
                         } else {
                           if (addedCount == 0) {
                             showFlowToast(
-                              FlowStrings.get(
-                                'toast_selected_songs_already_in',
-                              ).replaceFirst('{}', playlistName),
+                              AppLocalizations.of(context)
+                                  .toastSelectedSongsAlreadyIn
+                                  .replaceFirst('[placeholder]', playlistName),
                             );
                           } else if (skippedCount > 0) {
                             showFlowToast(
-                              FlowStrings.get('toast_added_songs_skipped')
-                                  .replaceFirst('{}', '$addedCount')
-                                  .replaceFirst('{}', playlistName)
-                                  .replaceFirst('{}', '$skippedCount'),
+                              AppLocalizations.of(context)
+                                  .toastAddedSongsSkipped
+                                  .replaceFirst('[placeholder]', '$addedCount')
+                                  .replaceFirst('[placeholder]', playlistName)
+                                  .replaceFirst(
+                                    '[placeholder]',
+                                    '$skippedCount',
+                                  ),
                             );
                           } else {
                             showFlowToast(
-                              FlowStrings.get('toast_added_songs_to_simple')
-                                  .replaceFirst('{}', '$addedCount')
-                                  .replaceFirst('{}', playlistName),
+                              AppLocalizations.of(context)
+                                  .toastAddedSongsToSimple
+                                  .replaceFirst('[placeholder]', '$addedCount')
+                                  .replaceFirst('[placeholder]', playlistName),
                             );
                           }
                         }
@@ -693,7 +717,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
               ? const Color(0xFFF0F0F3)
               : const Color(0xFF282828),
           title: Text(
-            FlowStrings.get('new_playlist'),
+            AppLocalizations.of(context).newPlaylist,
             style: TextStyle(
               color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
               fontFamily: _activeFont,
@@ -706,7 +730,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
               fontFamily: _activeFont,
             ),
             decoration: InputDecoration(
-              hintText: FlowStrings.get('playlist_name_placeholder'),
+              hintText: AppLocalizations.of(context).playlistNamePlaceholder,
               hintStyle: TextStyle(
                 color: isLight ? Colors.black38 : Colors.white54,
                 fontFamily: _activeFont,
@@ -725,7 +749,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                FlowStrings.get('cancel'),
+                AppLocalizations.of(context).cancel,
                 style: TextStyle(
                   color: isLight ? Colors.black45 : Colors.white54,
                   fontFamily: _activeFont,
@@ -745,14 +769,14 @@ extension _ModalsPlaylistUI on _MainScreenState {
                   });
                   Navigator.pop(context);
                   showFlowToast(
-                    FlowStrings.get(
-                      'playlist_created_format',
-                    ).replaceFirst('{}', name),
+                    AppLocalizations.of(
+                      context,
+                    ).playlistCreatedFormat.replaceFirst('[placeholder]', name),
                   );
                 }
               },
               child: Text(
-                FlowStrings.get('create_playlist').split(' ')[0],
+                AppLocalizations.of(context).createPlaylist.split(' ')[0],
                 style: TextStyle(
                   color: _activeAccentColor,
                   fontWeight: FontWeight.bold,
@@ -779,7 +803,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
               ? const Color(0xFFF0F0F3)
               : const Color(0xFF282828),
           title: Text(
-            FlowStrings.get('rename_playlist'),
+            AppLocalizations.of(context).renamePlaylist,
             style: TextStyle(
               color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
               fontFamily: _activeFont,
@@ -792,7 +816,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
               fontFamily: _activeFont,
             ),
             decoration: InputDecoration(
-              hintText: FlowStrings.get('playlist_name_placeholder'),
+              hintText: AppLocalizations.of(context).playlistNamePlaceholder,
               hintStyle: TextStyle(
                 color: isLight ? Colors.black38 : Colors.white54,
                 fontFamily: _activeFont,
@@ -811,7 +835,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                FlowStrings.get('cancel'),
+                AppLocalizations.of(context).cancel,
                 style: TextStyle(
                   color: isLight ? Colors.black45 : Colors.white54,
                   fontFamily: _activeFont,
@@ -839,13 +863,15 @@ extension _ModalsPlaylistUI on _MainScreenState {
                     _saveUserPlaylists();
                   });
                   Navigator.pop(context);
-                  showFlowToast(FlowStrings.get('playlist_renamed'));
+                  showFlowToast(AppLocalizations.of(context).playlistRenamed);
                 } else if (_userPlaylists.containsKey(newName)) {
-                  showFlowToast(FlowStrings.get('playlist_name_exists'));
+                  showFlowToast(
+                    AppLocalizations.of(context).playlistNameExists,
+                  );
                 }
               },
               child: Text(
-                FlowStrings.get('save'),
+                AppLocalizations.of(context).save,
                 style: TextStyle(
                   color: _activeAccentColor,
                   fontWeight: FontWeight.bold,
@@ -910,30 +936,32 @@ extension _ModalsPlaylistUI on _MainScreenState {
                 const SizedBox(height: 24),
                 _buildOptionItem(
                   Icons.play_arrow,
-                  FlowStrings.get('play_all'),
+                  AppLocalizations.of(context).playAll,
                   () {
                     Navigator.pop(context);
                     if (songs.isNotEmpty) {
                       _playTrack(0, sourceList: songs);
                     } else {
-                      showFlowToast(FlowStrings.get('playlist_empty'));
+                      showFlowToast(AppLocalizations.of(context).playlistEmpty);
                     }
                   },
                 ),
                 _buildOptionItem(
                   Icons.queue_music,
-                  FlowStrings.get('add_to_queue'),
+                  AppLocalizations.of(context).addToQueue,
                   () {
                     Navigator.pop(context);
                     if (songs.isNotEmpty) {
                       _playbackQueue.addAll(songs);
-                      showFlowToast(FlowStrings.get('added_songs_to_queue'));
+                      showFlowToast(
+                        AppLocalizations.of(context).addedSongsToQueue,
+                      );
                     }
                   },
                 ),
                 _buildOptionItem(
                   Icons.playlist_add,
-                  FlowStrings.get('add_to_playlist'),
+                  AppLocalizations.of(context).addToPlaylist,
                   () {
                     Navigator.pop(context);
                     _showMultiSelectSongsModal(context, candidateTracks: songs);
@@ -941,7 +969,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                 ),
                 _buildOptionItem(
                   Icons.image,
-                  FlowStrings.get('edit_cover'),
+                  AppLocalizations.of(context).editCover,
                   () async {
                     Navigator.pop(context);
                     final String? imagePath = await _showCoverSourceSelector(
@@ -958,8 +986,12 @@ extension _ModalsPlaylistUI on _MainScreenState {
                       _savePlaylistCovers();
                       showFlowToast(
                         imagePath == 'reset'
-                            ? FlowStrings.get('cover_reset_success')
-                            : FlowStrings.get('playlist_cover_updated'),
+                            ? lookupAppLocalizations(
+                                Locale(FlowStrings.currentLang),
+                              ).coverResetSuccess
+                            : lookupAppLocalizations(
+                                Locale(FlowStrings.currentLang),
+                              ).playlistCoverUpdated,
                       );
                     }
                   },
@@ -971,17 +1003,21 @@ extension _ModalsPlaylistUI on _MainScreenState {
                         : Colors.white10,
                     height: 1,
                   ),
-                  _buildOptionItem(Icons.add, FlowStrings.get('add_songs'), () {
-                    Navigator.pop(context);
-                    _showMultiSelectSongsModal(
-                      context,
-                      candidateTracks: _allTracks,
-                      predefinedTargetPlaylist: title,
-                    );
-                  }),
+                  _buildOptionItem(
+                    Icons.add,
+                    AppLocalizations.of(context).addSongs,
+                    () {
+                      Navigator.pop(context);
+                      _showMultiSelectSongsModal(
+                        context,
+                        candidateTracks: _allTracks,
+                        predefinedTargetPlaylist: title,
+                      );
+                    },
+                  ),
                   _buildOptionItem(
                     Icons.edit,
-                    FlowStrings.get('rename_playlist'),
+                    AppLocalizations.of(context).renamePlaylist,
                     () {
                       Navigator.pop(context);
                       _showRenamePlaylistModal(context, title);
@@ -989,14 +1025,16 @@ extension _ModalsPlaylistUI on _MainScreenState {
                   ),
                   _buildOptionItem(
                     Icons.delete_outline,
-                    FlowStrings.get('delete_playlist'),
+                    AppLocalizations.of(context).deletePlaylist,
                     () async {
                       Navigator.pop(context);
                       final bool? confirm = await showConfirmationDialog(
                         this.context,
-                        title: FlowStrings.get('confirm_delete'),
-                        content: FlowStrings.get('confirm_delete_playlist'),
-                        confirmText: FlowStrings.get('delete'),
+                        title: AppLocalizations.of(context).confirmDelete,
+                        content: AppLocalizations.of(
+                          context,
+                        ).confirmDeletePlaylist,
+                        confirmText: AppLocalizations.of(context).delete,
                       );
                       if (confirm != true) return;
 
@@ -1009,7 +1047,11 @@ extension _ModalsPlaylistUI on _MainScreenState {
                         }
                       });
                       _saveUserPlaylists();
-                      showFlowToast(FlowStrings.get('playlist_deleted'));
+                      showFlowToast(
+                        lookupAppLocalizations(
+                          Locale(FlowStrings.currentLang),
+                        ).playlistDeleted,
+                      );
                     },
                     iconColor: Colors.redAccent,
                   ),

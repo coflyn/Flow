@@ -66,3 +66,6 @@ ios/Pods/
 # Ignore Gradle build files
 android/build/
 android/.gradle/
+
+# Auto-generated localization Dart files (only track .arb files)
+lib/l10n/*.dart

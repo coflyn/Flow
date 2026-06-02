@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/settings_provider.dart';
 import 'dart:io';
 import 'dart:ui';
 import 'dart:convert';
@@ -10,65 +12,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../main.dart';
 import '../utils/globals.dart';
 import '../utils/image_cropper_util.dart';
 
-part 'settings_ui_components.dart';
+import '../widgets/settings/settings_ui_components.dart';
+import 'package:flow/l10n/app_localizations.dart';
 part 'settings_modals.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   final VoidCallback onRescanLibrary;
   final VoidCallback onSettingsChanged;
   final Function(int) onSetSleepTimer;
   final VoidCallback onResetData;
   final ValueNotifier<int> sleepTimerNotifier;
   final VoidCallback onManageFolders;
-  final int playCountThreshold;
-  final Function(int) onSetPlayCountThreshold;
-  final String activeFont;
-  final Function(String) onSetFont;
-  final double fontScale;
-  final Function(double) onSetFontScale;
-  final String themeAccentPreset;
-  final Function(String) onSetThemeAccent;
-  final Color activeAccentColor;
-  final ValueNotifier<Color?> dominantColorNotifier;
-  final String playerBackgroundStyle;
-  final ValueNotifier<String> playerBackgroundStyleNotifier;
-  final Function(String) onSetPlayerBackgroundStyle;
-  final String? playerCustomBgPath;
-  final ValueNotifier<String?> playerCustomBgPathNotifier;
-  final Function(String?) onSetPlayerCustomBgPath;
-  final double playerCustomBgBlur;
-  final ValueNotifier<double> playerCustomBgBlurNotifier;
-  final Function(double) onSetPlayerCustomBgBlur;
-  final double playerCustomBgDim;
-  final ValueNotifier<double> playerCustomBgDimNotifier;
-  final Function(double) onSetPlayerCustomBgDim;
-  final double playerCustomBgScale;
-  final ValueNotifier<double> playerCustomBgScaleNotifier;
-  final Function(double) onSetPlayerCustomBgScale;
-  final String themeMode;
-  final Function(String) onSetThemeMode;
-  final String customThemeBg;
-  final ValueNotifier<String> customThemeBgNotifier;
-  final Function(String) onSetCustomThemeBg;
-  final String? customThemeBgPath;
-  final ValueNotifier<String?> customThemeBgPathNotifier;
-  final Function(String?) onSetCustomThemeBgPath;
-  final double customThemeBgBlur;
-  final ValueNotifier<double> customThemeBgBlurNotifier;
-  final Function(double) onSetCustomThemeBgBlur;
-  final double customThemeBgDim;
-  final ValueNotifier<double> customThemeBgDimNotifier;
-  final Function(double) onSetCustomThemeBgDim;
-  final double customThemeBgScale;
-  final ValueNotifier<double> customThemeBgScaleNotifier;
-  final Function(double) onSetCustomThemeBgScale;
-  final String customThemeStyle;
-  final ValueNotifier<String> customThemeStyleNotifier;
-  final Function(String) onSetCustomThemeStyle;
   final Function(bool) onSetSkipSilence;
 
   const SettingsScreen({
@@ -79,59 +38,14 @@ class SettingsScreen extends StatefulWidget {
     required this.onResetData,
     required this.sleepTimerNotifier,
     required this.onManageFolders,
-    required this.playCountThreshold,
-    required this.onSetPlayCountThreshold,
-    required this.activeFont,
-    required this.onSetFont,
-    required this.fontScale,
-    required this.onSetFontScale,
-    required this.themeAccentPreset,
-    required this.onSetThemeAccent,
-    required this.activeAccentColor,
-    required this.dominantColorNotifier,
-    required this.playerBackgroundStyle,
-    required this.playerBackgroundStyleNotifier,
-    required this.onSetPlayerBackgroundStyle,
-    required this.playerCustomBgPath,
-    required this.playerCustomBgPathNotifier,
-    required this.onSetPlayerCustomBgPath,
-    required this.playerCustomBgBlur,
-    required this.playerCustomBgBlurNotifier,
-    required this.onSetPlayerCustomBgBlur,
-    required this.playerCustomBgDim,
-    required this.playerCustomBgDimNotifier,
-    required this.onSetPlayerCustomBgDim,
-    required this.playerCustomBgScale,
-    required this.playerCustomBgScaleNotifier,
-    required this.onSetPlayerCustomBgScale,
-    required this.themeMode,
-    required this.onSetThemeMode,
-    required this.customThemeBg,
-    required this.customThemeBgNotifier,
-    required this.onSetCustomThemeBg,
-    required this.customThemeBgPath,
-    required this.customThemeBgPathNotifier,
-    required this.onSetCustomThemeBgPath,
-    required this.customThemeBgBlur,
-    required this.customThemeBgBlurNotifier,
-    required this.onSetCustomThemeBgBlur,
-    required this.customThemeBgDim,
-    required this.customThemeBgDimNotifier,
-    required this.onSetCustomThemeBgDim,
-    required this.customThemeBgScale,
-    required this.customThemeBgScaleNotifier,
-    required this.onSetCustomThemeBgScale,
-    required this.customThemeStyle,
-    required this.customThemeStyleNotifier,
-    required this.onSetCustomThemeStyle,
     required this.onSetSkipSilence,
   });
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _filterShortAudio = false;
   bool _autoRegexClean = false;
   int _crossfadeDuration = 200;
@@ -157,11 +71,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _playerCustomBgPath;
   double _playerCustomBgBlur = 0.0;
   double _playerCustomBgDim = 0.4;
+  String _appVersion = 'Loading...';
   Future<List<SongModel>>? _songsFuture;
 
   Color get _activeAccentColor {
     if (_selectedThemeAccent == 'dynamic') {
-      return widget.dominantColorNotifier.value ?? const Color(0xFF8E8E93);
+      return dominantColorNotifier.value ?? const Color(0xFF8E8E93);
     }
     switch (_selectedThemeAccent) {
       case 'spotify':
@@ -191,12 +106,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadSettings();
-    widget.dominantColorNotifier.addListener(_onDominantColorChanged);
+    dominantColorNotifier.addListener(_onDominantColorChanged);
   }
 
   @override
   void dispose() {
-    widget.dominantColorNotifier.removeListener(_onDominantColorChanged);
+    dominantColorNotifier.removeListener(_onDominantColorChanged);
     super.dispose();
   }
 
@@ -207,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _checkForUpdates() async {
-    showFlowToast(FlowStrings.get('checking_updates'));
+    showFlowToast(AppLocalizations.of(context).checkingUpdates);
     try {
       final client = HttpClient();
       client.userAgent = 'Flow-App';
@@ -223,7 +138,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             json['html_url'] ?? 'https://github.com/coflyn/Flow/releases';
 
         final latestVersion = latestVersionTag.replaceAll('v', '').trim();
-        const currentVersion = '1.0.0';
+
+        final packageInfo = await PackageInfo.fromPlatform();
+        final currentVersion = packageInfo.version;
 
         if (latestVersion != currentVersion) {
           if (!mounted) return;
@@ -243,7 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     SizedBox(width: 12),
                     Text(
-                      FlowStrings.get('update_available'),
+                      AppLocalizations.of(context).updateAvailable,
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -256,12 +173,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      FlowStrings.get('new_version_available'),
+                      AppLocalizations.of(context).newVersionAvailable,
                       style: TextStyle(color: Colors.white70),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      '${FlowStrings.get('current_version')}: v$currentVersion\n${FlowStrings.get('latest_version')}: $latestVersionTag',
+                      '${AppLocalizations.of(context).currentVersion}: v$currentVersion\n${AppLocalizations.of(context).latestVersion}: $latestVersionTag',
                       style: const TextStyle(
                         color: Colors.white54,
                         fontFamily: 'monospace',
@@ -273,7 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(
-                      FlowStrings.get('later'),
+                      AppLocalizations.of(context).later,
                       style: const TextStyle(color: Colors.white54),
                     ),
                   ),
@@ -287,11 +204,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           mode: LaunchMode.externalApplication,
                         );
                       } catch (_) {
-                        showFlowToast(FlowStrings.get('could_not_open_update'));
+                        showFlowToast(
+                          lookupAppLocalizations(
+                            Locale(FlowStrings.currentLang),
+                          ).couldNotOpenUpdate,
+                        );
                       }
                     },
                     child: Text(
-                      FlowStrings.get('download'),
+                      AppLocalizations.of(context).download,
                       style: TextStyle(
                         color: _activeAccentColor,
                         fontWeight: FontWeight.bold,
@@ -304,14 +225,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         } else {
           showFlowToast(
-            '${FlowStrings.get('flow_up_to_date')} (v$currentVersion)',
+            '${lookupAppLocalizations(Locale(FlowStrings.currentLang)).flowUpToDate} (v$currentVersion)',
           );
         }
       } else {
-        showFlowToast(FlowStrings.get('unable_check_updates'));
+        showFlowToast(
+          lookupAppLocalizations(
+            Locale(FlowStrings.currentLang),
+          ).unableCheckUpdates,
+        );
       }
     } catch (_) {
-      showFlowToast(FlowStrings.get('network_error'));
+      showFlowToast(
+        lookupAppLocalizations(Locale(FlowStrings.currentLang)).networkError,
+      );
     }
   }
 
@@ -368,6 +295,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _playerCustomBgBlur = prefs.getDouble('playerCustomBgBlur') ?? 0.0;
       _playerCustomBgDim = prefs.getDouble('playerCustomBgDim') ?? 0.4;
     });
+
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _appVersion = packageInfo.version;
+      });
+    }
   }
 
   Future<void> _saveBool(String key, bool value) async {
@@ -382,6 +316,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setInt(key, value);
     widget
         .onSettingsChanged(); // Trigger reload of settings without full library rescan
+  }
+
+  Future<void> _pickAndSaveImage({
+    required String prefKey,
+    required Function(String) onSave,
+    required Function(String) onSetStatePath,
+  }) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      if (!mounted) return;
+      final croppedPath = await ImageCropperUtil.cropImage(
+        context: context,
+        sourcePath: image.path,
+      );
+      if (croppedPath != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(prefKey, croppedPath);
+        onSetStatePath(croppedPath);
+        onSave(croppedPath);
+        showFlowToast(
+          lookupAppLocalizations(
+            Locale(FlowStrings.currentLang),
+          ).wallpaperUpdated,
+        );
+      }
+    }
   }
 
   @override
@@ -407,7 +368,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          FlowStrings.get('settings'),
+          AppLocalizations.of(context).settings,
           style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 18,
@@ -419,23 +380,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
-          _buildSectionHeader(FlowStrings.get('appearance')),
-          _buildPremiumCard(
+          SettingsSectionHeader(
+            title: AppLocalizations.of(context).appearance,
+            activeAccentColor: _activeAccentColor,
+          ),
+          SettingsPremiumCard(
+            isLight: _selectedThemeMode == 'light',
             children: [
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.language_rounded,
-                title: FlowStrings.get('language'),
+                title: AppLocalizations.of(context).language,
                 subtitle: _language == 'id'
-                    ? FlowStrings.get('language_id')
+                    ? AppLocalizations.of(context).languageId
                     : _language == 'ja'
-                    ? FlowStrings.get('language_ja')
-                    : FlowStrings.get('language_en'),
+                    ? AppLocalizations.of(context).languageJa
+                    : AppLocalizations.of(context).languageEn,
                 onTap: () => _showLanguageSelectionDialog(),
               ),
               const Divider(color: Colors.white10, height: 1),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.font_download_outlined,
-                title: FlowStrings.get('typography_font_size'),
+                title: AppLocalizations.of(context).typographyFontSize,
                 subtitle:
                     '${_activeFont == 'Spotify Style'
                         ? 'Figtree'
@@ -445,20 +414,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => _showTypographyPreviewDialog(),
               ),
               const Divider(color: Colors.white10, height: 1),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.palette_outlined,
-                title: FlowStrings.get('theme_accent_color'),
+                title: AppLocalizations.of(context).themeAccentColor,
                 subtitle: _getThemeAccentLabel(_selectedThemeAccent),
                 onTap: () => _showThemeAccentSelectionDialog(),
               ),
               const Divider(color: Colors.white10, height: 1),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: _selectedThemeMode == 'light'
                     ? Icons.light_mode_outlined
                     : _selectedThemeMode == 'custom'
                     ? Icons.color_lens_outlined
                     : Icons.dark_mode_outlined,
-                title: FlowStrings.get('theme_mode'),
+                title: AppLocalizations.of(context).themeMode,
                 subtitle: _getThemeModeLabel(_selectedThemeMode),
                 onTap: () => _showThemeModeSelectionDialog(),
               ),
@@ -470,13 +443,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     vertical: 16,
                   ),
                   color: isLight
-                      ? Colors.black.withOpacity(0.01)
+                      ? Colors.black.withValues(alpha: 0.01)
                       : Colors.white.withValues(alpha: 0.02),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        FlowStrings.get('custom_theme_bg').toUpperCase(),
+                        AppLocalizations.of(
+                          context,
+                        ).customThemeBg.toUpperCase(),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -495,43 +470,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               id: 'dynamic',
                               name: 'Dynamic (Artwork)',
                               color:
-                                  widget.dominantColorNotifier.value ??
+                                  dominantColorNotifier.value ??
                                   const Color(0xFF8E8E93),
                             ),
                             const SizedBox(width: 10),
                             _buildCustomBgOption(
                               id: 'custom_image',
-                              name: FlowStrings.get('bg_custom_image'),
+                              name: AppLocalizations.of(context).bgCustomImage,
                               color: const Color(0xFF8E8E93),
                             ),
                             const SizedBox(width: 10),
                             _buildCustomBgOption(
                               id: 'navy',
-                              name: FlowStrings.get('bg_deep_navy'),
+                              name: AppLocalizations.of(context).bgDeepNavy,
                               color: const Color(0xFF0B132B),
                             ),
                             const SizedBox(width: 10),
                             _buildCustomBgOption(
                               id: 'forest',
-                              name: FlowStrings.get('bg_forest_green'),
+                              name: AppLocalizations.of(context).bgForestGreen,
                               color: const Color(0xFF0D1F1D),
                             ),
                             const SizedBox(width: 10),
                             _buildCustomBgOption(
                               id: 'wine',
-                              name: FlowStrings.get('bg_midnight_wine'),
+                              name: AppLocalizations.of(context).bgMidnightWine,
                               color: const Color(0xFF1A0F1A),
                             ),
                             const SizedBox(width: 10),
                             _buildCustomBgOption(
                               id: 'terracotta',
-                              name: FlowStrings.get('bg_sunset_terracotta'),
+                              name: AppLocalizations.of(
+                                context,
+                              ).bgSunsetTerracotta,
                               color: const Color(0xFF211510),
                             ),
                             const SizedBox(width: 10),
                             _buildCustomBgOption(
                               id: 'slate',
-                              name: FlowStrings.get('bg_slate_gray_blue'),
+                              name: AppLocalizations.of(
+                                context,
+                              ).bgSlateGrayBlue,
                               color: const Color(0xFF1C2541),
                             ),
                           ],
@@ -550,7 +529,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     vertical: 16,
                   ),
                   color: isLight
-                      ? Colors.black.withOpacity(0.01)
+                      ? Colors.black.withValues(alpha: 0.01)
                       : Colors.white.withValues(alpha: 0.02),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,7 +538,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            FlowStrings.get('theme_wallpaper_settings'),
+                            AppLocalizations.of(context).themeWallpaperSettings,
                             style: TextStyle(
                               color: _activeAccentColor,
                               fontWeight: FontWeight.bold,
@@ -581,41 +560,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               size: 14,
                             ),
                             label: Text(
-                              FlowStrings.get('change_photo'),
+                              AppLocalizations.of(context).changePhoto,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontFamily: _activeFont,
                               ),
                             ),
-                            onPressed: () async {
-                              final ImagePicker picker = ImagePicker();
-                              final XFile? image = await picker.pickImage(
-                                source: ImageSource.gallery,
-                              );
-                              if (image != null) {
-                                if (!context.mounted) return;
-                                final croppedPath =
-                                    await ImageCropperUtil.cropImage(
-                                      context: context,
-                                      sourcePath: image.path,
-                                    );
-                                if (croppedPath != null) {
-                                  final prefs =
-                                      await SharedPreferences.getInstance();
-                                  await prefs.setString(
-                                    'customThemeBgPath',
-                                    croppedPath,
-                                  );
-                                  setState(() {
-                                    _customThemeBgPath = croppedPath;
-                                  });
-                                  widget.onSetCustomThemeBgPath(croppedPath);
-                                  showFlowToast(
-                                    FlowStrings.get('wallpaper_updated'),
-                                  );
-                                }
-                              }
-                            },
+                            onPressed: () => _pickAndSaveImage(
+                              prefKey: 'customThemeBgPath',
+                              onSave: (path) => ref
+                                  .read(settingsProvider.notifier)
+                                  .updateSetting(customThemeBgPath: path),
+                              onSetStatePath: (path) =>
+                                  setState(() => _customThemeBgPath = path),
+                            ),
                           ),
                         ],
                       ),
@@ -629,7 +587,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               isMockLight = true;
                             } else if (_customThemeStyle == 'dynamic') {
                               final activeCol =
-                                  widget.dominantColorNotifier.value ??
+                                  dominantColorNotifier.value ??
                                   const Color(0xFF8E8E93);
                               isMockLight = activeCol.computeLuminance() > 0.45;
                             }
@@ -650,7 +608,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.3),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.3,
+                                      ),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -679,9 +639,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       Positioned.fill(
                                         child: Container(
                                           color: isMockLight
-                                              ? Colors.white.withOpacity(0.15)
-                                              : Colors.black.withOpacity(
-                                                  _customThemeBgDim,
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.15,
+                                                )
+                                              : Colors.black.withValues(
+                                                  alpha: _customThemeBgDim,
                                                 ),
                                         ),
                                       ),
@@ -708,8 +670,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                               height: 14,
                                               decoration: BoxDecoration(
                                                 color: isMockLight
-                                                    ? Colors.black.withOpacity(
-                                                        0.06,
+                                                    ? Colors.black.withValues(
+                                                        alpha: 0.06,
                                                       )
                                                     : Colors.white10,
                                                 borderRadius:
@@ -751,7 +713,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                     height: 16,
                                                     decoration: BoxDecoration(
                                                       color: _activeAccentColor
-                                                          .withOpacity(0.2),
+                                                          .withValues(
+                                                            alpha: 0.2,
+                                                          ),
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                             3,
@@ -833,7 +797,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              FlowStrings.get('blur_level'),
+                              AppLocalizations.of(context).blurLevel,
                               style: TextStyle(
                                 color: isLight
                                     ? Colors.black54
@@ -860,13 +824,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           max: 60.0,
                           activeColor: _activeAccentColor,
                           inactiveColor: isLight
-                              ? Colors.black.withOpacity(0.08)
+                              ? Colors.black.withValues(alpha: 0.08)
                               : Colors.white10,
                           onChanged: (val) {
                             setState(() {
                               _customThemeBgBlur = val;
                             });
-                            widget.onSetCustomThemeBgBlur(val);
+                            ref
+                                .read(settingsProvider.notifier)
+                                .updateSetting(customThemeBgBlur: val);
                           },
                         ),
                         // Dim Level (Opacity)
@@ -874,7 +840,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              FlowStrings.get('dim_level'),
+                              AppLocalizations.of(context).dimLevel,
                               style: TextStyle(
                                 color: isLight
                                     ? Colors.black54
@@ -901,20 +867,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           max: 0.90,
                           activeColor: _activeAccentColor,
                           inactiveColor: isLight
-                              ? Colors.black.withOpacity(0.08)
+                              ? Colors.black.withValues(alpha: 0.08)
                               : Colors.white10,
                           onChanged: (val) {
                             setState(() {
                               _customThemeBgDim = val;
                             });
-                            widget.onSetCustomThemeBgDim(val);
+                            ref
+                                .read(settingsProvider.notifier)
+                                .updateSetting(customThemeBgDim: val);
                           },
                         ),
                       ] else ...[
                         const SizedBox(height: 12),
                         Center(
                           child: Text(
-                            FlowStrings.get('no_wallpaper'),
+                            AppLocalizations.of(context).noWallpaper,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: isLight ? Colors.black54 : Colors.white54,
@@ -929,9 +897,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
               const Divider(color: Colors.white10, height: 1),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.wallpaper_outlined,
-                title: FlowStrings.get('player_background'),
+                title: AppLocalizations.of(context).playerBackground,
                 subtitle: _getPlayerBackgroundStyleLabel(
                   _playerBackgroundStyle,
                 ),
@@ -944,7 +914,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     horizontal: 20,
                     vertical: 16,
                   ),
-                  color: Colors.white.withValues(alpha: 0.02),
+                  color: isLight
+                      ? Colors.black.withValues(alpha: 0.01)
+                      : Colors.white.withValues(alpha: 0.02),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -952,7 +924,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            FlowStrings.get('wallpaper_settings'),
+                            AppLocalizations.of(context).wallpaperSettings,
                             style: TextStyle(
                               color: _activeAccentColor,
                               fontWeight: FontWeight.bold,
@@ -965,48 +937,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              foregroundColor: Colors.white70,
+                              foregroundColor: isLight
+                                  ? Colors.black54
+                                  : Colors.white70,
                             ),
                             icon: const Icon(
                               Icons.photo_library_outlined,
                               size: 14,
                             ),
                             label: Text(
-                              FlowStrings.get('change_photo'),
+                              AppLocalizations.of(context).changePhoto,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontFamily: _activeFont,
                               ),
                             ),
-                            onPressed: () async {
-                              final ImagePicker picker = ImagePicker();
-                              final XFile? image = await picker.pickImage(
-                                source: ImageSource.gallery,
-                              );
-                              if (image != null) {
-                                if (!context.mounted) return;
-                                final croppedPath =
-                                    await ImageCropperUtil.cropImage(
-                                      context: context,
-                                      sourcePath: image.path,
-                                    );
-                                if (croppedPath != null) {
-                                  final prefs =
-                                      await SharedPreferences.getInstance();
-                                  await prefs.setString(
-                                    'playerCustomBgPath',
-                                    croppedPath,
-                                  );
-                                  setState(() {
-                                    _playerCustomBgPath = croppedPath;
-                                  });
-                                  widget.onSetPlayerCustomBgPath(croppedPath);
-                                  showFlowToast(
-                                    FlowStrings.get('wallpaper_updated'),
-                                  );
-                                }
-                              }
-                            },
+                            onPressed: () => _pickAndSaveImage(
+                              prefKey: 'playerCustomBgPath',
+                              onSave: (path) => ref
+                                  .read(settingsProvider.notifier)
+                                  .updateSetting(playerCustomBgPath: path),
+                              onSetStatePath: (path) =>
+                                  setState(() => _playerCustomBgPath = path),
+                            ),
                           ),
                         ],
                       ),
@@ -1139,16 +1092,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                               Icons.skip_previous,
                                               color: Colors.white70,
                                               size: 16,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black54,
+                                                  blurRadius: 4,
+                                                ),
+                                              ],
                                             ),
                                             Icon(
                                               Icons.play_circle_fill,
                                               color: Colors.white,
                                               size: 32,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black54,
+                                                  blurRadius: 4,
+                                                ),
+                                              ],
                                             ),
                                             Icon(
                                               Icons.skip_next,
                                               color: Colors.white70,
                                               size: 16,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black54,
+                                                  blurRadius: 4,
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
@@ -1167,16 +1138,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            FlowStrings.get('blur_level'),
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            AppLocalizations.of(context).blurLevel,
+                            style: TextStyle(
+                              color: isLight ? Colors.black54 : Colors.white70,
                               fontSize: 13,
                             ),
                           ),
                           Text(
                             '${_playerCustomBgBlur.round()}',
-                            style: const TextStyle(
-                              color: Colors.white38,
+                            style: TextStyle(
+                              color: isLight ? Colors.black38 : Colors.white38,
                               fontSize: 13,
                             ),
                           ),
@@ -1187,12 +1158,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         min: 0.0,
                         max: 60.0,
                         activeColor: _activeAccentColor,
-                        inactiveColor: Colors.white10,
+                        inactiveColor: isLight
+                            ? Colors.black.withValues(alpha: 0.08)
+                            : Colors.white10,
                         onChanged: (val) {
                           setState(() {
                             _playerCustomBgBlur = val;
                           });
-                          widget.onSetPlayerCustomBgBlur(val);
+                          ref
+                              .read(settingsProvider.notifier)
+                              .updateSetting(playerCustomBgBlur: val);
                         },
                       ),
                       // Dim Level (Opacity)
@@ -1200,16 +1175,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            FlowStrings.get('dim_level'),
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            AppLocalizations.of(context).dimLevel,
+                            style: TextStyle(
+                              color: isLight ? Colors.black54 : Colors.white70,
                               fontSize: 13,
                             ),
                           ),
                           Text(
                             '${(_playerCustomBgDim * 100).round()}%',
-                            style: const TextStyle(
-                              color: Colors.white38,
+                            style: TextStyle(
+                              color: isLight ? Colors.black38 : Colors.white38,
                               fontSize: 13,
                             ),
                           ),
@@ -1220,12 +1195,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         min: 0.0,
                         max: 0.90,
                         activeColor: _activeAccentColor,
-                        inactiveColor: Colors.white10,
+                        inactiveColor: isLight
+                            ? Colors.black.withValues(alpha: 0.08)
+                            : Colors.white10,
                         onChanged: (val) {
                           setState(() {
                             _playerCustomBgDim = val;
                           });
-                          widget.onSetPlayerCustomBgDim(val);
+                          ref
+                              .read(settingsProvider.notifier)
+                              .updateSetting(playerCustomBgDim: val);
                         },
                       ),
                     ],
@@ -1234,8 +1213,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ],
           ),
-          _buildSectionHeader(FlowStrings.get('audio_playback')),
-          _buildPremiumCard(
+          SettingsSectionHeader(
+            title: AppLocalizations.of(context).audioPlayback,
+            activeAccentColor: _activeAccentColor,
+          ),
+          SettingsPremiumCard(
+            isLight: _selectedThemeMode == 'light',
             children: [
               ValueListenableBuilder<int>(
                 valueListenable: widget.sleepTimerNotifier,
@@ -1246,12 +1229,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     '0',
                   );
                   final secs = (remaining % 60).toString().padLeft(2, '0');
-                  return _buildPremiumListTile(
+                  return SettingsPremiumListTile(
+                    isLight: _selectedThemeMode == 'light',
+                    activeAccentColor: _activeAccentColor,
                     icon: Icons.timer_outlined,
-                    title: FlowStrings.get('sleep_timer'),
+                    title: AppLocalizations.of(context).sleepTimer,
                     subtitle: isActive
-                        ? '${FlowStrings.get('stops_in')} $mins:$secs'
-                        : FlowStrings.get('sleep_timer_subtitle'),
+                        ? '${AppLocalizations.of(context).stopsIn} $mins:$secs'
+                        : AppLocalizations.of(context).sleepTimerSubtitle,
                     isActive: isActive,
                     trailing: isActive
                         ? IconButton(
@@ -1269,9 +1254,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
                 },
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.compare_arrows_rounded,
-                title: FlowStrings.get('audio_crossfade'),
+                title: AppLocalizations.of(context).audioCrossfade,
                 subtitle: '${_crossfadeDuration}ms',
                 trailing: SizedBox(
                   width: 140,
@@ -1304,30 +1291,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              _buildPremiumSwitchTile(
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.headset_off_outlined,
-                title: FlowStrings.get('pause_on_disconnect'),
-                subtitle: FlowStrings.get('pause_on_disconnect_subtitle'),
+                title: AppLocalizations.of(context).pauseOnDisconnect,
+                subtitle: AppLocalizations.of(
+                  context,
+                ).pauseOnDisconnectSubtitle,
                 value: _pauseOnDisconnect,
                 onChanged: (val) {
                   setState(() => _pauseOnDisconnect = val);
                   _saveBool('pauseOnDisconnect', val);
                 },
               ),
-              _buildPremiumSwitchTile(
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.call_missed_outgoing_rounded,
-                title: FlowStrings.get('resume_after_call'),
-                subtitle: FlowStrings.get('resume_after_call_subtitle'),
+                title: AppLocalizations.of(context).resumeAfterCall,
+                subtitle: AppLocalizations.of(context).resumeAfterCallSubtitle,
                 value: _autoPlayAfterCall,
                 onChanged: (val) {
                   setState(() => _autoPlayAfterCall = val);
                   _saveBool('autoPlayAfterCall', val);
                 },
               ),
-              _buildPremiumSwitchTile(
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.layers_rounded,
-                title: FlowStrings.get('play_together'),
-                subtitle: FlowStrings.get('play_together_subtitle'),
+                title: AppLocalizations.of(context).playTogether,
+                subtitle: AppLocalizations.of(context).playTogetherSubtitle,
                 value: _playTogether,
                 onChanged: (val) {
                   setState(() => _playTogether = val);
@@ -1335,10 +1330,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   configureAudioSession(val); // Reconfigure dynamically
                 },
               ),
-              _buildPremiumSwitchTile(
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.content_cut_rounded,
-                title: FlowStrings.get('silence_trimmer'),
-                subtitle: FlowStrings.get('silence_trimmer_subtitle'),
+                title: AppLocalizations.of(context).silenceTrimmer,
+                subtitle: AppLocalizations.of(context).silenceTrimmerSubtitle,
                 value: _skipSilence,
                 onChanged: (val) {
                   setState(() => _skipSilence = val);
@@ -1346,25 +1343,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   widget.onSetSkipSilence(val);
                   showFlowToast(
                     val
-                        ? FlowStrings.get('silence_enabled_toast')
-                        : FlowStrings.get('silence_disabled_toast'),
+                        ? AppLocalizations.of(context).silenceEnabledToast
+                        : AppLocalizations.of(context).silenceDisabledToast,
                   );
                 },
               ),
-              _buildPremiumSwitchTile(
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.battery_saver_rounded,
-                title: FlowStrings.get('stop_on_low_battery'),
-                subtitle: FlowStrings.get('stop_on_low_battery_subtitle'),
+                title: AppLocalizations.of(context).stopOnLowBattery,
+                subtitle: AppLocalizations.of(context).stopOnLowBatterySubtitle,
                 value: _stopOnLowBattery,
                 onChanged: (val) {
                   setState(() => _stopOnLowBattery = val);
                   _saveBool('stopOnLowBattery', val);
                 },
               ),
-              _buildPremiumSwitchTile(
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.hearing_rounded,
-                title: FlowStrings.get('mono_audio'),
-                subtitle: FlowStrings.get('mono_audio_subtitle'),
+                title: AppLocalizations.of(context).monoAudio,
+                subtitle: AppLocalizations.of(context).monoAudioSubtitle,
                 value: _monoAudio,
                 onChanged: (val) async {
                   try {
@@ -1380,7 +1381,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       setState(() => _monoAudio = val);
                       await _saveBool('monoAudio', val);
                       showFlowToast(
-                        FlowStrings.get('mono_audio_info'),
+                        lookupAppLocalizations(
+                          Locale(FlowStrings.currentLang),
+                        ).monoAudioInfo,
                         isLong: true,
                       );
                     } else {
@@ -1389,12 +1392,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (e is PlatformException &&
                           e.code == 'PERMISSION_DENIED') {
                         showFlowToast(
-                          FlowStrings.get('mono_audio_permission'),
+                          lookupAppLocalizations(
+                            Locale(FlowStrings.currentLang),
+                          ).monoAudioPermission,
                           isLong: true,
                         );
                       } else {
                         showFlowToast(
-                          FlowStrings.get('mono_audio_not_supported'),
+                          lookupAppLocalizations(
+                            Locale(FlowStrings.currentLang),
+                          ).monoAudioNotSupported,
                           isLong: true,
                         );
                       }
@@ -1402,45 +1409,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
                 },
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.equalizer_rounded,
-                title: FlowStrings.get('equalizer'),
-                subtitle: FlowStrings.get('equalizer_subtitle'),
+                title: AppLocalizations.of(context).equalizer,
+                subtitle: AppLocalizations.of(context).equalizerSubtitle,
                 onTap: () {
                   MainScreen.showEqualizer(context);
                 },
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.bar_chart_rounded,
-                title: FlowStrings.get('most_played_threshold'),
+                title: AppLocalizations.of(context).mostPlayedThreshold,
                 subtitle: _getThresholdLabel(_playCountThreshold),
                 onTap: () => _showThresholdDialog(),
               ),
             ],
           ),
-          _buildSectionHeader(FlowStrings.get('library_storage')),
-          _buildPremiumCard(
+          SettingsSectionHeader(
+            title: AppLocalizations.of(context).libraryStorage,
+            activeAccentColor: _activeAccentColor,
+          ),
+          SettingsPremiumCard(
+            isLight: _selectedThemeMode == 'light',
             children: [
-              _buildPremiumSwitchTile(
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.auto_fix_high,
-                title: FlowStrings.get('auto_regex_cleaner'),
-                subtitle: FlowStrings.get('auto_regex_subtitle'),
+                title: AppLocalizations.of(context).autoRegexCleaner,
+                subtitle: AppLocalizations.of(context).autoRegexSubtitle,
                 value: _autoRegexClean,
                 onChanged: (val) {
                   setState(() => _autoRegexClean = val);
                   _saveBool('autoRegexClean', val);
                   if (val) {
                     showFlowToast(
-                      FlowStrings.get('rescan_to_apply'),
+                      AppLocalizations.of(context).rescanToApply,
                       isLong: true,
                     );
                   }
                 },
               ),
-              _buildPremiumSwitchTile(
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.filter_alt_outlined,
-                title: FlowStrings.get('filter_short_audio'),
-                subtitle: FlowStrings.get('filter_short_subtitle'),
+                title: AppLocalizations.of(context).filterShortAudio,
+                subtitle: AppLocalizations.of(context).filterShortSubtitle,
                 value: _filterShortAudio,
                 onChanged: (val) {
                   setState(() => _filterShortAudio = val);
@@ -1448,18 +1467,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   widget.onRescanLibrary(); // Needs immediate rescan to filter
                 },
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.folder_outlined,
-                title: FlowStrings.get('specific_folder_scan'),
-                subtitle: FlowStrings.get('specific_folder_subtitle'),
+                title: AppLocalizations.of(context).specificFolderScan,
+                subtitle: AppLocalizations.of(context).specificFolderSubtitle,
                 onTap: () {
                   widget.onManageFolders();
                 },
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.visibility_off_outlined,
-                title: FlowStrings.get('hidden_tracks'),
-                subtitle: FlowStrings.get('hidden_tracks_subtitle'),
+                title: AppLocalizations.of(context).hiddenTracks,
+                subtitle: AppLocalizations.of(context).hiddenTracksSubtitle,
                 onTap: () async {
                   _songsFuture = OnAudioQuery().querySongs(
                     sortType: SongSortType.TITLE,
@@ -1471,60 +1494,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _songsFuture = null;
                 },
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.sync_rounded,
-                title: FlowStrings.get('rescan_library'),
-                subtitle: FlowStrings.get('rescan_subtitle'),
+                title: AppLocalizations.of(context).rescanLibrary,
+                subtitle: AppLocalizations.of(context).rescanSubtitle,
                 onTap: () {
                   Navigator.pop(context);
                   widget.onRescanLibrary();
                 },
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.cleaning_services_outlined,
-                title: FlowStrings.get('clear_image_cache'),
-                subtitle: FlowStrings.get('clear_cache_subtitle'),
+                title: AppLocalizations.of(context).clearImageCache,
+                subtitle: AppLocalizations.of(context).clearCacheSubtitle,
                 onTap: () {
                   PaintingBinding.instance.imageCache.clear();
                   PaintingBinding.instance.imageCache.clearLiveImages();
-                  showFlowToast(FlowStrings.get('image_cache_cleared'));
+                  showFlowToast(AppLocalizations.of(context).imageCacheCleared);
                 },
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.backup_outlined,
-                title: FlowStrings.get('backup_data'),
-                subtitle: FlowStrings.get('backup_data_subtitle'),
+                title: AppLocalizations.of(context).backupData,
+                subtitle: AppLocalizations.of(context).backupDataSubtitle,
                 onTap: () => _handleBackup(),
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.restore_outlined,
-                title: FlowStrings.get('restore_data'),
-                subtitle: FlowStrings.get('restore_data_subtitle'),
+                title: AppLocalizations.of(context).restoreData,
+                subtitle: AppLocalizations.of(context).restoreDataSubtitle,
                 onTap: () => _handleRestore(),
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.delete_forever_outlined,
-                title: FlowStrings.get('reset_app_data'),
-                subtitle: FlowStrings.get('reset_data_subtitle'),
+                title: AppLocalizations.of(context).resetAppData,
+                subtitle: AppLocalizations.of(context).resetDataSubtitle,
                 titleColor: Colors.redAccent,
                 iconColor: Colors.redAccent,
                 onTap: () => _showResetConfirmation(),
               ),
             ],
           ),
-          _buildSectionHeader(FlowStrings.get('about_flow')),
-          _buildPremiumCard(
+          SettingsSectionHeader(
+            title: AppLocalizations.of(context).aboutFlow,
+            activeAccentColor: _activeAccentColor,
+          ),
+          SettingsPremiumCard(
+            isLight: _selectedThemeMode == 'light',
             children: [
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.update_rounded,
-                title: FlowStrings.get('check_updates'),
-                subtitle: 'Version 1.0.0',
+                title: AppLocalizations.of(context).checkUpdates,
+                subtitle: 'Version $_appVersion',
                 onTap: () => _checkForUpdates(),
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.code_rounded,
-                title: FlowStrings.get('source_code'),
-                subtitle: FlowStrings.get('github_repo'),
+                title: AppLocalizations.of(context).sourceCode,
+                subtitle: AppLocalizations.of(context).githubRepo,
                 trailing: const Icon(
                   Icons.open_in_new,
                   color: Colors.white24,
@@ -1538,18 +1579,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       mode: LaunchMode.externalApplication,
                     );
                     if (!launched) {
-                      showFlowToast(FlowStrings.get('could_not_open_link'));
+                      showFlowToast(
+                        lookupAppLocalizations(
+                          Locale(FlowStrings.currentLang),
+                        ).couldNotOpenLink,
+                      );
                     }
                   } catch (e) {
-                    showFlowToast(FlowStrings.get('could_not_open_link'));
+                    showFlowToast(
+                      lookupAppLocalizations(
+                        Locale(FlowStrings.currentLang),
+                      ).couldNotOpenLink,
+                    );
                   }
                 },
               ),
-              _buildPremiumListTile(
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.favorite_rounded,
                 iconColor: const Color(0xFFE91E63),
-                title: FlowStrings.get('support_developer'),
-                subtitle: FlowStrings.get('donate_sociabuzz'),
+                title: AppLocalizations.of(context).supportDeveloper,
+                subtitle: AppLocalizations.of(context).donateSociabuzz,
                 trailing: const Icon(
                   Icons.open_in_new,
                   color: Colors.white24,
@@ -1563,10 +1614,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       mode: LaunchMode.externalApplication,
                     );
                     if (!launched) {
-                      showFlowToast(FlowStrings.get('could_not_open_link'));
+                      showFlowToast(
+                        lookupAppLocalizations(
+                          Locale(FlowStrings.currentLang),
+                        ).couldNotOpenLink,
+                      );
                     }
                   } catch (e) {
-                    showFlowToast(FlowStrings.get('could_not_open_link'));
+                    showFlowToast(
+                      lookupAppLocalizations(
+                        Locale(FlowStrings.currentLang),
+                      ).couldNotOpenLink,
+                    );
                   }
                 },
               ),

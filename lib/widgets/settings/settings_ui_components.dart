@@ -1,14 +1,23 @@
-// ignore_for_file: library_private_types_in_public_api, deprecated_member_use
-part of 'settings_screen.dart';
+import 'package:flutter/material.dart';
 
-extension SettingsUIComponents on _SettingsScreenState {
-  Widget _buildSectionHeader(String title) {
+class SettingsSectionHeader extends StatelessWidget {
+  final String title;
+  final Color activeAccentColor;
+
+  const SettingsSectionHeader({
+    super.key,
+    required this.title,
+    required this.activeAccentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8, top: 16),
       child: Text(
         title,
         style: TextStyle(
-          color: _activeAccentColor,
+          color: activeAccentColor,
           fontSize: 14,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
@@ -16,21 +25,32 @@ extension SettingsUIComponents on _SettingsScreenState {
       ),
     );
   }
+}
 
-  Widget _buildPremiumCard({required List<Widget> children}) {
-    final isLight = _selectedThemeMode == 'light';
+class SettingsPremiumCard extends StatelessWidget {
+  final List<Widget> children;
+  final bool isLight;
+
+  const SettingsPremiumCard({
+    super.key,
+    required this.children,
+    required this.isLight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isLight ? Colors.white : const Color(0xFF161616),
         borderRadius: BorderRadius.circular(12),
         border: isLight
-            ? Border.all(color: Colors.black.withOpacity(0.05))
+            ? Border.all(color: Colors.black.withValues(alpha: 0.05))
             : null,
         boxShadow: isLight
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -49,8 +69,8 @@ extension SettingsUIComponents on _SettingsScreenState {
                 height: 1,
                 thickness: 1,
                 color: isLight
-                    ? Colors.black.withOpacity(0.04)
-                    : Colors.white.withOpacity(0.04),
+                    ? Colors.black.withValues(alpha: 0.04)
+                    : Colors.white.withValues(alpha: 0.04),
                 indent: 56,
                 endIndent: 16,
               ),
@@ -60,22 +80,39 @@ extension SettingsUIComponents on _SettingsScreenState {
       ),
     );
   }
+}
 
-  Widget _buildPremiumListTile({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    Widget? trailing,
-    VoidCallback? onTap,
-    Color? iconColor,
-    Color? titleColor,
-    bool isActive = false,
-  }) {
-    final isLight = _selectedThemeMode == 'light';
-    final effectiveIconColor =
-        iconColor ??
+class SettingsPremiumListTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final Color? iconColor;
+  final Color? titleColor;
+  final bool isActive;
+  final bool isLight;
+  final Color activeAccentColor;
+
+  const SettingsPremiumListTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.iconColor,
+    this.titleColor,
+    this.isActive = false,
+    required this.isLight,
+    required this.activeAccentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveIconColor = iconColor ??
         (isActive
-            ? _activeAccentColor
+            ? activeAccentColor
             : (isLight ? Colors.black54 : Colors.white70));
     final effectiveTitleColor =
         titleColor ?? (isLight ? const Color(0xFF1A1A1A) : Colors.white);
@@ -87,7 +124,7 @@ extension SettingsUIComponents on _SettingsScreenState {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: effectiveIconColor.withOpacity(isLight ? 0.06 : 0.1),
+          color: effectiveIconColor.withValues(alpha: isLight ? 0.06 : 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: effectiveIconColor, size: 20),
@@ -102,10 +139,10 @@ extension SettingsUIComponents on _SettingsScreenState {
       ),
       subtitle: subtitle != null
           ? Text(
-              subtitle,
+              subtitle!,
               style: TextStyle(
                 color: isActive
-                    ? effectiveIconColor.withOpacity(0.8)
+                    ? effectiveIconColor.withValues(alpha: 0.8)
                     : (isLight ? Colors.black45 : Colors.white38),
                 fontSize: 12,
               ),
@@ -114,24 +151,42 @@ extension SettingsUIComponents on _SettingsScreenState {
       trailing: trailing,
     );
   }
+}
 
-  Widget _buildPremiumSwitchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return _buildPremiumListTile(
+class SettingsPremiumSwitchTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final bool isLight;
+  final Color activeAccentColor;
+
+  const SettingsPremiumSwitchTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+    required this.isLight,
+    required this.activeAccentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SettingsPremiumListTile(
       icon: icon,
       title: title,
       subtitle: subtitle,
       isActive: value,
+      isLight: isLight,
+      activeAccentColor: activeAccentColor,
       trailing: Switch.adaptive(
         value: value,
         onChanged: onChanged,
-        activeColor: Colors.white,
-        activeTrackColor: _activeAccentColor,
+        activeThumbColor: Colors.white,
+        activeTrackColor: activeAccentColor,
         inactiveThumbColor: Colors.white54,
         inactiveTrackColor: Colors.white10,
       ),

@@ -379,7 +379,7 @@ extension _PlayerUI on _MainScreenState {
                     final cleanArtist =
                         (currentTrack.artist.trim().isEmpty ||
                             currentTrack.artist == '<unknown>')
-                        ? FlowStrings.get('unknown_artist')
+                        ? AppLocalizations.of(context).unknownArtist
                         : currentTrack.artist;
                     final query = Uri.encodeComponent(
                       '$cleanArtist $cleanTitle lyrics',
@@ -411,7 +411,7 @@ extension _PlayerUI on _MainScreenState {
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                FlowStrings.get('cancel'),
+                AppLocalizations.of(context).cancel,
                 style: TextStyle(color: Colors.white38),
               ),
             ),
@@ -428,7 +428,7 @@ extension _PlayerUI on _MainScreenState {
                 }
                 navigator.pop();
                 _loadLyricsForTrack(currentTrack);
-                showFlowToast(FlowStrings.get('toast_lyrics_updated'));
+                showFlowToast(lookupAppLocalizations(Locale(FlowStrings.currentLang)).toastLyricsUpdated);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _activeAccentColor,
@@ -437,7 +437,7 @@ extension _PlayerUI on _MainScreenState {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text(FlowStrings.get('save')),
+              child: Text(AppLocalizations.of(context).save),
             ),
           ],
         );
@@ -503,7 +503,7 @@ extension _PlayerUI on _MainScreenState {
         child: Stack(
           children: [
             ValueListenableBuilder<String>(
-              valueListenable: _playerBackgroundStyleNotifier,
+              valueListenable: playerBackgroundStyleNotifier,
               builder: (context, style, child) {
                 if (style == 'amoled') {
                   return Positioned.fill(
@@ -555,17 +555,17 @@ extension _PlayerUI on _MainScreenState {
                   );
                 } else if (style == 'custom') {
                   return ValueListenableBuilder<String?>(
-                    valueListenable: _playerCustomBgPathNotifier,
+                    valueListenable: playerCustomBgPathNotifier,
                     builder: (context, customPath, child) {
                       return ValueListenableBuilder<double>(
-                        valueListenable: _playerCustomBgBlurNotifier,
+                        valueListenable: playerCustomBgBlurNotifier,
                         builder: (context, blurVal, child) {
                           return ValueListenableBuilder<double>(
-                            valueListenable: _playerCustomBgDimNotifier,
+                            valueListenable: playerCustomBgDimNotifier,
                             builder: (context, dimVal, child) {
                               return AnimatedBuilder(
                                 animation: Listenable.merge([
-                                  _playerCustomBgScaleNotifier,
+                                  playerCustomBgScaleNotifier,
                                   playerCustomBgOffsetXNotifier,
                                   playerCustomBgOffsetYNotifier,
                                 ]),
@@ -588,7 +588,7 @@ extension _PlayerUI on _MainScreenState {
                                               ),
                                               child: Transform.scale(
                                                 scale:
-                                                    _playerCustomBgScaleNotifier
+                                                    playerCustomBgScaleNotifier
                                                         .value,
                                                 alignment: Alignment(
                                                   playerCustomBgOffsetXNotifier
@@ -707,7 +707,7 @@ extension _PlayerUI on _MainScreenState {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        FlowStrings.get('lyrics').toUpperCase(),
+                                        AppLocalizations.of(context).lyrics.toUpperCase(),
                                         textAlign: TextAlign.center,
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w600,
@@ -743,7 +743,7 @@ extension _PlayerUI on _MainScreenState {
                                             .toString()
                                             .padLeft(2, '0');
                                         return Text(
-                                          '${FlowStrings.get('stops_in').toUpperCase()} $mins:$secs',
+                                          '${AppLocalizations.of(context).stopsIn.toUpperCase()} $mins:$secs',
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
                                             fontWeight: FontWeight.w600,
@@ -757,7 +757,7 @@ extension _PlayerUI on _MainScreenState {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            '${FlowStrings.get('playing_from').toUpperCase()} $_playingFromType',
+                                            '${AppLocalizations.of(context).playingFrom.toUpperCase()} $_playingFromType',
                                             textAlign: TextAlign.center,
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w600,
@@ -769,7 +769,7 @@ extension _PlayerUI on _MainScreenState {
                                           const SizedBox(height: 2),
                                           Text(
                                             _playingFromName == 'All Songs'
-                                                ? FlowStrings.get('all_songs')
+                                                ? AppLocalizations.of(context).allSongs
                                                 : _playingFromName,
                                             textAlign: TextAlign.center,
                                             style: const TextStyle(
@@ -932,7 +932,16 @@ extension _PlayerUI on _MainScreenState {
                                 : Colors.white60,
                             size: 26,
                           ),
-                          onPressed: () => _toggleFavorite(currentTrack.id),
+                          onPressed: () {
+                            final wasFavorited = _favoriteTrackIds.contains(currentTrack.id);
+                            _toggleFavorite(currentTrack.id);
+                            if (wasFavorited) {
+                              final loc = lookupAppLocalizations(Locale(FlowStrings.currentLang));
+                              if (_playingFromName == loc.favourites) {
+                                _removeFromQueueAndPlayer(currentTrack.id);
+                              }
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -1407,7 +1416,7 @@ class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
         widget.customPath!.isNotEmpty) {
       final int cacheWidth =
           widget.cacheWidthOverride ??
-          (widget.size > 100 ? 600 : (widget.size * 3).toInt());
+          (widget.size > 100 ? 600 : 144);
       return Container(
         width: widget.size,
         height: widget.size,

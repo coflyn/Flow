@@ -30,7 +30,7 @@ extension SettingsModals on _SettingsScreenState {
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  FlowStrings.get('sleep_timer_title'),
+                  AppLocalizations.of(context).sleepTimerTitle,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -40,14 +40,32 @@ extension SettingsModals on _SettingsScreenState {
               ),
               const SizedBox(height: 16),
               const Divider(color: Colors.white10, height: 1),
-              _buildTimerOption('5 ${FlowStrings.get('minutes_format')}', 5),
-              _buildTimerOption('10 ${FlowStrings.get('minutes_format')}', 10),
-              _buildTimerOption('15 ${FlowStrings.get('minutes_format')}', 15),
-              _buildTimerOption('30 ${FlowStrings.get('minutes_format')}', 30),
-              _buildTimerOption('45 ${FlowStrings.get('minutes_format')}', 45),
-              _buildTimerOption(FlowStrings.get('hour_1'), 60),
-              _buildTimerOption(FlowStrings.get('end_of_track_short'), -1),
-              _buildTimerOption(FlowStrings.get('turn_off'), 0),
+              _buildTimerOption(
+                '5 ${AppLocalizations.of(context).minutesFormat}',
+                5,
+              ),
+              _buildTimerOption(
+                '10 ${AppLocalizations.of(context).minutesFormat}',
+                10,
+              ),
+              _buildTimerOption(
+                '15 ${AppLocalizations.of(context).minutesFormat}',
+                15,
+              ),
+              _buildTimerOption(
+                '30 ${AppLocalizations.of(context).minutesFormat}',
+                30,
+              ),
+              _buildTimerOption(
+                '45 ${AppLocalizations.of(context).minutesFormat}',
+                45,
+              ),
+              _buildTimerOption(AppLocalizations.of(context).hour1, 60),
+              _buildTimerOption(
+                AppLocalizations.of(context).endOfTrackShort,
+                -1,
+              ),
+              _buildTimerOption(AppLocalizations.of(context).turnOff, 0),
               const SizedBox(height: 16),
             ],
           ),
@@ -77,10 +95,10 @@ extension SettingsModals on _SettingsScreenState {
   Future<void> _handleBackup() async {
     final bool? confirm = await showConfirmationDialog(
       context,
-      title: FlowStrings.get('confirm_backup'),
-      content: FlowStrings.get('confirm_backup_body'),
-      confirmText: FlowStrings.get('backup'),
-      confirmColor: widget.activeAccentColor,
+      title: AppLocalizations.of(context).confirmBackup,
+      content: AppLocalizations.of(context).confirmBackupBody,
+      confirmText: AppLocalizations.of(context).backup,
+      confirmColor: _activeAccentColor,
     );
     if (confirm != true) return;
 
@@ -104,25 +122,25 @@ extension SettingsModals on _SettingsScreenState {
         final file = File('${directory.path}/Flow_Backup.json');
         await file.writeAsString(jsonString);
 
-        if (!context.mounted) return;
-        showFlowToast(FlowStrings.get('backup_success'));
+        if (!mounted) return;
+        showFlowToast(AppLocalizations.of(context).backupSuccess);
       } else {
-        if (!context.mounted) return;
-        showFlowToast(FlowStrings.get('permission_denied'));
+        if (!mounted) return;
+        showFlowToast(AppLocalizations.of(context).permissionDenied);
       }
     } catch (e) {
-      if (!context.mounted) return;
-      showFlowToast('${FlowStrings.get('backup_failed')}: $e');
+      if (!mounted) return;
+      showFlowToast('${AppLocalizations.of(context).backupFailed}: $e');
     }
   }
 
   Future<void> _handleRestore() async {
     final bool? confirm = await showConfirmationDialog(
       context,
-      title: FlowStrings.get('confirm_restore'),
-      content: FlowStrings.get('confirm_restore_body'),
-      confirmText: FlowStrings.get('restore'),
-      confirmColor: widget.activeAccentColor,
+      title: AppLocalizations.of(context).confirmRestore,
+      content: AppLocalizations.of(context).confirmRestoreBody,
+      confirmText: AppLocalizations.of(context).restore,
+      confirmColor: _activeAccentColor,
     );
     if (confirm != true) return;
 
@@ -154,29 +172,29 @@ extension SettingsModals on _SettingsScreenState {
             }
           }
 
-          if (!context.mounted) return;
-          showFlowToast(FlowStrings.get('restore_success'));
+          if (!mounted) return;
+          showFlowToast(AppLocalizations.of(context).restoreSuccess);
           widget.onRescanLibrary();
         } else {
-          if (!context.mounted) return;
-          showFlowToast(FlowStrings.get('no_backup_found'));
+          if (!mounted) return;
+          showFlowToast(AppLocalizations.of(context).noBackupFound);
         }
       } else {
-        if (!context.mounted) return;
-        showFlowToast(FlowStrings.get('permission_denied'));
+        if (!mounted) return;
+        showFlowToast(AppLocalizations.of(context).permissionDenied);
       }
     } catch (e) {
-      if (!context.mounted) return;
-      showFlowToast('${FlowStrings.get('restore_failed')}: $e');
+      if (!mounted) return;
+      showFlowToast('${AppLocalizations.of(context).restoreFailed}: $e');
     }
   }
 
   Future<void> _showResetConfirmation() async {
     final bool? confirm = await showConfirmationDialog(
       context,
-      title: FlowStrings.get('reset_confirm_title'),
-      content: FlowStrings.get('reset_confirm_body'),
-      confirmText: FlowStrings.get('reset'),
+      title: AppLocalizations.of(context).resetConfirmTitle,
+      content: AppLocalizations.of(context).resetConfirmBody,
+      confirmText: AppLocalizations.of(context).reset,
     );
     if (confirm == true) {
       if (mounted) {
@@ -254,7 +272,9 @@ extension SettingsModals on _SettingsScreenState {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            FlowStrings.get('hidden_filtered_tracks_title'),
+                            AppLocalizations.of(
+                              context,
+                            ).hiddenFilteredTracksTitle,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -262,7 +282,7 @@ extension SettingsModals on _SettingsScreenState {
                             ),
                           ),
                           Text(
-                            '${displaySongs.length}${FlowStrings.get('tracks_count_suffix')}',
+                            '${displaySongs.length}${AppLocalizations.of(context).tracksCountSuffix}',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.4),
                               fontSize: 13,
@@ -272,7 +292,7 @@ extension SettingsModals on _SettingsScreenState {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        FlowStrings.get('hidden_tracks_desc'),
+                        AppLocalizations.of(context).hiddenTracksDesc,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.5),
                           fontSize: 12,
@@ -283,7 +303,7 @@ extension SettingsModals on _SettingsScreenState {
                         child: displaySongs.isEmpty
                             ? Center(
                                 child: Text(
-                                  FlowStrings.get('no_hidden_tracks'),
+                                  AppLocalizations.of(context).noHiddenTracks,
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.3),
                                     fontSize: 14,
@@ -336,9 +356,9 @@ extension SettingsModals on _SettingsScreenState {
                                                       (song.artist == null ||
                                                               song.artist ==
                                                                   '<unknown>')
-                                                          ? FlowStrings.get(
-                                                              'unknown_artist',
-                                                            )
+                                                          ? AppLocalizations.of(
+                                                              context,
+                                                            ).unknownArtist
                                                           : song.artist!,
                                                       maxLines: 1,
                                                       overflow:
@@ -372,9 +392,9 @@ extension SettingsModals on _SettingsScreenState {
                                                         ),
                                                       ),
                                                       child: Text(
-                                                        FlowStrings.get(
-                                                          'badge_hidden',
-                                                        ),
+                                                        AppLocalizations.of(
+                                                          context,
+                                                        ).badgeHidden,
                                                         style: const TextStyle(
                                                           color: Colors.orange,
                                                           fontSize: 8,
@@ -404,9 +424,9 @@ extension SettingsModals on _SettingsScreenState {
                                                         ),
                                                       ),
                                                       child: Text(
-                                                        FlowStrings.get(
-                                                          'badge_short_audio',
-                                                        ),
+                                                        AppLocalizations.of(
+                                                          context,
+                                                        ).badgeShortAudio,
                                                         style: const TextStyle(
                                                           color: Colors.cyan,
                                                           fontSize: 8,
@@ -428,9 +448,9 @@ extension SettingsModals on _SettingsScreenState {
                                               color: _activeAccentColor,
                                               size: 20,
                                             ),
-                                            tooltip: FlowStrings.get(
-                                              'unhide_track',
-                                            ),
+                                            tooltip: AppLocalizations.of(
+                                              context,
+                                            ).unhideTrack,
                                             onPressed: () async {
                                               final prefs =
                                                   await SharedPreferences.getInstance();
@@ -457,14 +477,14 @@ extension SettingsModals on _SettingsScreenState {
                                               color: Colors.white30,
                                               size: 20,
                                             ),
-                                            tooltip: FlowStrings.get(
-                                              'auto_hidden_tooltip',
-                                            ),
+                                            tooltip: AppLocalizations.of(
+                                              context,
+                                            ).autoHiddenTooltip,
                                             onPressed: () {
                                               showFlowToast(
-                                                FlowStrings.get(
-                                                  'auto_hidden_toast',
-                                                ),
+                                                AppLocalizations.of(
+                                                  context,
+                                                ).autoHiddenToast,
                                               );
                                             },
                                           ),
@@ -486,9 +506,9 @@ extension SettingsModals on _SettingsScreenState {
   }
 
   String _getThresholdLabel(int seconds) {
-    if (seconds == -1) return FlowStrings.get('end_of_track_short');
-    if (seconds == 60) return FlowStrings.get('minute_1');
-    return '$seconds ${FlowStrings.get('seconds_format')}';
+    if (seconds == -1) return AppLocalizations.of(context).endOfTrackShort;
+    if (seconds == 60) return AppLocalizations.of(context).minute1;
+    return '$seconds ${AppLocalizations.of(context).secondsFormat}';
   }
 
   void _showThresholdDialog() {
@@ -518,7 +538,7 @@ extension SettingsModals on _SettingsScreenState {
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  FlowStrings.get('most_played_threshold_title'),
+                  AppLocalizations.of(context).mostPlayedThresholdTitle,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -529,19 +549,22 @@ extension SettingsModals on _SettingsScreenState {
               const SizedBox(height: 16),
               const Divider(color: Colors.white10, height: 1),
               _buildThresholdOption(
-                '5 ${FlowStrings.get('seconds_format')}',
+                '5 ${AppLocalizations.of(context).secondsFormat}',
                 5,
               ),
               _buildThresholdOption(
-                '10 ${FlowStrings.get('seconds_default_format')}',
+                '10 ${AppLocalizations.of(context).secondsDefaultFormat}',
                 10,
               ),
               _buildThresholdOption(
-                '30 ${FlowStrings.get('seconds_format')}',
+                '30 ${AppLocalizations.of(context).secondsFormat}',
                 30,
               ),
-              _buildThresholdOption(FlowStrings.get('minute_1'), 60),
-              _buildThresholdOption(FlowStrings.get('end_of_track_short'), -1),
+              _buildThresholdOption(AppLocalizations.of(context).minute1, 60),
+              _buildThresholdOption(
+                AppLocalizations.of(context).endOfTrackShort,
+                -1,
+              ),
               const SizedBox(height: 16),
             ],
           ),
@@ -566,20 +589,23 @@ extension SettingsModals on _SettingsScreenState {
           ? Icon(Icons.check, color: _activeAccentColor)
           : null,
       onTap: () {
-        widget.onSetPlayCountThreshold(seconds);
+        ref
+            .read(settingsProvider.notifier)
+            .updateSetting(playCountThreshold: seconds);
         setState(() {
           _playCountThreshold = seconds;
         });
+        widget.onSettingsChanged();
         Navigator.pop(context);
       },
     );
   }
 
   String _getFontSizeLabel(double scale) {
-    if (scale == 0.85) return FlowStrings.get('size_small');
-    if (scale == 1.15) return FlowStrings.get('size_large');
-    if (scale == 1.3) return FlowStrings.get('size_extra_large');
-    return FlowStrings.get('size_default');
+    if (scale == 0.85) return AppLocalizations.of(context).sizeSmall;
+    if (scale == 1.15) return AppLocalizations.of(context).sizeLarge;
+    if (scale == 1.3) return AppLocalizations.of(context).sizeExtraLarge;
+    return AppLocalizations.of(context).sizeDefault;
   }
 
   void _showTypographyPreviewDialog() {
@@ -644,7 +670,7 @@ extension SettingsModals on _SettingsScreenState {
                       const SizedBox(height: 16),
                       Center(
                         child: Text(
-                          FlowStrings.get('typography_font_size'),
+                          AppLocalizations.of(context).typographyFontSize,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -664,7 +690,7 @@ extension SettingsModals on _SettingsScreenState {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            FlowStrings.get('live_preview'),
+                            AppLocalizations.of(context).livePreview,
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 14,
@@ -755,7 +781,9 @@ extension SettingsModals on _SettingsScreenState {
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
-                                              FlowStrings.get('search_songs'),
+                                              AppLocalizations.of(
+                                                context,
+                                              ).searchSongs,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: previewTextStyle(
@@ -802,7 +830,7 @@ extension SettingsModals on _SettingsScreenState {
                                 children: [
                                   Expanded(
                                     child: _buildSimulatedFilterCapsule(
-                                      FlowStrings.get('songs_title'),
+                                      AppLocalizations.of(context).songsTitle,
                                       true,
                                       previewTextStyle,
                                     ),
@@ -810,7 +838,7 @@ extension SettingsModals on _SettingsScreenState {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: _buildSimulatedFilterCapsule(
-                                      FlowStrings.get('playlists'),
+                                      AppLocalizations.of(context).playlists,
                                       false,
                                       previewTextStyle,
                                     ),
@@ -818,7 +846,7 @@ extension SettingsModals on _SettingsScreenState {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: _buildSimulatedFilterCapsule(
-                                      FlowStrings.get('artists'),
+                                      AppLocalizations.of(context).artists,
                                       false,
                                       previewTextStyle,
                                     ),
@@ -826,7 +854,7 @@ extension SettingsModals on _SettingsScreenState {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: _buildSimulatedFilterCapsule(
-                                      FlowStrings.get('albums'),
+                                      AppLocalizations.of(context).albums,
                                       false,
                                       previewTextStyle,
                                     ),
@@ -877,7 +905,7 @@ extension SettingsModals on _SettingsScreenState {
 
                       // Typography Selection Row
                       Text(
-                        FlowStrings.get('font_family'),
+                        AppLocalizations.of(context).fontFamily,
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
@@ -925,7 +953,7 @@ extension SettingsModals on _SettingsScreenState {
 
                       // Font Size Selection List
                       Text(
-                        FlowStrings.get('font_size'),
+                        AppLocalizations.of(context).fontSize,
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
@@ -934,7 +962,7 @@ extension SettingsModals on _SettingsScreenState {
                       ),
                       const SizedBox(height: 10),
                       _buildFontSizeSelectorRow(
-                        '${FlowStrings.get('size_small')} (85%)',
+                        '${AppLocalizations.of(context).sizeSmall} (85%)',
                         0.85,
                         tempFontScale,
                         (val) {
@@ -942,7 +970,7 @@ extension SettingsModals on _SettingsScreenState {
                         },
                       ),
                       _buildFontSizeSelectorRow(
-                        '${FlowStrings.get('size_default')} (100%)',
+                        '${AppLocalizations.of(context).sizeDefault} (100%)',
                         1.0,
                         tempFontScale,
                         (val) {
@@ -950,7 +978,7 @@ extension SettingsModals on _SettingsScreenState {
                         },
                       ),
                       _buildFontSizeSelectorRow(
-                        '${FlowStrings.get('size_large')} (115%)',
+                        '${AppLocalizations.of(context).sizeLarge} (115%)',
                         1.15,
                         tempFontScale,
                         (val) {
@@ -958,7 +986,7 @@ extension SettingsModals on _SettingsScreenState {
                         },
                       ),
                       _buildFontSizeSelectorRow(
-                        '${FlowStrings.get('size_extra_large')} (130%)',
+                        '${AppLocalizations.of(context).sizeExtraLarge} (130%)',
                         1.3,
                         tempFontScale,
                         (val) {
@@ -986,7 +1014,7 @@ extension SettingsModals on _SettingsScreenState {
                                 ),
                                 child: Center(
                                   child: Text(
-                                    FlowStrings.get('close'),
+                                    AppLocalizations.of(context).close,
                                     style: TextStyle(
                                       color: Colors.white70,
                                       fontWeight: FontWeight.bold,
@@ -1007,8 +1035,12 @@ extension SettingsModals on _SettingsScreenState {
                                   'fontScale',
                                   tempFontScale,
                                 );
-                                widget.onSetFont(tempFont);
-                                widget.onSetFontScale(tempFontScale);
+                                ref
+                                    .read(settingsProvider.notifier)
+                                    .updateSetting(activeFont: tempFont);
+                                ref
+                                    .read(settingsProvider.notifier)
+                                    .updateSetting(fontScale: tempFontScale);
                                 setState(() {
                                   _activeFont = tempFont;
                                   _fontScale = tempFontScale;
@@ -1043,7 +1075,7 @@ extension SettingsModals on _SettingsScreenState {
                                 ),
                                 child: Center(
                                   child: Text(
-                                    FlowStrings.get('save'),
+                                    AppLocalizations.of(context).save,
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -1070,27 +1102,27 @@ extension SettingsModals on _SettingsScreenState {
   String _getThemeAccentLabel(String preset) {
     switch (preset) {
       case 'dynamic':
-        return FlowStrings.get('dynamic_artwork');
+        return AppLocalizations.of(context).dynamicArtwork;
       case 'spotify':
-        return FlowStrings.get('accent_spotify');
+        return AppLocalizations.of(context).accentSpotify;
       case 'apple':
-        return FlowStrings.get('accent_apple');
+        return AppLocalizations.of(context).accentApple;
       case 'purple':
-        return FlowStrings.get('accent_purple');
+        return AppLocalizations.of(context).accentPurple;
       case 'tidal':
-        return FlowStrings.get('accent_tidal');
+        return AppLocalizations.of(context).accentTidal;
       case 'orange':
-        return FlowStrings.get('accent_orange');
+        return AppLocalizations.of(context).accentOrange;
       case 'sakura':
-        return FlowStrings.get('accent_sakura');
+        return AppLocalizations.of(context).accentSakura;
       case 'gold':
-        return FlowStrings.get('accent_gold');
+        return AppLocalizations.of(context).accentGold;
       case 'blue':
-        return FlowStrings.get('accent_blue');
+        return AppLocalizations.of(context).accentBlue;
       case 'lime':
-        return FlowStrings.get('accent_lime');
+        return AppLocalizations.of(context).accentLime;
       default:
-        return FlowStrings.get('accent_spotify');
+        return AppLocalizations.of(context).accentSpotify;
     }
   }
 
@@ -1114,62 +1146,62 @@ extension SettingsModals on _SettingsScreenState {
                 final presets = [
                   {
                     'id': 'dynamic',
-                    'label': FlowStrings.get('dynamic_artwork'),
-                    'desc': FlowStrings.get('accent_desc_dynamic'),
-                    'color': widget.activeAccentColor,
+                    'label': AppLocalizations.of(context).dynamicArtwork,
+                    'desc': AppLocalizations.of(context).accentDescDynamic,
+                    'color': _activeAccentColor,
                   },
                   {
                     'id': 'spotify',
-                    'label': FlowStrings.get('accent_spotify'),
-                    'desc': FlowStrings.get('accent_desc_spotify'),
+                    'label': AppLocalizations.of(context).accentSpotify,
+                    'desc': AppLocalizations.of(context).accentDescSpotify,
                     'color': const Color(0xFF1DB954),
                   },
                   {
                     'id': 'apple',
-                    'label': FlowStrings.get('accent_apple'),
-                    'desc': FlowStrings.get('accent_desc_apple'),
+                    'label': AppLocalizations.of(context).accentApple,
+                    'desc': AppLocalizations.of(context).accentDescApple,
                     'color': const Color(0xFFFC3C44),
                   },
                   {
                     'id': 'purple',
-                    'label': FlowStrings.get('accent_purple'),
-                    'desc': FlowStrings.get('accent_desc_purple'),
+                    'label': AppLocalizations.of(context).accentPurple,
+                    'desc': AppLocalizations.of(context).accentDescPurple,
                     'color': const Color(0xFF8E2DE2),
                   },
                   {
                     'id': 'tidal',
-                    'label': FlowStrings.get('accent_tidal'),
-                    'desc': FlowStrings.get('accent_desc_tidal'),
+                    'label': AppLocalizations.of(context).accentTidal,
+                    'desc': AppLocalizations.of(context).accentDescTidal,
                     'color': const Color(0xFF00F2FE),
                   },
                   {
                     'id': 'orange',
-                    'label': FlowStrings.get('accent_orange'),
-                    'desc': FlowStrings.get('accent_desc_orange'),
+                    'label': AppLocalizations.of(context).accentOrange,
+                    'desc': AppLocalizations.of(context).accentDescOrange,
                     'color': const Color(0xFFFF9233),
                   },
                   {
                     'id': 'sakura',
-                    'label': FlowStrings.get('accent_sakura'),
-                    'desc': FlowStrings.get('accent_desc_sakura'),
+                    'label': AppLocalizations.of(context).accentSakura,
+                    'desc': AppLocalizations.of(context).accentDescSakura,
                     'color': const Color(0xFFFF2A6D),
                   },
                   {
                     'id': 'gold',
-                    'label': FlowStrings.get('accent_gold'),
-                    'desc': FlowStrings.get('accent_desc_gold'),
+                    'label': AppLocalizations.of(context).accentGold,
+                    'desc': AppLocalizations.of(context).accentDescGold,
                     'color': const Color(0xFFDFBA59),
                   },
                   {
                     'id': 'blue',
-                    'label': FlowStrings.get('accent_blue'),
-                    'desc': FlowStrings.get('accent_desc_blue'),
+                    'label': AppLocalizations.of(context).accentBlue,
+                    'desc': AppLocalizations.of(context).accentDescBlue,
                     'color': const Color(0xFF007AFF),
                   },
                   {
                     'id': 'lime',
-                    'label': FlowStrings.get('accent_lime'),
-                    'desc': FlowStrings.get('accent_desc_lime'),
+                    'label': AppLocalizations.of(context).accentLime,
+                    'desc': AppLocalizations.of(context).accentDescLime,
                     'color': const Color(0xFFCCFF00),
                   },
                 ];
@@ -1187,7 +1219,7 @@ extension SettingsModals on _SettingsScreenState {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      FlowStrings.get('theme_accent_color'),
+                      AppLocalizations.of(context).themeAccentColor,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -1196,7 +1228,7 @@ extension SettingsModals on _SettingsScreenState {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      FlowStrings.get('accent_dialog_subtitle'),
+                      AppLocalizations.of(context).accentDialogSubtitle,
                       style: const TextStyle(
                         color: Colors.white54,
                         fontSize: 12,
@@ -1224,7 +1256,9 @@ extension SettingsModals on _SettingsScreenState {
                               setState(() {
                                 _selectedThemeAccent = id;
                               });
-                              widget.onSetThemeAccent(id);
+                              ref
+                                  .read(settingsProvider.notifier)
+                                  .updateSetting(themeAccentPreset: id);
                             },
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 24,
@@ -1487,15 +1521,15 @@ extension SettingsModals on _SettingsScreenState {
   String _getPlayerBackgroundStyleLabel(String style) {
     switch (style) {
       case 'gradient':
-        return FlowStrings.get('gradient_dynamic');
+        return AppLocalizations.of(context).gradientDynamic;
       case 'blur':
-        return FlowStrings.get('blurred_cover');
+        return AppLocalizations.of(context).blurredCover;
       case 'amoled':
-        return FlowStrings.get('amoled_black');
+        return AppLocalizations.of(context).amoledBlack;
       case 'custom':
-        return FlowStrings.get('custom_image');
+        return AppLocalizations.of(context).customImage;
       default:
-        return FlowStrings.get('gradient_dynamic');
+        return AppLocalizations.of(context).gradientDynamic;
     }
   }
 
@@ -1519,23 +1553,23 @@ extension SettingsModals on _SettingsScreenState {
                 final options = [
                   {
                     'id': 'gradient',
-                    'label': FlowStrings.get('gradient_dynamic'),
-                    'desc': FlowStrings.get('player_bg_desc_gradient'),
+                    'label': AppLocalizations.of(context).gradientDynamic,
+                    'desc': AppLocalizations.of(context).playerBgDescGradient,
                   },
                   {
                     'id': 'blur',
-                    'label': FlowStrings.get('blurred_cover'),
-                    'desc': FlowStrings.get('player_bg_desc_blur'),
+                    'label': AppLocalizations.of(context).blurredCover,
+                    'desc': AppLocalizations.of(context).playerBgDescBlur,
                   },
                   {
                     'id': 'amoled',
-                    'label': FlowStrings.get('amoled_black'),
-                    'desc': FlowStrings.get('player_bg_desc_amoled'),
+                    'label': AppLocalizations.of(context).amoledBlack,
+                    'desc': AppLocalizations.of(context).playerBgDescAmoled,
                   },
                   {
                     'id': 'custom',
-                    'label': FlowStrings.get('custom_image'),
-                    'desc': FlowStrings.get('player_bg_desc_custom'),
+                    'label': AppLocalizations.of(context).customImage,
+                    'desc': AppLocalizations.of(context).playerBgDescCustom,
                   },
                 ];
 
@@ -1552,7 +1586,7 @@ extension SettingsModals on _SettingsScreenState {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      FlowStrings.get('player_background'),
+                      AppLocalizations.of(context).playerBackground,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -1587,17 +1621,22 @@ extension SettingsModals on _SettingsScreenState {
                                     'playerBackgroundStyle',
                                     'custom',
                                   );
-                                  if (!context.mounted) return;
+                                  if (!mounted) return;
                                   setState(() {
                                     _playerBackgroundStyle = 'custom';
                                   });
                                   setModalState(() {
                                     _playerBackgroundStyle = 'custom';
                                   });
-                                  widget.onSetPlayerBackgroundStyle('custom');
+                                  ref
+                                      .read(settingsProvider.notifier)
+                                      .updateSetting(
+                                        playerBackgroundStyle: 'custom',
+                                      );
                                   showFlowToast(
                                     'Custom wallpaper background set!',
                                   );
+                                  if (!context.mounted) return;
                                   Navigator.pop(context);
                                 } else {
                                   final ImagePicker picker = ImagePicker();
@@ -1622,7 +1661,7 @@ extension SettingsModals on _SettingsScreenState {
                                         'playerCustomBgPath',
                                         croppedPath,
                                       );
-                                      if (!context.mounted) return;
+                                      if (!mounted) return;
                                       setState(() {
                                         _playerBackgroundStyle = 'custom';
                                         _playerCustomBgPath = croppedPath;
@@ -1630,15 +1669,20 @@ extension SettingsModals on _SettingsScreenState {
                                       setModalState(() {
                                         _playerBackgroundStyle = 'custom';
                                       });
-                                      widget.onSetPlayerBackgroundStyle(
-                                        'custom',
-                                      );
-                                      widget.onSetPlayerCustomBgPath(
-                                        croppedPath,
-                                      );
+                                      ref
+                                          .read(settingsProvider.notifier)
+                                          .updateSetting(
+                                            playerBackgroundStyle: 'custom',
+                                          );
+                                      ref
+                                          .read(settingsProvider.notifier)
+                                          .updateSetting(
+                                            playerCustomBgPath: croppedPath,
+                                          );
                                       showFlowToast(
                                         'Custom wallpaper background set!',
                                       );
+                                      if (!context.mounted) return;
                                       Navigator.pop(context);
                                     }
                                   }
@@ -1650,17 +1694,20 @@ extension SettingsModals on _SettingsScreenState {
                                   'playerBackgroundStyle',
                                   id,
                                 );
-                                if (!context.mounted) return;
+                                if (!mounted) return;
                                 setState(() {
                                   _playerBackgroundStyle = id;
                                 });
                                 setModalState(() {
                                   _playerBackgroundStyle = id;
                                 });
-                                widget.onSetPlayerBackgroundStyle(id);
+                                ref
+                                    .read(settingsProvider.notifier)
+                                    .updateSetting(playerBackgroundStyle: id);
                                 showFlowToast(
-                                  '${FlowStrings.get('toast_bg_style_set')} $label',
+                                  '${lookupAppLocalizations(Locale(FlowStrings.currentLang)).toastBgStyleSet} $label',
                                 );
+                                if (!context.mounted) return;
                                 Navigator.pop(context);
                               }
                             },
@@ -1721,12 +1768,12 @@ extension SettingsModals on _SettingsScreenState {
   String _getThemeModeLabel(String mode) {
     switch (mode) {
       case 'light':
-        return FlowStrings.get('light_mode');
+        return AppLocalizations.of(context).lightMode;
       case 'custom':
-        return FlowStrings.get('custom_theme');
+        return AppLocalizations.of(context).customTheme;
       case 'dark':
       default:
-        return FlowStrings.get('dark_mode');
+        return AppLocalizations.of(context).darkMode;
     }
   }
 
@@ -1760,7 +1807,7 @@ extension SettingsModals on _SettingsScreenState {
               ),
               const SizedBox(height: 16),
               Text(
-                FlowStrings.get('theme_mode'),
+                AppLocalizations.of(context).themeMode,
                 style: TextStyle(
                   color: titleColor,
                   fontSize: 18,
@@ -1770,20 +1817,20 @@ extension SettingsModals on _SettingsScreenState {
               const SizedBox(height: 16),
               _buildThemeModeItem(
                 id: 'dark',
-                title: FlowStrings.get('dark_mode'),
-                subtitle: FlowStrings.get('theme_mode_desc_dark'),
+                title: AppLocalizations.of(context).darkMode,
+                subtitle: AppLocalizations.of(context).themeModeDescDark,
                 icon: Icons.dark_mode_outlined,
               ),
               _buildThemeModeItem(
                 id: 'light',
-                title: FlowStrings.get('light_mode'),
-                subtitle: FlowStrings.get('theme_mode_desc_light'),
+                title: AppLocalizations.of(context).lightMode,
+                subtitle: AppLocalizations.of(context).themeModeDescLight,
                 icon: Icons.light_mode_outlined,
               ),
               _buildThemeModeItem(
                 id: 'custom',
-                title: FlowStrings.get('custom_theme'),
-                subtitle: FlowStrings.get('theme_mode_desc_custom'),
+                title: AppLocalizations.of(context).customTheme,
+                subtitle: AppLocalizations.of(context).themeModeDescCustom,
                 icon: Icons.color_lens_outlined,
               ),
               const SizedBox(height: 24),
@@ -1845,7 +1892,7 @@ extension SettingsModals on _SettingsScreenState {
         setState(() {
           _selectedThemeMode = id;
         });
-        widget.onSetThemeMode(id);
+        ref.read(settingsProvider.notifier).updateSetting(themeMode: id);
       },
     );
   }
@@ -1861,8 +1908,10 @@ extension SettingsModals on _SettingsScreenState {
         setState(() {
           _customThemeStyle = id;
         });
-        widget.onSetCustomThemeStyle(id);
-        showFlowToast('${FlowStrings.get('toast_theme_style_set')} $label');
+        ref.read(settingsProvider.notifier).updateSetting(customThemeStyle: id);
+        showFlowToast(
+          '${lookupAppLocalizations(Locale(FlowStrings.currentLang)).toastThemeStyleSet} $label',
+        );
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -1912,7 +1961,7 @@ extension SettingsModals on _SettingsScreenState {
         setState(() {
           _customThemeBg = id;
         });
-        widget.onSetCustomThemeBg(id);
+        ref.read(settingsProvider.notifier).updateSetting(customThemeBg: id);
 
         if (id == 'custom_image' && _customThemeBgPath == null) {
           final ImagePicker picker = ImagePicker();
@@ -1930,8 +1979,14 @@ extension SettingsModals on _SettingsScreenState {
               setState(() {
                 _customThemeBgPath = croppedPath;
               });
-              widget.onSetCustomThemeBgPath(croppedPath);
-              showFlowToast(FlowStrings.get('wallpaper_updated'));
+              ref
+                  .read(settingsProvider.notifier)
+                  .updateSetting(customThemeBgPath: croppedPath);
+              showFlowToast(
+                lookupAppLocalizations(
+                  Locale(FlowStrings.currentLang),
+                ).wallpaperUpdated,
+              );
             }
           }
         }
@@ -2027,7 +2082,7 @@ extension SettingsModals on _SettingsScreenState {
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  FlowStrings.get('language'),
+                  AppLocalizations.of(context).language,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,

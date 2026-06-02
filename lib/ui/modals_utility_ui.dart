@@ -128,7 +128,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                     height: 300,
                     child: Center(
                       child: Text(
-                        FlowStrings.get('no_music_folders'),
+                        AppLocalizations.of(context).noMusicFolders,
                         style: TextStyle(
                           color: isLight ? Colors.black45 : Colors.white30,
                           fontSize: 14,
@@ -190,7 +190,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            FlowStrings.get('specific_folder_scan'),
+                            AppLocalizations.of(context).specificFolderScan,
                             style: TextStyle(
                               color: isLight
                                   ? const Color(0xFF1A1A1A)
@@ -218,7 +218,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(
-                                FlowStrings.get('reset_filter'),
+                                AppLocalizations.of(context).resetFilter,
                                 style: TextStyle(
                                   color: _activeAccentColor,
                                   fontWeight: FontWeight.w600,
@@ -231,7 +231,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        FlowStrings.get('folder_scan_desc'),
+                        AppLocalizations.of(context).folderScanDesc,
                         style: TextStyle(
                           color: isLight ? Colors.black54 : Colors.white54,
                           fontSize: 12,
@@ -286,7 +286,9 @@ extension _ModalsUtilityUI on _MainScreenState {
                                     Expanded(
                                       child: Text(
                                         folderName.isEmpty
-                                            ? FlowStrings.get('folder_root')
+                                            ? AppLocalizations.of(
+                                                context,
+                                              ).folderRoot
                                             : folderName,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -444,7 +446,9 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
   List<int> _frequencies = [];
   List<int> _levels = [];
   String? _error;
-  String _activePreset = FlowStrings.get('custom_time');
+  String _activePreset = lookupAppLocalizations(
+    Locale(FlowStrings.currentLang),
+  ).customTime;
 
   final Map<String, List<int>> _presets = {
     'Flat': [0, 0, 0, 0, 0],
@@ -470,7 +474,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
     final sessionId = widget.player.androidAudioSessionId ?? 0;
     if (sessionId == 0) {
       setState(() {
-        _error = FlowStrings.get('eq_error_play_first');
+        _error = AppLocalizations.of(context).eqErrorPlayFirst;
         _initialized = true;
       });
       return;
@@ -509,13 +513,13 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
           _channel.invokeMethod('setEqualizerEnabled', {'enable': _enabled});
           _activePreset =
               prefs.getString('saved_eq_preset') ??
-              FlowStrings.get('custom_time');
+              AppLocalizations.of(context).customTime;
           _initialized = true;
         });
       }
     } catch (e) {
       setState(() {
-        _error = FlowStrings.get('eq_error_unsupported');
+        _error = AppLocalizations.of(context).eqErrorUnsupported;
         _initialized = true;
       });
     }
@@ -525,7 +529,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
     if (!_enabled) return;
     setState(() {
       _levels[band] = value;
-      _activePreset = FlowStrings.get('custom_time');
+      _activePreset = AppLocalizations.of(context).customTime;
     });
     try {
       await _channel.invokeMethod('setBandLevel', {
@@ -534,7 +538,10 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
       });
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('saved_eq_levels', jsonEncode(_levels));
-      await prefs.setString('saved_eq_preset', FlowStrings.get('custom_time'));
+      await prefs.setString(
+        'saved_eq_preset',
+        lookupAppLocalizations(Locale(FlowStrings.currentLang)).customTime,
+      );
     } catch (_) {}
   }
 
@@ -618,7 +625,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
               ),
               const SizedBox(height: 16),
               Text(
-                FlowStrings.get('system_equalizer'),
+                AppLocalizations.of(context).systemEqualizer,
                 style: textStyle.copyWith(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -664,7 +671,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      FlowStrings.get('system_equalizer'),
+                      AppLocalizations.of(context).systemEqualizer,
                       style: textStyle.copyWith(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -673,7 +680,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      FlowStrings.get('equalizer_subtitle'),
+                      AppLocalizations.of(context).equalizerSubtitle,
                       style: textStyle.copyWith(
                         fontSize: 12,
                         color: Colors.white38,

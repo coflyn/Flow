@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:audio_service/audio_service.dart';
 
-import 'strings.dart';
+import 'package:flow/l10n/app_localizations.dart';
 export 'strings.dart';
 
 bool isBackgroundInitialized = false;
@@ -41,6 +41,24 @@ final ValueNotifier<double> playerCustomBgOffsetXNotifier =
     ValueNotifier<double>(0.0);
 final ValueNotifier<double> playerCustomBgOffsetYNotifier =
     ValueNotifier<double>(0.0);
+
+// Player Background Settings
+final ValueNotifier<String> playerBackgroundStyleNotifier =
+    ValueNotifier<String>('gradient');
+final ValueNotifier<String?> playerCustomBgPathNotifier =
+    ValueNotifier<String?>(null);
+final ValueNotifier<double> playerCustomBgBlurNotifier = ValueNotifier<double>(
+  0.0,
+);
+final ValueNotifier<double> playerCustomBgDimNotifier = ValueNotifier<double>(
+  0.4,
+);
+final ValueNotifier<double> playerCustomBgScaleNotifier = ValueNotifier<double>(
+  1.0,
+);
+final ValueNotifier<String> themeAccentPresetNotifier = ValueNotifier<String>(
+  'spotify',
+);
 
 void showFlowToast(String msg, {bool isLong = false}) {
   Fluttertoast.showToast(
@@ -96,7 +114,7 @@ Future<bool?> showConfirmationDialog(
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
-              cancelText ?? FlowStrings.get('cancel'),
+              cancelText ?? AppLocalizations.of(context).cancel,
               style: TextStyle(
                 color: isLight ? Colors.black54 : Colors.white54,
               ),

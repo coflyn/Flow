@@ -10,9 +10,9 @@ extension _DetailViewsUI on _MainScreenState {
     String? type = _selectedPlaylistDetail != null
         ? 'Playlist'
         : _selectedArtistDetail != null
-        ? FlowStrings.get('artist')
+        ? AppLocalizations.of(context).artist
         : _selectedAlbumDetail != null
-        ? FlowStrings.get('album')
+        ? AppLocalizations.of(context).album
         : null;
 
     if (baseName == null || type == null) {
@@ -20,11 +20,11 @@ extension _DetailViewsUI on _MainScreenState {
     }
 
     String dynamicKeyPart = '';
-    if (baseName == FlowStrings.get('favourites')) {
+    if (baseName == AppLocalizations.of(context).favourites) {
       dynamicKeyPart = _favoriteTrackIds.length.toString();
-    } else if (baseName == FlowStrings.get('last_played')) {
+    } else if (baseName == AppLocalizations.of(context).lastPlayed) {
       dynamicKeyPart = _lastPlayedTrackIds.length.toString();
-    } else if (baseName == FlowStrings.get('most_played')) {
+    } else if (baseName == AppLocalizations.of(context).mostPlayed) {
       dynamicKeyPart = _playCounts.values
           .fold<int>(0, (a, b) => a + b)
           .toString();
@@ -51,13 +51,13 @@ extension _DetailViewsUI on _MainScreenState {
       Widget? imageWidget;
 
       if (type == 'Playlist') {
-        if (baseName == FlowStrings.get('favourites')) {
+        if (baseName == AppLocalizations.of(context).favourites) {
           pSongs = _allTracks
               .where((t) => _favoriteTrackIds.contains(t.id))
               .toList();
-        } else if (baseName == FlowStrings.get('recently_added')) {
+        } else if (baseName == AppLocalizations.of(context).recentlyAdded) {
           pSongs = List.from(_allTracks);
-        } else if (baseName == FlowStrings.get('last_played')) {
+        } else if (baseName == AppLocalizations.of(context).lastPlayed) {
           pSongs = _lastPlayedTrackIds
               .map(
                 (id) => _allTracks.firstWhere(
@@ -67,7 +67,7 @@ extension _DetailViewsUI on _MainScreenState {
               )
               .where((t) => _lastPlayedTrackIds.contains(t.id))
               .toList();
-        } else if (baseName == FlowStrings.get('most_played')) {
+        } else if (baseName == AppLocalizations.of(context).mostPlayed) {
           pSongs = List.from(_allTracks);
           pSongs.sort(
             (a, b) =>
@@ -95,16 +95,16 @@ extension _DetailViewsUI on _MainScreenState {
         } else {
           Color color = Colors.grey;
           IconData icon = Icons.queue_music;
-          if (baseName == FlowStrings.get('favourites')) {
+          if (baseName == AppLocalizations.of(context).favourites) {
             color = const Color(0xFFE91E63);
             icon = Icons.favorite;
-          } else if (baseName == FlowStrings.get('recently_added')) {
+          } else if (baseName == AppLocalizations.of(context).recentlyAdded) {
             color = const Color(0xFF2196F3);
             icon = Icons.new_releases;
-          } else if (baseName == FlowStrings.get('last_played')) {
+          } else if (baseName == AppLocalizations.of(context).lastPlayed) {
             color = const Color(0xFFFF9800);
             icon = Icons.history;
-          } else if (baseName == FlowStrings.get('most_played')) {
+          } else if (baseName == AppLocalizations.of(context).mostPlayed) {
             color = const Color(0xFFF44336);
             icon = Icons.local_fire_department;
           } else if (_userPlaylists.containsKey(baseName)) {
@@ -186,12 +186,12 @@ extension _DetailViewsUI on _MainScreenState {
             );
           }
         }
-      } else if (type == FlowStrings.get('artist')) {
+      } else if (type == AppLocalizations.of(context).artist) {
         pSongs = _allTracks.where((t) => t.artist == baseName).toList();
         imageWidget = pSongs.isNotEmpty
             ? _buildTrackArtwork(pSongs.first, size: 300, radius: 12)
             : const SizedBox(width: 300, height: 300);
-      } else if (type == FlowStrings.get('album')) {
+      } else if (type == AppLocalizations.of(context).album) {
         pSongs = _allTracks.where((t) => t.album == baseName).toList();
         imageWidget = pSongs.isNotEmpty
             ? _buildTrackArtwork(pSongs.first, size: 300, radius: 12)
@@ -517,7 +517,7 @@ extension _DetailViewsUI on _MainScreenState {
         children: [
           Positioned.fill(
             child: ValueListenableBuilder<String>(
-              valueListenable: _playerBackgroundStyleNotifier,
+              valueListenable: playerBackgroundStyleNotifier,
               builder: (context, style, child) {
                 if (style == 'amoled') {
                   return Container(
@@ -579,17 +579,17 @@ extension _DetailViewsUI on _MainScreenState {
                   );
                 } else if (style == 'custom') {
                   return ValueListenableBuilder<String?>(
-                    valueListenable: _playerCustomBgPathNotifier,
+                    valueListenable: playerCustomBgPathNotifier,
                     builder: (context, customPath, child) {
                       return ValueListenableBuilder<double>(
-                        valueListenable: _playerCustomBgBlurNotifier,
+                        valueListenable: playerCustomBgBlurNotifier,
                         builder: (context, blurVal, child) {
                           return ValueListenableBuilder<double>(
-                            valueListenable: _playerCustomBgDimNotifier,
+                            valueListenable: playerCustomBgDimNotifier,
                             builder: (context, dimVal, child) {
                               return AnimatedBuilder(
                                 animation: Listenable.merge([
-                                  _playerCustomBgScaleNotifier,
+                                  playerCustomBgScaleNotifier,
                                   playerCustomBgOffsetXNotifier,
                                   playerCustomBgOffsetYNotifier,
                                 ]),
@@ -616,7 +616,7 @@ extension _DetailViewsUI on _MainScreenState {
                                                 ),
                                                 child: Transform.scale(
                                                   scale:
-                                                      _playerCustomBgScaleNotifier
+                                                      playerCustomBgScaleNotifier
                                                           .value,
                                                   alignment: Alignment(
                                                     playerCustomBgOffsetXNotifier
@@ -706,8 +706,9 @@ extension _DetailViewsUI on _MainScreenState {
           _buildSongList(
             tracks,
             header: header,
-            isMostPlayed: title == FlowStrings.get('most_played'),
+            isMostPlayed: title == AppLocalizations.of(context).mostPlayed,
             controller: _detailScrollController,
+            playlistContext: type == 'Playlist' ? title : null,
           ),
         ],
       ),

@@ -115,25 +115,25 @@ extension _TabsUI on _MainScreenState {
         onTap: () => _showCreatePlaylistModal(context),
       ),
       _buildPlaylistCard(
-        FlowStrings.get('favourites'),
+        AppLocalizations.of(context).favourites,
         favorites,
         const Color(0xFFE91E63),
         Icons.favorite,
       ),
       _buildPlaylistCard(
-        FlowStrings.get('recently_added'),
+        AppLocalizations.of(context).recentlyAdded,
         recentlyAdded,
         const Color(0xFF2196F3),
         Icons.new_releases,
       ),
       _buildPlaylistCard(
-        FlowStrings.get('last_played'),
+        AppLocalizations.of(context).lastPlayed,
         lastPlayed,
         const Color(0xFFFF9800),
         Icons.history,
       ),
       _buildPlaylistCard(
-        FlowStrings.get('most_played'),
+        AppLocalizations.of(context).mostPlayed,
         mostPlayed,
         const Color(0xFFF44336),
         Icons.local_fire_department,
@@ -142,7 +142,7 @@ extension _TabsUI on _MainScreenState {
         Padding(
           padding: const EdgeInsets.only(top: 16, bottom: 8, left: 8),
           child: Text(
-            FlowStrings.get('my_playlists'),
+            AppLocalizations.of(context).myPlaylists,
             style: TextStyle(
               color: isAppLight ? const Color(0xFF1A1A1A) : Colors.white,
               fontSize: 18,
@@ -288,7 +288,7 @@ extension _TabsUI on _MainScreenState {
               ),
             ),
             subtitle: Text(
-              '$songCount ${FlowStrings.get('songs_count')}',
+              '$songCount ${AppLocalizations.of(context).songsCount}',
               style: TextStyle(
                 color: isAppLight ? Colors.black45 : Colors.white38,
                 fontSize: 12,
@@ -405,7 +405,7 @@ extension _TabsUI on _MainScreenState {
               ),
             ),
             subtitle: Text(
-              '$songCount ${FlowStrings.get('songs_count')}',
+              '$songCount ${AppLocalizations.of(context).songsCount}',
               style: TextStyle(
                 color: isAppLight ? Colors.black45 : Colors.white38,
                 fontSize: 12,
@@ -428,11 +428,12 @@ extension _TabsUI on _MainScreenState {
     bool isMostPlayed = false,
     ScrollController? controller,
     List<Track>? fullQueueList,
+    String? playlistContext,
   }) {
     if (list.isEmpty && header == null) {
       return Center(
         child: Text(
-          FlowStrings.get('no_matching_songs'),
+          AppLocalizations.of(context).noMatchingSongs,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.4),
             fontSize: 14,
@@ -532,7 +533,7 @@ extension _TabsUI on _MainScreenState {
               ),
               subtitle: Text(
                 isMostPlayed
-                    ? '${_playCounts[track.id] ?? 0} ${FlowStrings.get('plays_count')} • ${track.artist}'
+                    ? '${_playCounts[track.id] ?? 0} ${AppLocalizations.of(context).playsCount} • ${track.artist}'
                     : track.artist,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -572,7 +573,11 @@ extension _TabsUI on _MainScreenState {
                       ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
-                      onPressed: () => _showTrackOptions(context, track),
+                      onPressed: () => _showTrackOptions(
+                        context,
+                        track,
+                        playlistContext: playlistContext,
+                      ),
                     ),
                   ],
                 ),
@@ -628,7 +633,7 @@ extension _TabsUI on _MainScreenState {
                 },
                 style: TextStyle(fontSize: 14, color: textColor),
                 decoration: InputDecoration(
-                  hintText: FlowStrings.get('search_songs'),
+                  hintText: AppLocalizations.of(context).searchSongs,
                   hintStyle: TextStyle(color: hintColor, fontSize: 13),
                   prefixIcon: Icon(Icons.search, color: iconColor, size: 20),
                   suffixIcon: _searchQuery.isNotEmpty
@@ -673,10 +678,10 @@ extension _TabsUI on _MainScreenState {
   Widget _buildFilterCapsules() {
     final isLight = isAppLight;
     final filters = [
-      FlowStrings.get('songs_title'),
-      FlowStrings.get('playlists'),
-      FlowStrings.get('artists'),
-      FlowStrings.get('albums'),
+      AppLocalizations.of(context).songsTitle,
+      AppLocalizations.of(context).playlists,
+      AppLocalizations.of(context).artists,
+      AppLocalizations.of(context).albums,
     ];
     return Padding(
       padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 8),

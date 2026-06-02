@@ -6,6 +6,7 @@ extension _ModalsTrackUI on _MainScreenState {
     BuildContext context,
     Track track, {
     bool isFromPlayer = false,
+    String? playlistContext,
   }) {
     final isLight = isAppLight;
     showModalBottomSheet(
@@ -75,36 +76,38 @@ extension _ModalsTrackUI on _MainScreenState {
                   if (!isFromPlayer) ...[
                     _buildOptionItem(
                       Icons.playlist_play,
-                      FlowStrings.get('play_next'),
+                      AppLocalizations.of(context).playNext,
                       () {
                         Navigator.pop(context);
                         if (_playingTrack?.id == track.id) {
                           showFlowToast(
-                            FlowStrings.get('cannot_play_next_active'),
+                            AppLocalizations.of(context).cannotPlayNextActive,
                           );
                           return;
                         }
                         if (_playbackQueue.isNotEmpty) {
                           _moveTrackInQueue(track, _currentIndex + 1);
-                          showFlowToast(FlowStrings.get('added_play_next'));
+                          showFlowToast(
+                            AppLocalizations.of(context).addedPlayNext,
+                          );
                         }
                       },
                     ),
                     _buildOptionItem(
                       Icons.queue_music,
-                      FlowStrings.get('add_to_queue'),
+                      AppLocalizations.of(context).addToQueue,
                       () {
                         Navigator.pop(context);
                         if (_playingTrack?.id == track.id) {
                           showFlowToast(
-                            FlowStrings.get('cannot_play_next_active'),
+                            AppLocalizations.of(context).cannotPlayNextActive,
                           );
                           return;
                         }
                         if (_playbackQueue.isNotEmpty) {
                           _moveTrackInQueue(track, _playbackQueue.length);
                           showFlowToast(
-                            FlowStrings.get('added_songs_to_queue'),
+                            AppLocalizations.of(context).addedSongsToQueue,
                           );
                         }
                       },
@@ -112,7 +115,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   ],
                   _buildOptionItem(
                     Icons.playlist_add,
-                    FlowStrings.get('add_to_playlist'),
+                    AppLocalizations.of(context).addToPlaylist,
                     () {
                       Navigator.pop(context);
                       _showAddToPlaylistModal(context, [track]);
@@ -120,7 +123,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   _buildOptionItem(
                     Icons.timer,
-                    FlowStrings.get('sleep_timer'),
+                    AppLocalizations.of(context).sleepTimer,
                     () {
                       Navigator.pop(context);
                       _showFullSleepTimerDialog(context);
@@ -128,7 +131,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   _buildOptionItem(
                     Icons.equalizer_rounded,
-                    FlowStrings.get('equalizer'),
+                    AppLocalizations.of(context).equalizer,
                     () {
                       Navigator.pop(context);
                       MainScreen.showEqualizer(context);
@@ -136,18 +139,54 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   _buildOptionItem(
                     isFavorited ? Icons.favorite : Icons.favorite_border,
-                    FlowStrings.get('favourites'),
+                    AppLocalizations.of(context).favourites,
                     () {
                       _toggleFavorite(track.id);
+                      if (isFavorited) {
+                        final loc = lookupAppLocalizations(
+                          Locale(FlowStrings.currentLang),
+                        );
+                        if (_MainScreenState
+                                .mainScreenState!
+                                ._playingFromName ==
+                            loc.favourites) {
+                          _MainScreenState.mainScreenState!
+                              ._removeFromQueueAndPlayer(track.id);
+                        }
+                      }
                       setModalState(() {});
                     },
                     iconColor: isFavorited
                         ? _activeAccentColor
                         : (isLight ? Colors.black54 : Colors.white70),
                   ),
+                  if (playlistContext != null &&
+                      _userPlaylists.containsKey(playlistContext))
+                    _buildOptionItem(
+                      Icons.remove_circle_outline,
+                      AppLocalizations.of(context).removeFromPlaylist,
+                      () async {
+                        Navigator.pop(context);
+                        setState(() {
+                          _userPlaylists[playlistContext]!.remove(track.id);
+                        });
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString(
+                          'user_playlists',
+                          jsonEncode(_userPlaylists),
+                        );
+                        _MainScreenState.mainScreenState!
+                            ._removeFromQueueAndPlayer(track.id);
+                        if (!context.mounted) return;
+                        showFlowToast(
+                          AppLocalizations.of(context).trackDeleted,
+                        );
+                      },
+                      iconColor: Colors.redAccent,
+                    ),
                   _buildOptionItem(
                     Icons.album_outlined,
-                    FlowStrings.get('go_to_album'),
+                    AppLocalizations.of(context).goToAlbum,
                     () {
                       Navigator.pop(context);
                       setState(() {
@@ -172,7 +211,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   _buildOptionItem(
                     Icons.person_outline,
-                    FlowStrings.get('go_to_artist'),
+                    AppLocalizations.of(context).goToArtist,
                     () {
                       Navigator.pop(context);
                       setState(() {
@@ -197,7 +236,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   _buildOptionItem(
                     Icons.edit_outlined,
-                    FlowStrings.get('edit_metadata'),
+                    AppLocalizations.of(context).editMetadata,
                     () {
                       Navigator.pop(context);
                       _showEditMetadataModal(context, track);
@@ -205,7 +244,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   _buildOptionItem(
                     Icons.info_outline,
-                    FlowStrings.get('song_info'),
+                    AppLocalizations.of(context).songInfo,
                     () {
                       Navigator.pop(context);
                       _showSongInfoModal(context, track);
@@ -213,7 +252,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   _buildOptionItem(
                     Icons.visibility_off_outlined,
-                    FlowStrings.get('hide_from_library'),
+                    AppLocalizations.of(context).hideFromLibrary,
                     () async {
                       Navigator.pop(context);
                       final prefs = await SharedPreferences.getInstance();
@@ -224,9 +263,10 @@ extension _ModalsTrackUI on _MainScreenState {
                       );
                       setState(() {
                         _allTracks.removeWhere((t) => t.id == track.id);
-                        _playbackQueue.removeWhere((t) => t.id == track.id);
                         _cachedDetailKey = null;
                       });
+                      _MainScreenState.mainScreenState!
+                          ._removeFromQueueAndPlayer(track.id);
                       final serialized = _allTracks
                           .map((t) => t.toMap())
                           .toList();
@@ -234,19 +274,23 @@ extension _ModalsTrackUI on _MainScreenState {
                         'cached_tracks_list',
                         jsonEncode(serialized),
                       );
-                      showFlowToast(FlowStrings.get('track_hidden'));
+                      showFlowToast(
+                        lookupAppLocalizations(
+                          Locale(FlowStrings.currentLang),
+                        ).trackHidden,
+                      );
                     },
                   ),
                   _buildOptionItem(
                     Icons.delete_outline,
-                    FlowStrings.get('delete_from_device'),
+                    AppLocalizations.of(context).deleteFromDevice,
                     () async {
                       Navigator.pop(context);
                       final bool? confirm = await showConfirmationDialog(
                         this.context,
-                        title: FlowStrings.get('confirm_delete'),
-                        content: FlowStrings.get('confirm_delete_body'),
-                        confirmText: FlowStrings.get('delete'),
+                        title: AppLocalizations.of(context).confirmDelete,
+                        content: AppLocalizations.of(context).confirmDeleteBody,
+                        confirmText: AppLocalizations.of(context).delete,
                       );
                       if (confirm != true) return;
 
@@ -256,9 +300,10 @@ extension _ModalsTrackUI on _MainScreenState {
                           await file.delete();
                           setState(() {
                             _allTracks.removeWhere((t) => t.id == track.id);
-                            _playbackQueue.removeWhere((t) => t.id == track.id);
                             _cachedDetailKey = null;
                           });
+                          _MainScreenState.mainScreenState!
+                              ._removeFromQueueAndPlayer(track.id);
                           final prefs = await SharedPreferences.getInstance();
                           final serialized = _allTracks
                               .map((t) => t.toMap())
@@ -267,9 +312,17 @@ extension _ModalsTrackUI on _MainScreenState {
                             'cached_tracks_list',
                             jsonEncode(serialized),
                           );
-                          showFlowToast(FlowStrings.get('track_deleted'));
+                          showFlowToast(
+                            lookupAppLocalizations(
+                              Locale(FlowStrings.currentLang),
+                            ).trackDeleted,
+                          );
                         } else {
-                          showFlowToast(FlowStrings.get('file_not_found'));
+                          showFlowToast(
+                            lookupAppLocalizations(
+                              Locale(FlowStrings.currentLang),
+                            ).fileNotFound,
+                          );
                         }
                       } catch (e) {
                         if (!context.mounted) return;
@@ -285,7 +338,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               title: Text(
-                                FlowStrings.get('permission_denied'),
+                                AppLocalizations.of(context).permissionDenied,
                                 style: TextStyle(
                                   color: isLight
                                       ? const Color(0xFF1A1A1A)
@@ -295,7 +348,9 @@ extension _ModalsTrackUI on _MainScreenState {
                                 ),
                               ),
                               content: Text(
-                                FlowStrings.get('scoped_storage_warning'),
+                                AppLocalizations.of(
+                                  context,
+                                ).scopedStorageWarning,
                                 style: TextStyle(
                                   color: isLight
                                       ? Colors.black54
@@ -308,7 +363,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
                                   child: Text(
-                                    FlowStrings.get('cancel'),
+                                    AppLocalizations.of(context).cancel,
                                     style: TextStyle(
                                       color: isLight
                                           ? Colors.black45
@@ -331,11 +386,10 @@ extension _ModalsTrackUI on _MainScreenState {
                                       _allTracks.removeWhere(
                                         (t) => t.id == track.id,
                                       );
-                                      _playbackQueue.removeWhere(
-                                        (t) => t.id == track.id,
-                                      );
                                       _cachedDetailKey = null;
                                     });
+                                    _MainScreenState.mainScreenState!
+                                        ._removeFromQueueAndPlayer(track.id);
                                     final serialized = _allTracks
                                         .map((t) => t.toMap())
                                         .toList();
@@ -344,11 +398,13 @@ extension _ModalsTrackUI on _MainScreenState {
                                       jsonEncode(serialized),
                                     );
                                     showFlowToast(
-                                      FlowStrings.get('track_hidden'),
+                                      lookupAppLocalizations(
+                                        Locale(FlowStrings.currentLang),
+                                      ).trackHidden,
                                     );
                                   },
                                   child: Text(
-                                    FlowStrings.get('hide_track'),
+                                    AppLocalizations.of(context).hideTrack,
                                     style: TextStyle(
                                       color: _activeAccentColor,
                                       fontWeight: FontWeight.bold,
@@ -413,7 +469,7 @@ extension _ModalsTrackUI on _MainScreenState {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        FlowStrings.get('edit_metadata'),
+                        AppLocalizations.of(context).editMetadata,
                         style: TextStyle(
                           color: isLight
                               ? const Color(0xFF1A1A1A)
@@ -477,7 +533,7 @@ extension _ModalsTrackUI on _MainScreenState {
                           fontFamily: _activeFont,
                         ),
                         decoration: InputDecoration(
-                          labelText: FlowStrings.get('title'),
+                          labelText: AppLocalizations.of(context).title,
                           labelStyle: TextStyle(
                             color: isLight ? Colors.black54 : Colors.white54,
                             fontFamily: _activeFont,
@@ -502,7 +558,7 @@ extension _ModalsTrackUI on _MainScreenState {
                           fontFamily: _activeFont,
                         ),
                         decoration: InputDecoration(
-                          labelText: FlowStrings.get('artist'),
+                          labelText: AppLocalizations.of(context).artist,
                           labelStyle: TextStyle(
                             color: isLight ? Colors.black54 : Colors.white54,
                             fontFamily: _activeFont,
@@ -527,7 +583,7 @@ extension _ModalsTrackUI on _MainScreenState {
                           fontFamily: _activeFont,
                         ),
                         decoration: InputDecoration(
-                          labelText: FlowStrings.get('album'),
+                          labelText: AppLocalizations.of(context).album,
                           labelStyle: TextStyle(
                             color: isLight ? Colors.black54 : Colors.white54,
                             fontFamily: _activeFont,
@@ -548,23 +604,63 @@ extension _ModalsTrackUI on _MainScreenState {
                         children: [
                           if (_metadataOverrides.containsKey(track.id))
                             TextButton(
-                              onPressed: () {
+                              onPressed: () async {
                                 setState(() {
                                   _metadataOverrides.remove(track.id);
                                   _cachedDetailKey = null;
-                                  if (_playingTrack?.id == track.id) {
-                                    _updateDominantColor(_playingTrack!);
-                                  }
                                 });
-                                _saveMetadataOverrides();
-                                _requestPermissionAndScan();
-                                Navigator.pop(context);
-                                showFlowToast(
-                                  FlowStrings.get('metadata_reset'),
-                                );
+                                final msg = AppLocalizations.of(
+                                  context,
+                                ).metadataReset;
+                                await _saveMetadataOverrides();
+                                await _requestPermissionAndScan();
+
+                                if (context.mounted) {
+                                  final index = _allTracks.indexWhere(
+                                    (t) => t.id == track.id,
+                                  );
+                                  if (index != -1) {
+                                    final nativeTrack = _allTracks[index];
+                                    setState(() {
+                                      if (_playingTrack?.id == track.id) {
+                                        _playingTrack = nativeTrack;
+                                        _updateDominantColor(_playingTrack!);
+
+                                        final currentMediaItem =
+                                            audioHandler.mediaItem.value;
+                                        if (currentMediaItem != null &&
+                                            currentMediaItem.id == track.id) {
+                                          _getCoverUriForTrack(
+                                            nativeTrack,
+                                          ).then((coverUri) {
+                                            audioHandler.updateMediaItem(
+                                              currentMediaItem.copyWith(
+                                                title: nativeTrack.title,
+                                                artist: nativeTrack.artist,
+                                                album: nativeTrack.album,
+                                                artUri: coverUri,
+                                              ),
+                                            );
+                                          });
+                                        }
+                                      }
+                                      for (
+                                        int i = 0;
+                                        i < _playbackQueue.length;
+                                        i++
+                                      ) {
+                                        if (_playbackQueue[i].id == track.id) {
+                                          _playbackQueue[i] = nativeTrack;
+                                        }
+                                      }
+                                    });
+                                  }
+                                  Navigator.pop(context);
+                                  showFlowToast(msg);
+                                }
                               },
                               child: Text(
-                                FlowStrings.get('reset'),
+                                AppLocalizations.of(context).reset,
                                 style: TextStyle(
                                   color: Colors.redAccent,
                                   fontFamily: _activeFont,
@@ -574,7 +670,7 @@ extension _ModalsTrackUI on _MainScreenState {
                           TextButton(
                             onPressed: () => Navigator.pop(context),
                             child: Text(
-                              FlowStrings.get('cancel'),
+                              AppLocalizations.of(context).cancel,
                               style: TextStyle(
                                 color: isLight
                                     ? Colors.black54
@@ -589,7 +685,7 @@ extension _ModalsTrackUI on _MainScreenState {
                               backgroundColor: _activeAccentColor,
                               foregroundColor: Colors.white,
                             ),
-                            onPressed: () {
+                            onPressed: () async {
                               setState(() {
                                 _metadataOverrides[track.id] = {
                                   'title': titleController.text.trim(),
@@ -657,8 +753,8 @@ extension _ModalsTrackUI on _MainScreenState {
                                     null; // Clear cache so Lists like Recently Added auto-update
                               });
 
-                              _saveMetadataOverrides();
-                              Navigator.pop(context);
+                              await _saveMetadataOverrides();
+                              if (context.mounted) Navigator.pop(context);
 
                               // Trigger a rebuild of the main application state after pop
                               Future.delayed(
@@ -670,7 +766,7 @@ extension _ModalsTrackUI on _MainScreenState {
                               showFlowToast("Metadata updated locally");
                             },
                             child: Text(
-                              FlowStrings.get('save'),
+                              AppLocalizations.of(context).save,
                               style: TextStyle(color: Colors.black),
                             ),
                           ),
@@ -732,12 +828,14 @@ extension _ModalsTrackUI on _MainScreenState {
                 const SizedBox(height: 24),
                 _buildOptionItem(
                   Icons.playlist_play,
-                  FlowStrings.get('play_next'),
+                  AppLocalizations.of(context).playNext,
                   () {
                     Navigator.pop(context);
                     if (tracks.length == 1 &&
                         _playingTrack?.id == tracks.first.id) {
-                      showFlowToast(FlowStrings.get('cannot_play_next_active'));
+                      showFlowToast(
+                        AppLocalizations.of(context).cannotPlayNextActive,
+                      );
                       return;
                     }
                     if (tracks.isNotEmpty) {
@@ -753,7 +851,7 @@ extension _ModalsTrackUI on _MainScreenState {
                         showFlowToast("Added $addedCount tracks to play next");
                       } else {
                         showFlowToast(
-                          FlowStrings.get('cannot_play_next_active'),
+                          AppLocalizations.of(context).cannotPlayNextActive,
                         );
                       }
                     }
@@ -761,7 +859,7 @@ extension _ModalsTrackUI on _MainScreenState {
                 ),
                 _buildOptionItem(
                   Icons.queue_music,
-                  FlowStrings.get('add_to_queue'),
+                  AppLocalizations.of(context).addToQueue,
                   () {
                     Navigator.pop(context);
                     if (tracks.isNotEmpty) {
@@ -774,7 +872,7 @@ extension _ModalsTrackUI on _MainScreenState {
                 ),
                 _buildOptionItem(
                   Icons.playlist_add,
-                  FlowStrings.get('add_to_playlist'),
+                  AppLocalizations.of(context).addToPlaylist,
                   () {
                     Navigator.pop(context);
                     _showMultiSelectSongsModal(
@@ -787,7 +885,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   Navigator.pop(context);
                   _showDetailSortModal(context);
                 }),
-                if (type == FlowStrings.get('album')) ...[
+                if (type == AppLocalizations.of(context).album) ...[
                   _buildOptionItem(Icons.image, 'Edit Album Cover', () async {
                     Navigator.pop(context);
                     final String? imagePath = await _showCoverSourceSelector(
@@ -813,14 +911,16 @@ extension _ModalsTrackUI on _MainScreenState {
                         _cachedDetailKey =
                             null; // Force rebuild to show new cover
                       });
-                      _saveMetadataOverrides();
+                      await _saveMetadataOverrides();
                       if (_playingTrack != null &&
                           tracks.any((t) => t.id == _playingTrack!.id)) {
                         _updateDominantColor(_playingTrack!);
                       }
                       showFlowToast(
                         imagePath == 'reset'
-                            ? FlowStrings.get('cover_reset_success')
+                            ? lookupAppLocalizations(
+                                Locale(FlowStrings.currentLang),
+                              ).coverResetSuccess
                             : "Album cover updated locally",
                       );
                     }
@@ -850,7 +950,9 @@ extension _ModalsTrackUI on _MainScreenState {
                       });
                       showFlowToast(
                         imagePath == 'reset'
-                            ? FlowStrings.get('cover_reset_success')
+                            ? lookupAppLocalizations(
+                                Locale(FlowStrings.currentLang),
+                              ).coverResetSuccess
                             : "Cover updated",
                       );
                     }
@@ -872,7 +974,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   }),
                   _buildOptionItem(
                     Icons.edit,
-                    FlowStrings.get('rename_playlist'),
+                    AppLocalizations.of(context).renamePlaylist,
                     () {
                       Navigator.pop(context);
                       _showRenamePlaylistModal(context, title);
@@ -880,14 +982,16 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   _buildOptionItem(
                     Icons.delete_outline,
-                    FlowStrings.get('delete_playlist'),
+                    AppLocalizations.of(context).deletePlaylist,
                     () async {
                       Navigator.pop(context);
                       final bool? confirm = await showConfirmationDialog(
                         this.context,
-                        title: FlowStrings.get('confirm_delete'),
-                        content: FlowStrings.get('confirm_delete_playlist'),
-                        confirmText: FlowStrings.get('delete'),
+                        title: AppLocalizations.of(context).confirmDelete,
+                        content: AppLocalizations.of(
+                          context,
+                        ).confirmDeletePlaylist,
+                        confirmText: AppLocalizations.of(context).delete,
                       );
                       if (confirm != true) return;
 
@@ -991,7 +1095,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
-                      FlowStrings.get('sort_by'),
+                      AppLocalizations.of(context).sortBy,
                       style: TextStyle(
                         color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontSize: 18,
@@ -1009,37 +1113,37 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   buildSortItem(
                     'date',
-                    FlowStrings.get('sort_recently_added'),
+                    AppLocalizations.of(context).sortRecentlyAdded,
                     Icons.calendar_today_rounded,
                   ),
                   buildSortItem(
                     'date_oldest',
-                    FlowStrings.get('sort_oldest'),
+                    AppLocalizations.of(context).sortOldest,
                     Icons.history_toggle_off_rounded,
                   ),
                   buildSortItem(
                     'title',
-                    FlowStrings.get('sort_title_az'),
+                    AppLocalizations.of(context).sortTitleAz,
                     Icons.sort_by_alpha_rounded,
                   ),
                   buildSortItem(
                     'artist',
-                    FlowStrings.get('sort_artist_az'),
+                    AppLocalizations.of(context).sortArtistAz,
                     Icons.person_search_rounded,
                   ),
                   buildSortItem(
                     'album',
-                    FlowStrings.get('sort_album_az'),
+                    AppLocalizations.of(context).sortAlbumAz,
                     Icons.album_rounded,
                   ),
                   buildSortItem(
                     'duration_longest',
-                    FlowStrings.get('sort_duration_longest'),
+                    AppLocalizations.of(context).sortDurationLongest,
                     Icons.hourglass_top_rounded,
                   ),
                   buildSortItem(
                     'duration_shortest',
-                    FlowStrings.get('sort_duration_shortest'),
+                    AppLocalizations.of(context).sortDurationShortest,
                     Icons.hourglass_bottom_rounded,
                   ),
                   const SizedBox(height: 16),
@@ -1123,7 +1227,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
-                      FlowStrings.get('sort_songs_in_view'),
+                      AppLocalizations.of(context).sortSongsInView,
                       style: TextStyle(
                         color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontSize: 18,
@@ -1141,27 +1245,27 @@ extension _ModalsTrackUI on _MainScreenState {
                   ),
                   buildSortItem(
                     'default',
-                    FlowStrings.get('sort_default_order'),
+                    AppLocalizations.of(context).sortDefaultOrder,
                     Icons.playlist_play,
                   ),
                   buildSortItem(
                     'title',
-                    FlowStrings.get('sort_title_az'),
+                    AppLocalizations.of(context).sortTitleAz,
                     Icons.sort_by_alpha_rounded,
                   ),
                   buildSortItem(
                     'artist',
-                    FlowStrings.get('sort_artist_az'),
+                    AppLocalizations.of(context).sortArtistAz,
                     Icons.person_search_rounded,
                   ),
                   buildSortItem(
                     'duration_longest',
-                    FlowStrings.get('sort_duration_longest'),
+                    AppLocalizations.of(context).sortDurationLongest,
                     Icons.hourglass_top_rounded,
                   ),
                   buildSortItem(
                     'duration_shortest',
-                    FlowStrings.get('sort_duration_shortest'),
+                    AppLocalizations.of(context).sortDurationShortest,
                     Icons.hourglass_bottom_rounded,
                   ),
                   const SizedBox(height: 16),
@@ -1197,7 +1301,9 @@ extension _ModalsTrackUI on _MainScreenState {
           return '${mb.toStringAsFixed(2)} MB';
         }
       } catch (_) {}
-      return FlowStrings.get('unknown_literal');
+      return lookupAppLocalizations(
+        Locale(FlowStrings.currentLang),
+      ).unknownLiteral;
     }
 
     showModalBottomSheet(
@@ -1224,7 +1330,7 @@ extension _ModalsTrackUI on _MainScreenState {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      FlowStrings.get('song_info'),
+                      AppLocalizations.of(context).songInfo,
                       style: TextStyle(
                         color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontSize: 18,
@@ -1311,20 +1417,20 @@ extension _ModalsTrackUI on _MainScreenState {
                 const SizedBox(height: 20),
                 _buildInfoRow(
                   context,
-                  FlowStrings.get('file_name'),
+                  AppLocalizations.of(context).fileName,
                   fileName,
                   isLight,
                 ),
                 _buildInfoRow(
                   context,
-                  FlowStrings.get('format'),
+                  AppLocalizations.of(context).format,
                   format,
                   isLight,
                   isBadge: true,
                 ),
                 _buildInfoRow(
                   context,
-                  FlowStrings.get('sort_duration'),
+                  AppLocalizations.of(context).sortDuration,
                   formatDuration(track.duration),
                   isLight,
                 ),
@@ -1333,15 +1439,15 @@ extension _ModalsTrackUI on _MainScreenState {
                   builder: (context, snapshot) {
                     return _buildInfoRow(
                       context,
-                      FlowStrings.get('size'),
-                      snapshot.data ?? FlowStrings.get('loading'),
+                      AppLocalizations.of(context).size,
+                      snapshot.data ?? AppLocalizations.of(context).loading,
                       isLight,
                     );
                   },
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  FlowStrings.get('file_path'),
+                  AppLocalizations.of(context).filePath,
                   style: TextStyle(
                     color: isLight ? Colors.black38 : Colors.white38,
                     fontSize: 12,
@@ -1422,7 +1528,7 @@ extension _ModalsTrackUI on _MainScreenState {
                         color: isLight ? Colors.black87 : Colors.white,
                       ),
                       label: Text(
-                        FlowStrings.get('edit_metadata'),
+                        AppLocalizations.of(context).editMetadata,
                         style: TextStyle(
                           color: isLight ? Colors.black87 : Colors.white,
                           fontSize: 13,
@@ -1523,7 +1629,7 @@ extension _ModalsTrackUI on _MainScreenState {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
-                  FlowStrings.get('select_image_source'),
+                  AppLocalizations.of(context).selectImageSource,
                   style: TextStyle(
                     color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                     fontSize: 18,
@@ -1535,21 +1641,21 @@ extension _ModalsTrackUI on _MainScreenState {
               const SizedBox(height: 24),
               _buildOptionItem(
                 Icons.photo_library,
-                FlowStrings.get('choose_from_gallery'),
+                AppLocalizations.of(context).chooseFromGallery,
                 () {
                   Navigator.pop(context, 'gallery');
                 },
               ),
               _buildOptionItem(
                 Icons.music_note,
-                FlowStrings.get('choose_from_song'),
+                AppLocalizations.of(context).chooseFromSong,
                 () {
                   Navigator.pop(context, 'song');
                 },
               ),
               _buildOptionItem(
                 Icons.no_photography_outlined,
-                FlowStrings.get('remove_custom_cover'),
+                AppLocalizations.of(context).removeCustomCover,
                 () {
                   Navigator.pop(context, 'reset');
                 },

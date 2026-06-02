@@ -39,170 +39,6 @@ extension _MainUIComponents on _MainScreenState {
                       onResetData: _resetAppData,
                       sleepTimerNotifier: _sleepTimerNotifier,
                       onManageFolders: () => _showFolderScanDialog(context),
-                      playCountThreshold: _playCountThreshold,
-                      onSetPlayCountThreshold: (seconds) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setInt('playCountThreshold', seconds);
-                        setState(() {
-                          _playCountThreshold = seconds;
-                        });
-                      },
-                      activeFont: _activeFont,
-                      onSetFont: (fontName) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('activeFont', fontName);
-                        setState(() {
-                          _activeFont = fontName;
-                        });
-                        activeFontNotifier.value = fontName;
-                      },
-                      fontScale: _fontScale,
-                      onSetFontScale: (scale) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setDouble('fontScale', scale);
-                        setState(() {
-                          _fontScale = scale;
-                        });
-                        fontScaleNotifier.value = scale;
-                      },
-                      themeAccentPreset: _themeAccentPreset,
-                      activeAccentColor: _activeAccentColor,
-                      dominantColorNotifier: _dominantColorNotifier,
-                      onSetThemeAccent: (preset) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('themeAccentPreset', preset);
-                        setState(() {
-                          _themeAccentPreset = preset;
-                        });
-                      },
-                      playerBackgroundStyle: _playerBackgroundStyle,
-                      playerBackgroundStyleNotifier:
-                          _playerBackgroundStyleNotifier,
-                      onSetPlayerBackgroundStyle: (style) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('playerBackgroundStyle', style);
-                        setState(() {
-                          _playerBackgroundStyle = style;
-                        });
-                        _playerBackgroundStyleNotifier.value = style;
-                      },
-                      playerCustomBgPath: _playerCustomBgPath,
-                      playerCustomBgPathNotifier: _playerCustomBgPathNotifier,
-                      onSetPlayerCustomBgPath: (path) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        if (path != null) {
-                          await prefs.setString('playerCustomBgPath', path);
-                        } else {
-                          await prefs.remove('playerCustomBgPath');
-                        }
-                        setState(() {
-                          _playerCustomBgPath = path;
-                        });
-                        _playerCustomBgPathNotifier.value = path;
-                      },
-                      playerCustomBgBlur: _playerCustomBgBlur,
-                      playerCustomBgBlurNotifier: _playerCustomBgBlurNotifier,
-                      onSetPlayerCustomBgBlur: (blur) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setDouble('playerCustomBgBlur', blur);
-                        setState(() {
-                          _playerCustomBgBlur = blur;
-                        });
-                        _playerCustomBgBlurNotifier.value = blur;
-                      },
-                      playerCustomBgDim: _playerCustomBgDim,
-                      playerCustomBgDimNotifier: _playerCustomBgDimNotifier,
-                      onSetPlayerCustomBgDim: (dim) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setDouble('playerCustomBgDim', dim);
-                        setState(() {
-                          _playerCustomBgDim = dim;
-                        });
-                        _playerCustomBgDimNotifier.value = dim;
-                      },
-                      playerCustomBgScale: _playerCustomBgScale,
-                      playerCustomBgScaleNotifier: _playerCustomBgScaleNotifier,
-                      onSetPlayerCustomBgScale: (scale) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setDouble('playerCustomBgScale', scale);
-                        setState(() {
-                          _playerCustomBgScale = scale;
-                        });
-                        _playerCustomBgScaleNotifier.value = scale;
-                      },
-                      themeMode: _themeMode,
-                      onSetThemeMode: (mode) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('themeMode', mode);
-                        setState(() {
-                          _themeMode = mode;
-                        });
-                        themeModeNotifier.value = mode;
-                      },
-                      customThemeBg: _customThemeBg,
-                      customThemeBgNotifier: customThemeBgNotifier,
-                      onSetCustomThemeBg: (customBg) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('customThemeBg', customBg);
-                        setState(() {
-                          _customThemeBg = customBg;
-                        });
-                        customThemeBgNotifier.value = customBg;
-                      },
-                      customThemeBgPath: _customThemeBgPath,
-                      customThemeBgPathNotifier: _customThemeBgPathNotifier,
-                      onSetCustomThemeBgPath: (path) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        if (path != null) {
-                          await prefs.setString('customThemeBgPath', path);
-                        } else {
-                          await prefs.remove('customThemeBgPath');
-                        }
-                        setState(() {
-                          _customThemeBgPath = path;
-                        });
-                        _customThemeBgPathNotifier.value = path;
-                      },
-                      customThemeBgBlur: _customThemeBgBlur,
-                      customThemeBgBlurNotifier: _customThemeBgBlurNotifier,
-                      onSetCustomThemeBgBlur: (blur) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setDouble('customThemeBgBlur', blur);
-                        setState(() {
-                          _customThemeBgBlur = blur;
-                        });
-                        _customThemeBgBlurNotifier.value = blur;
-                      },
-                      customThemeBgDim: _customThemeBgDim,
-                      customThemeBgDimNotifier: _customThemeBgDimNotifier,
-                      onSetCustomThemeBgDim: (dim) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setDouble('customThemeBgDim', dim);
-                        setState(() {
-                          _customThemeBgDim = dim;
-                        });
-                        _customThemeBgDimNotifier.value = dim;
-                      },
-                      customThemeBgScale: _customThemeBgScale,
-                      customThemeBgScaleNotifier: _customThemeBgScaleNotifier,
-                      onSetCustomThemeBgScale: (scale) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setDouble('customThemeBgScale', scale);
-                        setState(() {
-                          _customThemeBgScale = scale;
-                        });
-                        _customThemeBgScaleNotifier.value = scale;
-                      },
-                      customThemeStyle: _customThemeStyle,
-                      customThemeStyleNotifier: _customThemeStyleNotifier,
-                      onSetCustomThemeStyle: (style) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('customThemeStyle', style);
-                        setState(() {
-                          _customThemeStyle = style;
-                        });
-                        _customThemeStyleNotifier.value = style;
-                      },
                       onSetSkipSilence: (val) {
                         setState(() {
                           _skipSilence = val;
@@ -240,7 +76,7 @@ extension _MainUIComponents on _MainScreenState {
               ),
               const SizedBox(width: 8),
               Text(
-                '${_multiSelectedTrackIds.length} ${FlowStrings.get('selected')}',
+                '${_multiSelectedTrackIds.length} ${AppLocalizations.of(context).selected}',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -286,7 +122,7 @@ extension _MainUIComponents on _MainScreenState {
                     _clearMultiSelect();
                   },
                   icon: const Icon(Icons.playlist_add),
-                  label: Text(FlowStrings.get('add_to_playlist')),
+                  label: Text(AppLocalizations.of(context).addToPlaylist),
                 ),
               ),
             ],
@@ -317,7 +153,7 @@ extension _MainUIComponents on _MainScreenState {
             ),
             const SizedBox(height: 20),
             Text(
-              FlowStrings.get('no_songs_found'),
+              AppLocalizations.of(context).noSongsFound,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -326,7 +162,7 @@ extension _MainUIComponents on _MainScreenState {
             ),
             const SizedBox(height: 8),
             Text(
-              FlowStrings.get('no_songs_subtitle'),
+              AppLocalizations.of(context).noSongsSubtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -349,7 +185,7 @@ extension _MainUIComponents on _MainScreenState {
               onPressed: _requestPermissionAndScan,
               icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
               label: Text(
-                FlowStrings.get('refresh_library'),
+                AppLocalizations.of(context).refreshLibrary,
                 style: TextStyle(color: Colors.white, fontSize: 13),
               ),
             ),
@@ -379,13 +215,13 @@ extension _MainUIComponents on _MainScreenState {
           _searchController.clear();
 
           List<Track> pSongs = [];
-          if (title == FlowStrings.get('favourites')) {
+          if (title == AppLocalizations.of(context).favourites) {
             pSongs = _allTracks
                 .where((t) => _favoriteTrackIds.contains(t.id))
                 .toList();
-          } else if (title == FlowStrings.get('recently_added')) {
+          } else if (title == AppLocalizations.of(context).recentlyAdded) {
             pSongs = List.from(_allTracks);
-          } else if (title == FlowStrings.get('last_played')) {
+          } else if (title == AppLocalizations.of(context).lastPlayed) {
             pSongs = _lastPlayedTrackIds
                 .map(
                   (id) => _allTracks.firstWhere(
@@ -395,7 +231,7 @@ extension _MainUIComponents on _MainScreenState {
                 )
                 .where((t) => _lastPlayedTrackIds.contains(t.id))
                 .toList();
-          } else if (title == FlowStrings.get('most_played')) {
+          } else if (title == AppLocalizations.of(context).mostPlayed) {
             pSongs = List.from(_allTracks);
             pSongs.sort(
               (a, b) =>
@@ -432,7 +268,7 @@ extension _MainUIComponents on _MainScreenState {
               songs,
               color,
               icon,
-              title == FlowStrings.get('favourites'),
+              title == AppLocalizations.of(context).favourites,
             ),
       title: Text(
         title,
@@ -620,7 +456,7 @@ extension _MainUIComponents on _MainScreenState {
                   child: Row(
                     children: [
                       Text(
-                        FlowStrings.get('up_next'),
+                        AppLocalizations.of(context).upNext,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

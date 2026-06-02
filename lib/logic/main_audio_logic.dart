@@ -24,7 +24,8 @@ extension _MainAudioLogic on _MainScreenState {
       _monoAudio = prefs.getBool('monoAudio') ?? false;
       _sortBy = prefs.getString('sortBy') ?? 'date';
       _detailSortBy = prefs.getString('detailSortBy') ?? 'default';
-      _themeAccentPreset = prefs.getString('themeAccentPreset') ?? 'spotify';
+      themeAccentPresetNotifier.value =
+          prefs.getString('themeAccentPreset') ?? 'spotify';
       _themeMode = prefs.getString('themeMode') ?? 'dark';
       _customThemeBg = prefs.getString('customThemeBg') ?? 'dynamic';
       _customThemeBgPath = prefs.getString('customThemeBgPath');
@@ -44,18 +45,17 @@ extension _MainAudioLogic on _MainScreenState {
       customThemeBgDimNotifier.value = _customThemeBgDim;
       customThemeBgScaleNotifier.value = _customThemeBgScale;
       customThemeStyleNotifier.value = _customThemeStyle;
-      _playerBackgroundStyle =
+      playerBackgroundStyleNotifier.value =
           prefs.getString('playerBackgroundStyle') ?? 'gradient';
-      _playerBackgroundStyleNotifier.value = _playerBackgroundStyle;
-      _playerCustomBgPath = prefs.getString('playerCustomBgPath');
-      _playerCustomBgPathNotifier.value = _playerCustomBgPath;
-      _playerCustomBgBlur = prefs.getDouble('playerCustomBgBlur') ?? 0.0;
-      _playerCustomBgBlurNotifier.value = _playerCustomBgBlur;
-      _playerCustomBgDim = prefs.getDouble('playerCustomBgDim') ?? 0.4;
-      _playerCustomBgDimNotifier.value = _playerCustomBgDim;
-      _playerCustomBgScale = prefs.getDouble('playerCustomBgScale') ?? 1.0;
-      _playerCustomBgScaleNotifier.value = _playerCustomBgScale;
-
+      playerCustomBgPathNotifier.value = prefs.getString('playerCustomBgPath');
+      playerCustomBgBlurNotifier.value =
+          prefs.getDouble('playerCustomBgBlur') ?? 0.0;
+      playerCustomBgDimNotifier.value =
+          prefs.getDouble('playerCustomBgDim') ?? 0.4;
+      playerCustomBgScaleNotifier.value =
+          prefs.getDouble('playerCustomBgScale') ?? 1.0;
+      themeAccentPresetNotifier.value =
+          prefs.getString('themeAccentPreset') ?? 'spotify';
       double playerOffsetX = prefs.getDouble('playerCustomBgOffsetX') ?? 0.0;
       double playerOffsetY = prefs.getDouble('playerCustomBgOffsetY') ?? 0.0;
       playerCustomBgOffsetXNotifier.value = playerOffsetX;
@@ -136,7 +136,9 @@ extension _MainAudioLogic on _MainScreenState {
       _metadataOverrides.clear();
       _playlistCovers.clear();
     });
-    showFlowToast(FlowStrings.get('toast_app_data_reset'));
+    showFlowToast(
+      lookupAppLocalizations(Locale(FlowStrings.currentLang)).toastAppDataReset,
+    );
     _loadSettings();
   }
 
@@ -517,7 +519,7 @@ extension _MainAudioLogic on _MainScreenState {
                 String title = song.title;
                 String artist =
                     (song.artist == null || song.artist == '<unknown>')
-                    ? FlowStrings.get('unknown_artist')
+                    ? AppLocalizations.of(context).unknownArtist
                     : song.artist!;
                 String album = song.album ?? 'Unknown Album';
 
@@ -712,7 +714,9 @@ extension _MainAudioLogic on _MainScreenState {
               artist:
                   (nextTrack.artist.trim().isEmpty ||
                       nextTrack.artist == '<unknown>')
-                  ? FlowStrings.get('unknown_artist')
+                  ? lookupAppLocalizations(
+                      Locale(FlowStrings.currentLang),
+                    ).unknownArtist
                   : nextTrack.artist,
               artUri: nextCover,
               duration: Duration(milliseconds: nextTrack.duration),
@@ -793,6 +797,65 @@ extension _MainAudioLogic on _MainScreenState {
     });
 
     _updateCurrentSourceSilently();
+  }
+
+  void _removeFromQueueAndPlayer(String trackId) {
+    setState(() {
+      final actualRemoveIndex = _playbackQueue.indexWhere(
+        (t) => t.id == trackId,
+      );
+      if (actualRemoveIndex == -1) return;
+
+      if (actualRemoveIndex == _currentIndex) {
+        if (_playbackQueue.length <= 1) {
+          _playbackQueue.clear();
+          _shuffledIndices.clear();
+          _audioPlayer.stop();
+          _playingTrack = null;
+          return;
+        } else {
+          // We are removing the currently playing track.
+          // First, remove it from the queue and shuffle indices.
+          _playbackQueue.removeAt(actualRemoveIndex);
+
+          _shuffledIndices.remove(actualRemoveIndex);
+          for (int i = 0; i < _shuffledIndices.length; i++) {
+            if (_shuffledIndices[i] > actualRemoveIndex) {
+              _shuffledIndices[i]--;
+            }
+          }
+
+          // The next track will now naturally fall into the same index (actualRemoveIndex)
+          // unless it was the very last track in the queue.
+          if (actualRemoveIndex >= _playbackQueue.length) {
+            _currentIndex = 0;
+          } else {
+            _currentIndex = actualRemoveIndex;
+          }
+
+          // Now play the new track at _currentIndex. This handles updating the player.
+          _playTrack(_currentIndex, playImmediately: _isPlaying);
+          return; // Return early because _playTrack will build the audio source.
+        }
+      }
+
+      // If we are removing a track that is NOT currently playing:
+      _playbackQueue.removeAt(actualRemoveIndex);
+
+      if (actualRemoveIndex < _currentIndex) {
+        _currentIndex--;
+      }
+
+      _shuffledIndices.remove(actualRemoveIndex);
+      for (int i = 0; i < _shuffledIndices.length; i++) {
+        if (_shuffledIndices[i] > actualRemoveIndex) {
+          _shuffledIndices[i]--;
+        }
+      }
+    });
+
+    // Refresh the window around the current track since queue changed
+    _refreshAudioSourceWindow();
   }
 
   void reorderUpNext(List<int> newEffectiveIndices) {
@@ -907,7 +970,9 @@ extension _MainAudioLogic on _MainScreenState {
           album: track.album.trim().isEmpty ? 'Unknown Album' : track.album,
           title: track.title.trim().isEmpty ? 'Unknown Title' : track.title,
           artist: (track.artist.trim().isEmpty || track.artist == '<unknown>')
-              ? FlowStrings.get('unknown_artist')
+              ? lookupAppLocalizations(
+                  Locale(FlowStrings.currentLang),
+                ).unknownArtist
               : track.artist,
           artUri: currentCover,
           duration: Duration(milliseconds: track.duration),
@@ -973,7 +1038,9 @@ extension _MainAudioLogic on _MainScreenState {
                 artist:
                     (prevTrack.artist.trim().isEmpty ||
                         prevTrack.artist == '<unknown>')
-                    ? FlowStrings.get('unknown_artist')
+                    ? lookupAppLocalizations(
+                        Locale(FlowStrings.currentLang),
+                      ).unknownArtist
                     : prevTrack.artist,
                 artUri: prevCover,
                 duration: Duration(milliseconds: prevTrack.duration),
@@ -1008,7 +1075,9 @@ extension _MainAudioLogic on _MainScreenState {
                 artist:
                     (nextTrack.artist.trim().isEmpty ||
                         nextTrack.artist == '<unknown>')
-                    ? FlowStrings.get('unknown_artist')
+                    ? lookupAppLocalizations(
+                        Locale(FlowStrings.currentLang),
+                      ).unknownArtist
                     : nextTrack.artist,
                 artUri: nextCover,
                 duration: Duration(milliseconds: nextTrack.duration),
@@ -1169,7 +1238,9 @@ extension _MainAudioLogic on _MainScreenState {
               artist:
                   (prevTrack.artist.trim().isEmpty ||
                       prevTrack.artist == '<unknown>')
-                  ? FlowStrings.get('unknown_artist')
+                  ? lookupAppLocalizations(
+                      Locale(FlowStrings.currentLang),
+                    ).unknownArtist
                   : prevTrack.artist,
               artUri: prevCover,
               duration: Duration(milliseconds: prevTrack.duration),
@@ -1198,7 +1269,9 @@ extension _MainAudioLogic on _MainScreenState {
               artist:
                   (nextTrack.artist.trim().isEmpty ||
                       nextTrack.artist == '<unknown>')
-                  ? FlowStrings.get('unknown_artist')
+                  ? lookupAppLocalizations(
+                      Locale(FlowStrings.currentLang),
+                    ).unknownArtist
                   : nextTrack.artist,
               artUri: nextCover,
               duration: Duration(milliseconds: nextTrack.duration),
@@ -1311,7 +1384,9 @@ extension _MainAudioLogic on _MainScreenState {
                   artist:
                       (nextTrack.artist.trim().isEmpty ||
                           nextTrack.artist == '<unknown>')
-                      ? FlowStrings.get('unknown_artist')
+                      ? lookupAppLocalizations(
+                          Locale(FlowStrings.currentLang),
+                        ).unknownArtist
                       : nextTrack.artist,
                   artUri: nextCover,
                   duration: Duration(milliseconds: nextTrack.duration),
@@ -1345,7 +1420,9 @@ extension _MainAudioLogic on _MainScreenState {
                   artist:
                       (prevTrack.artist.trim().isEmpty ||
                           prevTrack.artist == '<unknown>')
-                      ? FlowStrings.get('unknown_artist')
+                      ? lookupAppLocalizations(
+                          Locale(FlowStrings.currentLang),
+                        ).unknownArtist
                       : prevTrack.artist,
                   artUri: prevCover,
                   duration: Duration(milliseconds: prevTrack.duration),
@@ -1489,7 +1566,9 @@ extension _MainAudioLogic on _MainScreenState {
       final cleanTitle = track.title;
       final cleanArtist =
           (track.artist.trim().isEmpty || track.artist == '<unknown>')
-          ? FlowStrings.get('unknown_artist')
+          ? lookupAppLocalizations(
+              Locale(FlowStrings.currentLang),
+            ).unknownArtist
           : track.artist;
 
       final client = HttpClient();
@@ -1626,12 +1705,34 @@ extension _MainAudioLogic on _MainScreenState {
     }
   }
 
+  void _addTrackToQueueDynamically(String trackId) {
+    if (_playbackQueue.any((t) => t.id == trackId)) return;
+
+    try {
+      final track = _allTracks.firstWhere((t) => t.id == trackId);
+      setState(() {
+        _playbackQueue.add(track);
+        if (_isShuffle && _shuffledIndices.isNotEmpty) {
+          // Insert at random position, but maybe at the end is fine for newly added
+          _shuffledIndices.add(_playbackQueue.length - 1);
+        }
+      });
+      _refreshAudioSourceWindow();
+    } catch (e) {
+      // Track not found in _allTracks, ignore
+    }
+  }
+
   void _toggleFavorite(String trackId) {
     setState(() {
       if (_favoriteTrackIds.contains(trackId)) {
         _favoriteTrackIds.remove(trackId);
       } else {
         _favoriteTrackIds.add(trackId);
+        final loc = lookupAppLocalizations(Locale(FlowStrings.currentLang));
+        if (_playingFromName == loc.favourites) {
+          _addTrackToQueueDynamically(trackId);
+        }
       }
     });
     SharedPreferences.getInstance().then((prefs) {
@@ -1651,10 +1752,9 @@ extension _MainAudioLogic on _MainScreenState {
     });
   }
 
-  void _saveMetadataOverrides() {
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setString('metadata_overrides', jsonEncode(_metadataOverrides));
-    });
+  Future<void> _saveMetadataOverrides() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('metadata_overrides', jsonEncode(_metadataOverrides));
   }
 
   Widget _buildOptionItem(
