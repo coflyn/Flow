@@ -38,7 +38,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                     color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    fontFamily: _activeFont,
+                    fontFamily: getFontFamily(_activeFont),
                   ),
                 ),
               ),
@@ -49,17 +49,149 @@ extension _ModalsUtilityUI on _MainScreenState {
                     : Colors.white10,
                 height: 1,
               ),
-              _buildTimerSheetOpt(context, '5 minutes', 5),
-              _buildTimerSheetOpt(context, '10 minutes', 10),
-              _buildTimerSheetOpt(context, '15 minutes', 15),
-              _buildTimerSheetOpt(context, '30 minutes', 30),
-              _buildTimerSheetOpt(context, '45 minutes', 45),
-              _buildTimerSheetOpt(context, '1 hour', 60),
-              _buildTimerSheetOpt(context, 'End of track', -1),
-              _buildTimerSheetOpt(context, 'Turn off', 0),
+              _buildTimerSheetOpt(
+                context,
+                '5 ${AppLocalizations.of(context).minutesFormat}',
+                5,
+              ),
+              _buildTimerSheetOpt(
+                context,
+                '10 ${AppLocalizations.of(context).minutesFormat}',
+                10,
+              ),
+              _buildTimerSheetOpt(
+                context,
+                '15 ${AppLocalizations.of(context).minutesFormat}',
+                15,
+              ),
+              _buildTimerSheetOpt(
+                context,
+                '30 ${AppLocalizations.of(context).minutesFormat}',
+                30,
+              ),
+              _buildTimerSheetOpt(
+                context,
+                '45 ${AppLocalizations.of(context).minutesFormat}',
+                45,
+              ),
+              _buildTimerSheetOpt(
+                context,
+                AppLocalizations.of(context).hour1,
+                60,
+              ),
+              _buildCustomTimerSheetOpt(context),
+              _buildTimerSheetOpt(
+                context,
+                AppLocalizations.of(context).endOfTrackShort,
+                -1,
+              ),
+              _buildTimerSheetOpt(
+                context,
+                AppLocalizations.of(context).turnOff,
+                0,
+              ),
               const SizedBox(height: 16),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCustomTimerSheetOpt(BuildContext context) {
+    final isLight = isAppLight;
+    final loc = AppLocalizations.of(context);
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      title: Row(
+        children: [
+          Icon(
+            Icons.edit_calendar_rounded,
+            size: 20,
+            color: isLight ? const Color(0xFF1A1A1A) : Colors.white70,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            loc.customTimer,
+            style: TextStyle(
+              color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              fontFamily: getFontFamily(_activeFont),
+            ),
+          ),
+        ],
+      ),
+      onTap: () {
+        Navigator.pop(context);
+        _showCustomSleepTimerDialog(context);
+      },
+    );
+  }
+
+  void _showCustomSleepTimerDialog(BuildContext context) {
+    final isLight = isAppLight;
+    final loc = AppLocalizations.of(context);
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor:
+              isLight ? const Color(0xFFFFFFFF) : const Color(0xFF1E1E26),
+          title: Text(
+            loc.customTimer,
+            style: TextStyle(
+              color: isLight ? Colors.black : Colors.white,
+              fontFamily: getFontFamily(_activeFont),
+            ),
+          ),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            style: TextStyle(
+              color: isLight ? Colors.black : Colors.white,
+              fontFamily: getFontFamily(_activeFont),
+            ),
+            decoration: InputDecoration(
+              hintText: loc.enterMinutes,
+              hintStyle: TextStyle(
+                color: isLight ? Colors.black45 : Colors.white38,
+                fontFamily: getFontFamily(_activeFont),
+              ),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: isLight ? Colors.black26 : Colors.white24,
+                ),
+              ),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFF1DB954)),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                loc.cancel,
+                style: const TextStyle(color: Colors.white54),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                final val = int.tryParse(controller.text.trim());
+                if (val != null && val > 0) {
+                  _startSleepTimer(val);
+                }
+                Navigator.pop(dialogContext);
+              },
+              child: Text(
+                loc.save,
+                style: const TextStyle(color: Color(0xFF1DB954)),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -75,7 +207,7 @@ extension _ModalsUtilityUI on _MainScreenState {
           color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
           fontSize: 16,
           fontWeight: FontWeight.w400,
-          fontFamily: _activeFont,
+          fontFamily: getFontFamily(_activeFont),
         ),
       ),
       onTap: () {
@@ -132,7 +264,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                         style: TextStyle(
                           color: isLight ? Colors.black45 : Colors.white30,
                           fontSize: 14,
-                          fontFamily: _activeFont,
+                          fontFamily: getFontFamily(_activeFont),
                         ),
                       ),
                     ),
@@ -197,7 +329,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                                   : Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              fontFamily: _activeFont,
+                              fontFamily: getFontFamily(_activeFont),
                             ),
                           ),
                           if (isFilteringActive)
@@ -223,7 +355,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                                   color: _activeAccentColor,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
-                                  fontFamily: _activeFont,
+                                  fontFamily: getFontFamily(_activeFont),
                                 ),
                               ),
                             ),
@@ -235,7 +367,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                         style: TextStyle(
                           color: isLight ? Colors.black54 : Colors.white54,
                           fontSize: 12,
-                          fontFamily: _activeFont,
+                          fontFamily: getFontFamily(_activeFont),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -298,7 +430,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                                               : Colors.white,
                                           fontWeight: FontWeight.w600,
                                           fontSize: 14,
-                                          fontFamily: _activeFont,
+                                          fontFamily: getFontFamily(_activeFont),
                                         ),
                                       ),
                                     ),
@@ -325,7 +457,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                                               : Colors.white70,
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          fontFamily: _activeFont,
+                                          fontFamily: getFontFamily(_activeFont),
                                         ),
                                       ),
                                     ),
@@ -345,7 +477,7 @@ extension _ModalsUtilityUI on _MainScreenState {
                                           ? Colors.black38
                                           : Colors.white30,
                                       fontSize: 11,
-                                      fontFamily: _activeFont,
+                                      fontFamily: getFontFamily(_activeFont),
                                     ),
                                   ),
                                 ),

@@ -23,25 +23,30 @@ extension _DetailViewsUI on _MainScreenState {
     if (baseName == AppLocalizations.of(context).favourites) {
       dynamicKeyPart = _favoriteTrackIds.length.toString();
     } else if (baseName == AppLocalizations.of(context).lastPlayed) {
-      dynamicKeyPart = _lastPlayedTrackIds.length.toString();
+      dynamicKeyPart = _allPlayedTrackIdsOrdered.length.toString();
     } else if (baseName == AppLocalizations.of(context).mostPlayed) {
       dynamicKeyPart = _playCounts.values
           .fold<int>(0, (a, b) => a + b)
+          .toString();
+    } else if (baseName == AppLocalizations.of(context).forgottenGems) {
+      dynamicKeyPart = _allTracks
+          .where((t) => (_playCounts[t.id] ?? 0) == 0)
+          .length
           .toString();
     } else if (_userPlaylists.containsKey(baseName)) {
       dynamicKeyPart = _userPlaylists[baseName]?.length.toString() ?? '0';
     }
 
     String baseKey = "${baseName}_${_searchQuery}_${type}_$dynamicKeyPart";
-    String currentKey = "${baseKey}_${dominantColorNotifier.value?.toARGB32()}";
 
-    if (_cachedDetailKey != currentKey ||
+    if (_cachedDetailKey != baseKey ||
         _cachedDetailSongs == null ||
         _cachedDetailImage == null) {
-      _cachedDetailKey = currentKey;
+      _cachedDetailKey = baseKey;
 
       if (_cachedDetailBaseKey != baseKey) {
         _cachedDetailBaseKey = baseKey;
+        _detailScrollOffsetNotifier.value = 0.0;
 
         if (_detailScrollController.hasClients) {
           _detailScrollController.jumpTo(0);
@@ -58,14 +63,10 @@ extension _DetailViewsUI on _MainScreenState {
         } else if (baseName == AppLocalizations.of(context).recentlyAdded) {
           pSongs = List.from(_allTracks);
         } else if (baseName == AppLocalizations.of(context).lastPlayed) {
-          pSongs = _lastPlayedTrackIds
-              .map(
-                (id) => _allTracks.firstWhere(
-                  (t) => t.id == id,
-                  orElse: () => _allTracks[0],
-                ),
-              )
-              .where((t) => _lastPlayedTrackIds.contains(t.id))
+          final trackMap = {for (var t in _allTracks) t.id: t};
+          pSongs = _allPlayedTrackIdsOrdered
+              .where((id) => trackMap.containsKey(id))
+              .map((id) => trackMap[id]!)
               .toList();
         } else if (baseName == AppLocalizations.of(context).mostPlayed) {
           pSongs = List.from(_allTracks);
@@ -74,6 +75,10 @@ extension _DetailViewsUI on _MainScreenState {
                 (_playCounts[b.id] ?? 0).compareTo(_playCounts[a.id] ?? 0),
           );
           pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
+        } else if (baseName == AppLocalizations.of(context).forgottenGems) {
+          pSongs = _allTracks
+              .where((t) => (_playCounts[t.id] ?? 0) <= 2)
+              .toList();
         } else if (_userPlaylists.containsKey(baseName)) {
           final trackIds = _userPlaylists[baseName]!.toSet();
           pSongs = _allTracks.where((t) => trackIds.contains(t.id)).toList();
@@ -107,8 +112,11 @@ extension _DetailViewsUI on _MainScreenState {
           } else if (baseName == AppLocalizations.of(context).mostPlayed) {
             color = const Color(0xFFF44336);
             icon = Icons.local_fire_department;
-          } else if (_userPlaylists.containsKey(baseName)) {
+          } else if (baseName == AppLocalizations.of(context).forgottenGems) {
             color = const Color(0xFF9C27B0);
+            icon = Icons.diamond_outlined;
+          } else if (_userPlaylists.containsKey(baseName)) {
+            color = const Color(0xFF673AB7);
             icon = Icons.queue_music;
           }
 
@@ -139,13 +147,11 @@ extension _DetailViewsUI on _MainScreenState {
                           distinctCovers[0],
                           size: 150,
                           radius: 0,
-                          cacheWidthOverride: 150,
                         ),
                         _buildTrackArtwork(
                           distinctCovers[1],
                           size: 150,
                           radius: 0,
-                          cacheWidthOverride: 150,
                         ),
                       ],
                     ),
@@ -155,13 +161,11 @@ extension _DetailViewsUI on _MainScreenState {
                           distinctCovers[2],
                           size: 150,
                           radius: 0,
-                          cacheWidthOverride: 150,
                         ),
                         _buildTrackArtwork(
                           distinctCovers[3],
                           size: 150,
                           radius: 0,
-                          cacheWidthOverride: 150,
                         ),
                       ],
                     ),
@@ -703,12 +707,105 @@ extension _DetailViewsUI on _MainScreenState {
               },
             ),
           ),
-          _buildSongList(
-            tracks,
-            header: header,
-            isMostPlayed: title == AppLocalizations.of(context).mostPlayed,
-            controller: _detailScrollController,
-            playlistContext: type == 'Playlist' ? title : null,
+          NotificationListener<ScrollNotification>(
+            onNotification: (scrollNotification) {
+              if (scrollNotification.metrics.axis == Axis.vertical) {
+                _detailScrollOffsetNotifier.value =
+                    scrollNotification.metrics.pixels;
+              }
+              return false;
+            },
+            child: _buildSongList(
+              tracks,
+              header: header,
+              isMostPlayed: title == AppLocalizations.of(context).mostPlayed,
+              controller: _detailScrollController,
+              playlistContext: type == 'Playlist' ? title : null,
+            ),
+          ),
+          ValueListenableBuilder<double>(
+            valueListenable: _detailScrollOffsetNotifier,
+            builder: (context, scrollOffset, child) {
+              final double progress =
+                  ((scrollOffset - 120.0) / 100.0).clamp(0.0, 1.0);
+              if (progress <= 0) return const SizedBox.shrink();
+
+              final navBgColor = isLight
+                  ? const Color(0xFFF6F8FA).withValues(alpha: progress * 0.96)
+                  : const Color(0xFF0A0A0A).withValues(alpha: progress * 0.96);
+
+              final textColor =
+                  isLight ? const Color(0xFF1A1A1A) : Colors.white;
+
+              return Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  color: navBgColor,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Container(
+                      height: 54,
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: (isLight ? Colors.black : Colors.white)
+                                .withValues(alpha: progress * 0.08),
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.arrow_back,
+                              color: textColor,
+                              size: 24,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _selectedPlaylistDetail = null;
+                                _selectedArtistDetail = null;
+                                _selectedAlbumDetail = null;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Opacity(
+                              opacity: progress,
+                              child: Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                  fontFamily:
+                                      getFontFamily(activeFontNotifier.value),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.more_vert,
+                              color: textColor,
+                              size: 24,
+                            ),
+                            onPressed: () =>
+                                _showDetailOptions(title, type, tracks),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

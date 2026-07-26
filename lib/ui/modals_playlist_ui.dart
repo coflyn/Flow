@@ -54,7 +54,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                   : Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              fontFamily: _activeFont,
+                              fontFamily: getFontFamily(_activeFont),
                             ),
                           ),
                           TextButton(
@@ -105,7 +105,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                           : Colors.white24)
                                     : _activeAccentColor,
                                 fontWeight: FontWeight.bold,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                           ),
@@ -140,7 +140,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                 color: isLight
                                     ? const Color(0xFF1A1A1A)
                                     : Colors.white,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                             subtitle: Text(
@@ -152,7 +152,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                     ? Colors.black54
                                     : Colors.white54,
                                 fontSize: 12,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                             trailing: Checkbox(
@@ -250,7 +250,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                     : Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -265,7 +265,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                               style: TextStyle(
                                 color: _activeAccentColor,
                                 fontWeight: FontWeight.bold,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                           ),
@@ -306,7 +306,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                               style: TextStyle(
                                 color: isLight ? Colors.black87 : Colors.white,
                                 fontSize: 12,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                             style: OutlinedButton.styleFrom(
@@ -349,7 +349,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                     ? Colors.black54
                                     : Colors.white70,
                                 fontSize: 12,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                           ),
@@ -372,7 +372,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                             color: isLight
                                                 ? const Color(0xFF1A1A1A)
                                                 : Colors.white,
-                                            fontFamily: _activeFont,
+                                            fontFamily: getFontFamily(_activeFont),
                                           ),
                                         ),
                                         content: Text(
@@ -383,7 +383,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                             color: isLight
                                                 ? Colors.black54
                                                 : Colors.white70,
-                                            fontFamily: _activeFont,
+                                            fontFamily: getFontFamily(_activeFont),
                                           ),
                                         ),
                                         actions: [
@@ -397,7 +397,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                                 color: isLight
                                                     ? Colors.black38
                                                     : Colors.white38,
-                                                fontFamily: _activeFont,
+                                                fontFamily: getFontFamily(_activeFont),
                                               ),
                                             ),
                                           ),
@@ -430,7 +430,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                               style: TextStyle(
                                                 color: Colors.redAccent,
                                                 fontWeight: FontWeight.bold,
-                                                fontFamily: _activeFont,
+                                                fontFamily: getFontFamily(_activeFont),
                                               ),
                                             ),
                                           ),
@@ -464,7 +464,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                   color: isLight
                                       ? Colors.black38
                                       : Colors.white30,
-                                  fontFamily: _activeFont,
+                                  fontFamily: getFontFamily(_activeFont),
                                 ),
                               ),
                             )
@@ -499,7 +499,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                       color: isLight
                                           ? const Color(0xFF1A1A1A)
                                           : Colors.white,
-                                      fontFamily: _activeFont,
+                                      fontFamily: getFontFamily(_activeFont),
                                     ),
                                   ),
                                   subtitle: Text(
@@ -511,7 +511,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                                           ? Colors.black54
                                           : Colors.white54,
                                       fontSize: 12,
-                                      fontFamily: _activeFont,
+                                      fontFamily: getFontFamily(_activeFont),
                                     ),
                                   ),
                                   trailing: Checkbox(
@@ -566,7 +566,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                         color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        fontFamily: _activeFont,
+                        fontFamily: getFontFamily(_activeFont),
                       ),
                     ),
                   ),
@@ -582,7 +582,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                       AppLocalizations.of(context).createNewPlaylist,
                       style: TextStyle(
                         color: _activeAccentColor,
-                        fontFamily: _activeFont,
+                        fontFamily: getFontFamily(_activeFont),
                       ),
                     ),
                     onTap: () {
@@ -612,7 +612,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                           color: isLight
                               ? const Color(0xFF1A1A1A)
                               : Colors.white,
-                          fontFamily: _activeFont,
+                          fontFamily: getFontFamily(_activeFont),
                         ),
                       ),
                       onTap: () {
@@ -720,20 +720,20 @@ extension _ModalsPlaylistUI on _MainScreenState {
             AppLocalizations.of(context).newPlaylist,
             style: TextStyle(
               color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-              fontFamily: _activeFont,
+              fontFamily: getFontFamily(_activeFont),
             ),
           ),
           content: TextField(
             controller: nameController,
             style: TextStyle(
               color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-              fontFamily: _activeFont,
+              fontFamily: getFontFamily(_activeFont),
             ),
             decoration: InputDecoration(
               hintText: AppLocalizations.of(context).playlistNamePlaceholder,
               hintStyle: TextStyle(
                 color: isLight ? Colors.black38 : Colors.white54,
-                fontFamily: _activeFont,
+                fontFamily: getFontFamily(_activeFont),
               ),
               enabledBorder: UnderlineInputBorder(
                 borderSide: BorderSide(
@@ -752,7 +752,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                 AppLocalizations.of(context).cancel,
                 style: TextStyle(
                   color: isLight ? Colors.black45 : Colors.white54,
-                  fontFamily: _activeFont,
+                  fontFamily: getFontFamily(_activeFont),
                 ),
               ),
             ),
@@ -780,7 +780,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                 style: TextStyle(
                   color: _activeAccentColor,
                   fontWeight: FontWeight.bold,
-                  fontFamily: _activeFont,
+                  fontFamily: getFontFamily(_activeFont),
                 ),
               ),
             ),
@@ -806,20 +806,20 @@ extension _ModalsPlaylistUI on _MainScreenState {
             AppLocalizations.of(context).renamePlaylist,
             style: TextStyle(
               color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-              fontFamily: _activeFont,
+              fontFamily: getFontFamily(_activeFont),
             ),
           ),
           content: TextField(
             controller: nameController,
             style: TextStyle(
               color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-              fontFamily: _activeFont,
+              fontFamily: getFontFamily(_activeFont),
             ),
             decoration: InputDecoration(
               hintText: AppLocalizations.of(context).playlistNamePlaceholder,
               hintStyle: TextStyle(
                 color: isLight ? Colors.black38 : Colors.white54,
-                fontFamily: _activeFont,
+                fontFamily: getFontFamily(_activeFont),
               ),
               enabledBorder: UnderlineInputBorder(
                 borderSide: BorderSide(
@@ -838,7 +838,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                 AppLocalizations.of(context).cancel,
                 style: TextStyle(
                   color: isLight ? Colors.black45 : Colors.white54,
-                  fontFamily: _activeFont,
+                  fontFamily: getFontFamily(_activeFont),
                 ),
               ),
             ),
@@ -875,7 +875,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                 style: TextStyle(
                   color: _activeAccentColor,
                   fontWeight: FontWeight.bold,
-                  fontFamily: _activeFont,
+                  fontFamily: getFontFamily(_activeFont),
                 ),
               ),
             ),
@@ -926,7 +926,7 @@ extension _ModalsPlaylistUI on _MainScreenState {
                       color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      fontFamily: _activeFont,
+                      fontFamily: getFontFamily(_activeFont),
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 1,

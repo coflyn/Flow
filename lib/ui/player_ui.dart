@@ -3,6 +3,7 @@ part of '../main.dart';
 
 extension _PlayerUI on _MainScreenState {
   Widget _buildMiniPlayer(Track currentTrack) {
+    final double bottomInset = MediaQuery.of(context).padding.bottom;
     return Positioned(
       bottom: 0,
       left: 0,
@@ -51,20 +52,36 @@ extension _PlayerUI on _MainScreenState {
           duration: const Duration(milliseconds: 500),
           builder: (context, Color? color, child) {
             return Container(
-              height: 60,
-              margin: const EdgeInsets.all(12),
+              height: 68,
+              margin: EdgeInsets.only(
+                left: 12,
+                right: 12,
+                bottom: bottomInset > 0 ? bottomInset + 4 : 12,
+              ),
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: child,
             );
           },
           child: Row(
             children: [
-              const SizedBox(width: 8),
-              _buildTrackArtwork(currentTrack, size: 44, radius: 6),
+              const SizedBox(width: 10),
+              _buildTrackArtwork(
+                currentTrack,
+                size: 48,
+                radius: 8,
+                heroTag: "mini_to_full_player_artwork",
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -75,20 +92,22 @@ extension _PlayerUI on _MainScreenState {
                       currentTrack.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                        fontSize: 14,
                         color: Colors.white,
+                        fontFamily: getFontFamily(activeFontNotifier.value),
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       currentTrack.artist,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white38,
-                        fontSize: 11,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        fontSize: 12,
+                        fontFamily: getFontFamily(activeFontNotifier.value),
                       ),
                     ),
                   ],
@@ -230,7 +249,7 @@ extension _PlayerUI on _MainScreenState {
                               : activeFontNotifier.value == 'Apple Music Style'
                               ? 'Inter'
                               : 'Plus Jakarta Sans',
-                          fontSize: 26,
+                          fontSize: _lyricFontSize,
                           fontWeight: FontWeight.bold,
                           color: isHighlighted
                               ? Colors.white
@@ -242,7 +261,7 @@ extension _PlayerUI on _MainScreenState {
                             : Text(
                                 line.text,
                                 textAlign: TextAlign.center,
-                                maxLines: 3,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                       ),
@@ -457,9 +476,10 @@ extension _PlayerUI on _MainScreenState {
     double size = 48,
     double radius = 8,
     int? cacheWidthOverride,
+    String? heroTag,
   }) {
     final customPath = _metadataOverrides[track.id]?['coverPath'];
-    return CachedTrackArtwork(
+    final artwork = CachedTrackArtwork(
       key: ValueKey("cached_artwork_${track.id}_$size"),
       trackId: track.id,
       size: size,
@@ -467,6 +487,14 @@ extension _PlayerUI on _MainScreenState {
       customPath: customPath,
       cacheWidthOverride: cacheWidthOverride,
     );
+
+    if (heroTag != null && heroTag.isNotEmpty) {
+      return Hero(
+        tag: heroTag,
+        child: artwork,
+      );
+    }
+    return artwork;
   }
 
   Widget _buildFullScreenPlayer(Track currentTrack) {
@@ -830,40 +858,44 @@ extension _PlayerUI on _MainScreenState {
                                   setState(() => _showLyrics = true);
                                   _loadLyricsForTrack(currentTrack);
                                 },
-                                child: Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12.0,
-                                    ),
-                                    child: AspectRatio(
-                                      aspectRatio: 1.0,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            24,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(
-                                                alpha: 0.45,
+                                child: AnimatedScale(
+                                  scale: _isPlayerOpen ? 1.0 : 0.35,
+                                  duration: const Duration(milliseconds: 380),
+                                  curve: Curves.easeOutQuint,
+                                  alignment: const Alignment(-0.85, 0.95),
+                                  child: Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12.0,
+                                      ),
+                                      child: AspectRatio(
+                                        aspectRatio: 1.0,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(24),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.45,
+                                                ),
+                                                blurRadius: 35,
+                                                offset: const Offset(0, 12),
                                               ),
-                                              blurRadius: 35,
-                                              offset: const Offset(0, 12),
-                                            ),
-                                          ],
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            24,
+                                            ],
                                           ),
-                                          child: _buildTrackArtwork(
-                                            currentTrack,
-                                            size:
-                                                MediaQuery.of(
-                                                  context,
-                                                ).size.width *
-                                                0.85,
-                                            radius: 24,
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(24),
+                                            child: _buildTrackArtwork(
+                                              currentTrack,
+                                              size:
+                                                  MediaQuery.of(
+                                                    context,
+                                                  ).size.width *
+                                                  0.85,
+                                              radius: 24,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1338,7 +1370,6 @@ class CachedTrackArtwork extends StatefulWidget {
 
 class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
   Uint8List? _bytes;
-  bool _loading = false;
 
   @override
   void initState() {
@@ -1356,40 +1387,27 @@ class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
   }
 
   void _load() {
-    // Bypass the low-res thumbnail cache for large artworks (player view, headers)
     if (widget.size > 100) {
-      _loading = true;
       return;
     }
 
     if (widget.customPath != null && widget.customPath!.isNotEmpty) {
-      // Custom images are handled by Flutter's native ImageCache
       _bytes = null;
-      _loading = true;
       return;
     }
 
     final cached = ArtworkCacheManager.getCachedArtwork(widget.trackId);
     if (cached != null) {
       _bytes = cached;
-      _loading = false;
       return;
     }
 
-    if (ArtworkCacheManager.isCached(widget.trackId)) {
-      _bytes = null;
-      _loading = false;
-      return;
-    }
-
-    _loading = true;
     ArtworkCacheManager.fetchAndCacheNativeArtwork(widget.trackId).then((
       bytes,
     ) {
-      if (mounted) {
+      if (mounted && bytes != null) {
         setState(() {
           _bytes = bytes;
-          _loading = false;
         });
       }
     });
@@ -1411,63 +1429,53 @@ class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
       );
     }
 
-    if (_loading &&
-        widget.customPath != null &&
-        widget.customPath!.isNotEmpty) {
-      final int cacheWidth =
-          widget.cacheWidthOverride ??
-          (widget.size > 100 ? 600 : 144);
+    if (widget.customPath != null && widget.customPath!.isNotEmpty) {
+      final ImageProvider customImageProvider = widget.size > 100
+          ? FileImage(File(widget.customPath!))
+          : (widget.cacheWidthOverride != null
+              ? ResizeImage(FileImage(File(widget.customPath!)),
+                  width: widget.cacheWidthOverride!)
+              : ResizeImage(FileImage(File(widget.customPath!)), width: 300));
       return Container(
         width: widget.size,
         height: widget.size,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(widget.radius),
           image: DecorationImage(
-            image: ResizeImage(
-              FileImage(File(widget.customPath!)),
-              width: cacheWidth,
-            ),
+            image: customImageProvider,
             fit: BoxFit.cover,
+            filterQuality: FilterQuality.high,
           ),
         ),
       );
     }
 
-    if (_loading && widget.size > 100) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(widget.radius),
-        child: QueryArtworkWidget(
-          id: int.parse(widget.trackId),
-          type: ArtworkType.AUDIO,
-          artworkWidth: widget.size,
-          artworkHeight: widget.size,
-          artworkBorder: BorderRadius.circular(widget.radius),
-          artworkFit: BoxFit.cover,
-          keepOldArtwork: true,
-          size: 1000,
-          quality: 100,
-          artworkQuality: FilterQuality.high,
-          nullArtworkWidget: Container(
-            width: widget.size,
-            height: widget.size,
-            decoration: BoxDecoration(
-              color: Colors.white10,
-              borderRadius: BorderRadius.circular(widget.radius),
-            ),
-            child: const Icon(Icons.music_note, color: Colors.white54),
-          ),
-        ),
-      );
-    }
+    final int artworkSize = widget.size > 100 ? 1000 : 200;
+    final int artworkQuality = widget.size > 100 ? 100 : 50;
 
-    return Container(
-      width: widget.size,
-      height: widget.size,
-      decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(widget.radius),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(widget.radius),
+      child: QueryArtworkWidget(
+        id: int.parse(widget.trackId),
+        type: ArtworkType.AUDIO,
+        artworkWidth: widget.size,
+        artworkHeight: widget.size,
+        artworkBorder: BorderRadius.circular(widget.radius),
+        artworkFit: BoxFit.cover,
+        keepOldArtwork: true,
+        size: artworkSize,
+        quality: artworkQuality,
+        artworkQuality: FilterQuality.low,
+        nullArtworkWidget: Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            borderRadius: BorderRadius.circular(widget.radius),
+          ),
+          child: const Icon(Icons.music_note, color: Colors.white54),
+        ),
       ),
-      child: const Icon(Icons.music_note, color: Colors.white54),
     );
   }
 }

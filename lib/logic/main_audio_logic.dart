@@ -22,6 +22,13 @@ extension _MainAudioLogic on _MainScreenState {
       languageNotifier.value = savedLang;
       _stopOnLowBattery = prefs.getBool('stopOnLowBattery') ?? false;
       _monoAudio = prefs.getBool('monoAudio') ?? false;
+      _libraryDensity = prefs.getString('libraryDensity') ?? 'standard';
+      _autoPlayOnConnect = prefs.getBool('autoPlayOnConnect') ?? false;
+      _playbackSpeed = prefs.getDouble('playbackSpeed') ?? 1.0;
+      _pitchLock = prefs.getBool('pitchLock') ?? true;
+      _lyricFontSize = prefs.getDouble('lyricFontSize') ?? 22.0;
+
+      _applyPlaybackSpeedAndPitch();
       _sortBy = prefs.getString('sortBy') ?? 'date';
       _detailSortBy = prefs.getString('detailSortBy') ?? 'default';
       themeAccentPresetNotifier.value =
@@ -100,9 +107,19 @@ extension _MainAudioLogic on _MainScreenState {
     _sleepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_sleepTimerNotifier.value > 0) {
         _sleepTimerNotifier.value--;
+        if (_sleepTimerNotifier.value <= 20) {
+          final factor = (_sleepTimerNotifier.value / 20.0).clamp(0.0, 1.0);
+          _audioPlayer.setVolume(factor);
+        }
       } else {
         _sleepTimer?.cancel();
-        _pauseWithFade();
+        _audioPlayer.pause();
+        if (mounted) {
+          setState(() {
+            _isPlaying = false;
+          });
+        }
+        _audioPlayer.setVolume(1.0);
       }
     });
   }
@@ -142,6 +159,21 @@ extension _MainAudioLogic on _MainScreenState {
     _loadSettings();
   }
 
+  Future<void> _applyPlaybackSpeedAndPitch() async {
+    try {
+      if (_playbackSpeed == 1.0 && _pitchLock) {
+        await _audioPlayer.setPitch(1.0);
+        await _audioPlayer.setSpeed(1.0);
+      } else if (_pitchLock) {
+        await _audioPlayer.setPitch(1.0);
+        await _audioPlayer.setSpeed(_playbackSpeed);
+      } else {
+        await _audioPlayer.setSpeed(_playbackSpeed);
+        await _audioPlayer.setPitch(_playbackSpeed);
+      }
+    } catch (_) {}
+  }
+
   void _startBatteryMonitor() {
     _batteryCheckTimer?.cancel();
     _batteryCheckTimer = Timer.periodic(const Duration(seconds: 30), (
@@ -170,21 +202,26 @@ extension _MainAudioLogic on _MainScreenState {
   }
 
   Future<Color?> _getDetailColor(Track? track, {String? playlistName}) async {
+    final String cacheKey = playlistName ?? (track != null ? track.id : '');
+    if (cacheKey.isNotEmpty && _detailColorCache.containsKey(cacheKey)) {
+      return _detailColorCache[cacheKey];
+    }
+
     ImageProvider? provider;
     if (playlistName != null && _playlistCovers.containsKey(playlistName)) {
       provider = ResizeImage(
         FileImage(File(_playlistCovers[playlistName]!)),
-        width: 600,
+        width: 64,
       );
     } else if (track != null) {
       final customPath = _metadataOverrides[track.id]?['coverPath'];
       if (customPath != null) {
-        provider = ResizeImage(FileImage(File(customPath)), width: 600);
+        provider = ResizeImage(FileImage(File(customPath)), width: 64);
       } else {
         final artwork = await _audioQuery.queryArtwork(
           int.parse(track.id),
           ArtworkType.AUDIO,
-          size: 200,
+          size: 100,
         );
         if (artwork != null) provider = MemoryImage(artwork);
       }
@@ -193,11 +230,16 @@ extension _MainAudioLogic on _MainScreenState {
     if (provider != null) {
       final palette = await PaletteGenerator.fromImageProvider(
         provider,
-        size: const Size(100, 100),
+        size: const Size(40, 40),
       );
-      return palette.dominantColor?.color ??
+      final color =
+          palette.dominantColor?.color ??
           palette.vibrantColor?.color ??
           palette.mutedColor?.color;
+      if (color != null && cacheKey.isNotEmpty) {
+        _detailColorCache[cacheKey] = color;
+      }
+      return color;
     }
     return null;
   }
@@ -238,6 +280,17 @@ extension _MainAudioLogic on _MainScreenState {
           }
         }
       }
+    });
+
+    AudioSession.instance.then((session) {
+      session.devicesChangedEventStream.listen((event) {
+        if (_autoPlayOnConnect &&
+            event.devicesAdded.isNotEmpty &&
+            _playingTrack != null &&
+            !_audioPlayer.playing) {
+          _audioPlayer.play();
+        }
+      });
     });
 
     _audioPlayer.playerStateStream.listen((state) {
@@ -412,12 +465,18 @@ extension _MainAudioLogic on _MainScreenState {
         _hiddenTrackIds.clear();
         _hiddenTrackIds.addAll(hidden);
       }
-      if (lastPlayed != null) _lastPlayedTrackIds = lastPlayed;
+      if (lastPlayed != null)
+        _lastPlayedTrackIds = List<String>.from(lastPlayed);
       if (playCountsStr != null) {
         try {
           Map<String, dynamic> decoded = jsonDecode(playCountsStr);
           _playCounts = decoded.map((k, v) => MapEntry(k, v as int));
         } catch (_) {}
+      }
+      for (var entry in _playCounts.entries) {
+        if (entry.value > 0 && !_lastPlayedTrackIds.contains(entry.key)) {
+          _lastPlayedTrackIds.add(entry.key);
+        }
       }
       if (userPlaylistsStr != null) {
         try {
@@ -595,6 +654,11 @@ extension _MainAudioLogic on _MainScreenState {
             _metadataOverrides,
           );
         }
+
+        final autoCheck = prefs.getBool('auto_check_updates') ?? true;
+        if (autoCheck) {
+          _checkForUpdatesStartup();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -603,6 +667,119 @@ extension _MainAudioLogic on _MainScreenState {
         });
       }
     }
+  }
+
+  Future<void> _checkForUpdatesStartup() async {
+    try {
+      final client = HttpClient();
+      client.userAgent = 'Flow-App';
+      final request = await client.getUrl(
+        Uri.parse('https://api.github.com/repos/coflyn/Flow/releases/latest'),
+      );
+      final response = await request.close();
+      if (response.statusCode == 200) {
+        final responseBody = await response.transform(utf8.decoder).join();
+        final json = jsonDecode(responseBody) as Map<String, dynamic>;
+        final String latestVersionTag = json['tag_name'] ?? 'v1.0.0';
+        final String htmlUrl =
+            json['html_url'] ?? 'https://github.com/coflyn/Flow/releases';
+
+        final latestVersion = latestVersionTag.replaceAll('v', '').trim();
+
+        final packageInfo = await PackageInfo.fromPlatform();
+        final currentVersion = packageInfo.version;
+
+        if (latestVersion != currentVersion) {
+          if (!mounted) return;
+          final isLight = isAppLight;
+          showDialog(
+            context: context,
+            builder: (dialogContext) {
+              return AlertDialog(
+                backgroundColor: isLight
+                    ? const Color(0xFFF0F0F3)
+                    : const Color(0xFF161616),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: Row(
+                  children: [
+                    Icon(
+                      Icons.system_update_rounded,
+                      color: _activeAccentColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      AppLocalizations.of(context).updateAvailable,
+                      style: TextStyle(
+                        color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context).newVersionAvailable,
+                      style: TextStyle(
+                        color: isLight ? Colors.black87 : Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${AppLocalizations.of(context).currentVersion}: v$currentVersion\n${AppLocalizations.of(context).latestVersion}: $latestVersionTag',
+                      style: TextStyle(
+                        color: isLight ? Colors.black54 : Colors.white54,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: Text(
+                      AppLocalizations.of(context).later,
+                      style: TextStyle(
+                        color: isLight ? Colors.black54 : Colors.white54,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      Navigator.pop(dialogContext);
+                      final url = Uri.parse(htmlUrl);
+                      try {
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      } catch (_) {
+                        showFlowToast(
+                          lookupAppLocalizations(
+                            Locale(FlowStrings.currentLang),
+                          ).couldNotOpenUpdate,
+                        );
+                      }
+                    },
+                    child: Text(
+                      AppLocalizations.of(context).download,
+                      style: TextStyle(
+                        color: _activeAccentColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      }
+    } catch (_) {}
   }
 
   void _filterSongs() {
@@ -940,7 +1117,6 @@ extension _MainAudioLogic on _MainScreenState {
       if (playImmediately) {
         _lastPlayedTrackIds.remove(track.id);
         _lastPlayedTrackIds.insert(0, track.id);
-        if (_lastPlayedTrackIds.length > 100) _lastPlayedTrackIds.removeLast();
       }
     });
 
@@ -1323,7 +1499,6 @@ extension _MainAudioLogic on _MainScreenState {
         prefs.setString('last_playing_track_id', track.id);
         _lastPlayedTrackIds.remove(track.id);
         _lastPlayedTrackIds.insert(0, track.id);
-        if (_lastPlayedTrackIds.length > 100) _lastPlayedTrackIds.removeLast();
         prefs.setStringList('last_played_track_ids', _lastPlayedTrackIds);
       });
 
@@ -1773,7 +1948,7 @@ extension _MainAudioLogic on _MainScreenState {
         style: TextStyle(
           color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
           fontSize: 16,
-          fontFamily: _activeFont,
+          fontFamily: getFontFamily(_activeFont),
         ),
       ),
       onTap: onTap,

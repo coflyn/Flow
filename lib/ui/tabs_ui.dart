@@ -77,20 +77,19 @@ extension _TabsUI on _MainScreenState {
         .where((t) => _favoriteTrackIds.contains(t.id))
         .toList();
     final recentlyAdded = List<Track>.from(_allTracks);
-    final lastPlayed = _lastPlayedTrackIds
-        .map(
-          (id) => _allTracks.firstWhere(
-            (t) => t.id == id,
-            orElse: () => _allTracks[0],
-          ),
-        )
-        .where((t) => _lastPlayedTrackIds.contains(t.id))
+    final trackMap = {for (var t in _allTracks) t.id: t};
+    final lastPlayed = _allPlayedTrackIdsOrdered
+        .where((id) => trackMap.containsKey(id))
+        .map((id) => trackMap[id]!)
         .toList();
     var mostPlayed = List<Track>.from(_allTracks);
     mostPlayed.sort(
       (a, b) => (_playCounts[b.id] ?? 0).compareTo(_playCounts[a.id] ?? 0),
     );
     mostPlayed = mostPlayed.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
+    final forgottenGems = _allTracks
+        .where((t) => (_playCounts[t.id] ?? 0) <= 2)
+        .toList();
 
     final children = [
       ListTile(
@@ -137,6 +136,12 @@ extension _TabsUI on _MainScreenState {
         mostPlayed,
         const Color(0xFFF44336),
         Icons.local_fire_department,
+      ),
+      _buildPlaylistCard(
+        AppLocalizations.of(context).forgottenGems,
+        forgottenGems,
+        const Color(0xFF9C27B0),
+        Icons.diamond_outlined,
       ),
       if (_userPlaylists.isNotEmpty)
         Padding(
@@ -489,11 +494,14 @@ extension _TabsUI on _MainScreenState {
                   : Border.all(color: Colors.transparent, width: 1),
             ),
             child: ListTile(
-              contentPadding: const EdgeInsets.only(
+              visualDensity: _libraryDensity == 'compact'
+                  ? const VisualDensity(vertical: -2)
+                  : VisualDensity.standard,
+              contentPadding: EdgeInsets.only(
                 left: 8,
                 right: 0,
-                top: 4,
-                bottom: 4,
+                top: _libraryDensity == 'compact' ? 0 : 4,
+                bottom: _libraryDensity == 'compact' ? 0 : 4,
               ),
               onLongPress: () {
                 _searchFocusNode.unfocus();
@@ -518,7 +526,11 @@ extension _TabsUI on _MainScreenState {
                   _playTrack(trackIndex, sourceList: list);
                 }
               },
-              leading: _buildTrackArtwork(track, size: 44, radius: 6),
+              leading: _buildTrackArtwork(
+                track,
+                size: _libraryDensity == 'compact' ? 36 : 44,
+                radius: _libraryDensity == 'compact' ? 4 : 6,
+              ),
               title: Text(
                 track.title,
                 maxLines: 1,

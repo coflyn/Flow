@@ -22,7 +22,7 @@ class ArtworkCacheManager {
 
   /// Fetches the native artwork asynchronously and stores it in the memory cache.
   static Future<Uint8List?> fetchAndCacheNativeArtwork(String trackId) async {
-    if (_memoryCache.containsKey(trackId)) {
+    if (_memoryCache.containsKey(trackId) && _memoryCache[trackId] != null) {
       return _memoryCache[trackId];
     }
 
@@ -41,21 +41,17 @@ class ArtworkCacheManager {
             quality: 50,
           );
 
-          if (bytes != null) {
+          if (bytes != null && bytes.isNotEmpty) {
             _memoryCache[trackId] = bytes;
             break;
           } else {
-            if (i == 2) {
-              _memoryCache[trackId] = null;
-            } else {
-              await Future.delayed(const Duration(milliseconds: 100));
+            if (i < 2) {
+              await Future.delayed(Duration(milliseconds: 100 * (i + 1)));
             }
           }
         } catch (e) {
-          if (i == 2) {
-            _memoryCache[trackId] = null;
-          } else {
-            await Future.delayed(const Duration(milliseconds: 100));
+          if (i < 2) {
+            await Future.delayed(Duration(milliseconds: 100 * (i + 1)));
           }
         }
       }
@@ -83,7 +79,7 @@ class ArtworkCacheManager {
       if (customPath != null && customPath.isNotEmpty) {
         final file = File(customPath);
         if (await file.exists()) {
-          final provider = ResizeImage(FileImage(file), width: 144);
+          final provider = FileImage(file);
           provider.resolve(const ImageConfiguration());
         }
       } else {

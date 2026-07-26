@@ -133,7 +133,7 @@ class _CustomCropScreenState extends State<_CustomCropScreen> {
               color: isSelected ? const Color(0xFF1DB954) : Colors.white54,
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              fontFamily: activeFontNotifier.value,
+              fontFamily: getFontFamily(),
             ),
           ),
         ],
@@ -244,7 +244,7 @@ class _CustomCropScreenState extends State<_CustomCropScreen> {
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            fontFamily: activeFontNotifier.value,
+                            fontFamily: getFontFamily(),
                           ),
                         ),
                         IconButton(

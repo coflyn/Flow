@@ -18,6 +18,7 @@ import 'dart:io';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'models/track.dart';
 import 'models/lyrics_line.dart';
@@ -146,12 +147,13 @@ class FlowApp extends StatelessWidget {
                                     return MediaQuery(
                                       data: MediaQuery.of(
                                         context,
-                                      ).copyWith(textScaleFactor: scale),
+                                      ).copyWith(textScaler: TextScaler.linear(scale)),
                                       child: child!,
                                     );
                                   },
                                   theme: ThemeData(
                                     useMaterial3: true,
+                                    fontFamily: getFontFamily(fontName),
                                     brightness: isLight
                                         ? Brightness.light
                                         : Brightness.dark,
@@ -255,6 +257,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool _skipSilence = false;
   bool _stopOnLowBattery = false;
   bool _monoAudio = false;
+  String _libraryDensity = 'standard';
+  bool _autoPlayOnConnect = false;
+  double _playbackSpeed = 1.0;
+  bool _pitchLock = true;
+  double _lyricFontSize = 22.0;
   Timer? _batteryCheckTimer;
   String _sortBy = 'date';
   String _detailSortBy = 'default';
@@ -311,6 +318,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   int _currentPageIndex = 0;
 
   List<String> _lastPlayedTrackIds = [];
+  List<String> get _allPlayedTrackIdsOrdered {
+    final result = <String>[];
+    final added = <String>{};
+    for (var id in _lastPlayedTrackIds) {
+      if (added.add(id)) result.add(id);
+    }
+    for (var entry in _playCounts.entries) {
+      if (entry.value > 0 && added.add(entry.key)) {
+        result.add(entry.key);
+      }
+    }
+    return result;
+  }
   Map<String, int> _playCounts = {};
   Map<String, List<String>> _userPlaylists = {};
   Map<String, String> _playlistCovers = {};
@@ -385,11 +405,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Future<Color?>? _detailColorFuture;
+  final Map<String, Color> _detailColorCache = {};
   int _fadeSessionId = 0;
   final ValueNotifier<double> _playerDragOffsetNotifier = ValueNotifier(0.0);
   final ValueNotifier<bool> _isDraggingPlayerNotifier = ValueNotifier(false);
   final ValueNotifier<double> _detailDragOffsetNotifier = ValueNotifier(0.0);
   final ValueNotifier<bool> _isDraggingDetailNotifier = ValueNotifier(false);
+  final ValueNotifier<double> _detailScrollOffsetNotifier = ValueNotifier(0.0);
 
   Widget? _lastDetailView;
   String? _cachedDetailKey;
@@ -599,7 +621,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                                                 Positioned.fill(
                                                   child: Container(
                                                     color: Colors.black
-                                                        .withOpacity(dimVal),
+                                                        .withValues(alpha: dimVal),
                                                   ),
                                                 ),
                                               ],
@@ -662,7 +684,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     _detailDragOffsetNotifier,
                     _isDraggingDetailNotifier,
                   ]),
-                  child: _getActiveDetailView(),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
+                    child: _getActiveDetailView(),
+                  ),
                   builder: (context, child) {
                     final isDragging = _isDraggingDetailNotifier.value;
                     final dragOffset = _detailDragOffsetNotifier.value;
@@ -695,9 +722,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     _playerDragOffsetNotifier,
                     _isDraggingPlayerNotifier,
                   ]),
-                  child: _playingTrack != null
-                      ? _buildFullScreenPlayer(_playingTrack!)
-                      : const SizedBox.shrink(),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
+                    child: _playingTrack != null
+                        ? _buildFullScreenPlayer(_playingTrack!)
+                        : const SizedBox.shrink(),
+                  ),
                   builder: (context, child) {
                     final isDragging = _isDraggingPlayerNotifier.value;
                     final dragOffset = _playerDragOffsetNotifier.value;

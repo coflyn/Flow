@@ -3,8 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:audio_service/audio_service.dart';
 
+import 'package:google_fonts/google_fonts.dart';
+
 import 'package:flow/l10n/app_localizations.dart';
 export 'strings.dart';
+
+String getFontFamily([String? fontName]) {
+  final font = fontName ?? activeFontNotifier.value;
+  if (font == 'Spotify Style') {
+    return GoogleFonts.figtree().fontFamily!;
+  } else if (font == 'Apple Music Style') {
+    return GoogleFonts.inter().fontFamily!;
+  } else {
+    return GoogleFonts.plusJakartaSans().fontFamily!;
+  }
+}
 
 bool isBackgroundInitialized = false;
 String? backgroundInitError;
@@ -123,7 +136,7 @@ Future<bool?> showConfirmationDialog(
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(
-              confirmText ?? 'Confirm',
+              confirmText ?? AppLocalizations.of(context).confirm,
               style: TextStyle(
                 color: confirmColor,
                 fontWeight: FontWeight.bold,

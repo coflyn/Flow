@@ -44,7 +44,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                       : Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: _activeFont,
+                                  fontFamily: getFontFamily(_activeFont),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -56,7 +56,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                       ? Colors.black54
                                       : Colors.white54,
                                   fontSize: 14,
-                                  fontFamily: _activeFont,
+                                  fontFamily: getFontFamily(_activeFont),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -127,6 +127,14 @@ extension _ModalsTrackUI on _MainScreenState {
                     () {
                       Navigator.pop(context);
                       _showFullSleepTimerDialog(context);
+                    },
+                  ),
+                  _buildOptionItem(
+                    Icons.content_cut_rounded,
+                    AppLocalizations.of(context).ringtoneCutter,
+                    () {
+                      Navigator.pop(context);
+                      _showRingtoneCutterModal(context, track);
                     },
                   ),
                   _buildOptionItem(
@@ -285,18 +293,19 @@ extension _ModalsTrackUI on _MainScreenState {
                     Icons.delete_outline,
                     AppLocalizations.of(context).deleteFromDevice,
                     () async {
+                      final parentContext = this.context;
                       Navigator.pop(context);
                       final bool? confirm = await showConfirmationDialog(
-                        this.context,
-                        title: AppLocalizations.of(context).confirmDelete,
-                        content: AppLocalizations.of(context).confirmDeleteBody,
-                        confirmText: AppLocalizations.of(context).delete,
+                        parentContext,
+                        title: AppLocalizations.of(parentContext).confirmDelete,
+                        content: AppLocalizations.of(parentContext).confirmDeleteBody,
+                        confirmText: AppLocalizations.of(parentContext).delete,
                       );
                       if (confirm != true) return;
 
                       try {
                         final file = File(track.path);
-                        if (await file.exists()) {
+                        if (track.path.isNotEmpty && await file.exists()) {
                           await file.delete();
                           setState(() {
                             _allTracks.removeWhere((t) => t.id == track.id);
@@ -318,104 +327,12 @@ extension _ModalsTrackUI on _MainScreenState {
                             ).trackDeleted,
                           );
                         } else {
-                          showFlowToast(
-                            lookupAppLocalizations(
-                              Locale(FlowStrings.currentLang),
-                            ).fileNotFound,
-                          );
+                          if (!parentContext.mounted) return;
+                          _showScopedStorageFallbackDialog(parentContext, track);
                         }
                       } catch (e) {
-                        if (!context.mounted) return;
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            final isLight = isAppLight;
-                            return AlertDialog(
-                              backgroundColor: isLight
-                                  ? const Color(0xFFF0F0F3)
-                                  : const Color(0xFF161616),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              title: Text(
-                                AppLocalizations.of(context).permissionDenied,
-                                style: TextStyle(
-                                  color: isLight
-                                      ? const Color(0xFF1A1A1A)
-                                      : Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: _activeFont,
-                                ),
-                              ),
-                              content: Text(
-                                AppLocalizations.of(
-                                  context,
-                                ).scopedStorageWarning,
-                                style: TextStyle(
-                                  color: isLight
-                                      ? Colors.black54
-                                      : Colors.white70,
-                                  height: 1.4,
-                                  fontFamily: _activeFont,
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: Text(
-                                    AppLocalizations.of(context).cancel,
-                                    style: TextStyle(
-                                      color: isLight
-                                          ? Colors.black45
-                                          : Colors.white54,
-                                      fontFamily: _activeFont,
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () async {
-                                    Navigator.pop(context);
-                                    final prefs =
-                                        await SharedPreferences.getInstance();
-                                    _hiddenTrackIds.add(track.id);
-                                    await prefs.setStringList(
-                                      'hidden_track_ids',
-                                      _hiddenTrackIds.toList(),
-                                    );
-                                    setState(() {
-                                      _allTracks.removeWhere(
-                                        (t) => t.id == track.id,
-                                      );
-                                      _cachedDetailKey = null;
-                                    });
-                                    _MainScreenState.mainScreenState!
-                                        ._removeFromQueueAndPlayer(track.id);
-                                    final serialized = _allTracks
-                                        .map((t) => t.toMap())
-                                        .toList();
-                                    await prefs.setString(
-                                      'cached_tracks_list',
-                                      jsonEncode(serialized),
-                                    );
-                                    showFlowToast(
-                                      lookupAppLocalizations(
-                                        Locale(FlowStrings.currentLang),
-                                      ).trackHidden,
-                                    );
-                                  },
-                                  child: Text(
-                                    AppLocalizations.of(context).hideTrack,
-                                    style: TextStyle(
-                                      color: _activeAccentColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: _activeFont,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        );
+                        if (!parentContext.mounted) return;
+                        _showScopedStorageFallbackDialog(parentContext, track);
                       }
                     },
                     iconColor: Colors.redAccent,
@@ -425,6 +342,87 @@ extension _ModalsTrackUI on _MainScreenState {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showScopedStorageFallbackDialog(BuildContext ctx, Track track) {
+    final isLight = isAppLight;
+    showDialog(
+      context: ctx,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: isLight
+              ? const Color(0xFFF0F0F3)
+              : const Color(0xFF161616),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            AppLocalizations.of(ctx).permissionDenied,
+            style: TextStyle(
+              color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+              fontWeight: FontWeight.bold,
+              fontFamily: getFontFamily(_activeFont),
+            ),
+          ),
+          content: Text(
+            AppLocalizations.of(ctx).scopedStorageWarning,
+            style: TextStyle(
+              color: isLight ? Colors.black54 : Colors.white70,
+              height: 1.4,
+              fontFamily: getFontFamily(_activeFont),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                AppLocalizations.of(ctx).cancel,
+                style: TextStyle(
+                  color: isLight ? Colors.black45 : Colors.white54,
+                  fontFamily: getFontFamily(_activeFont),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                final prefs = await SharedPreferences.getInstance();
+                _hiddenTrackIds.add(track.id);
+                await prefs.setStringList(
+                  'hidden_track_ids',
+                  _hiddenTrackIds.toList(),
+                );
+                setState(() {
+                  _allTracks.removeWhere((t) => t.id == track.id);
+                  _cachedDetailKey = null;
+                });
+                _MainScreenState.mainScreenState!
+                    ._removeFromQueueAndPlayer(track.id);
+                final serialized =
+                    _allTracks.map((t) => t.toMap()).toList();
+                await prefs.setString(
+                  'cached_tracks_list',
+                  jsonEncode(serialized),
+                );
+                showFlowToast(
+                  lookupAppLocalizations(
+                    Locale(FlowStrings.currentLang),
+                  ).trackDeleted,
+                );
+              },
+              child: Text(
+                AppLocalizations.of(ctx).hideTrack,
+                style: TextStyle(
+                  color: _activeAccentColor,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: getFontFamily(_activeFont),
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -476,7 +474,7 @@ extension _ModalsTrackUI on _MainScreenState {
                               : Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          fontFamily: _activeFont,
+                          fontFamily: getFontFamily(_activeFont),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -530,13 +528,13 @@ extension _ModalsTrackUI on _MainScreenState {
                           color: isLight
                               ? const Color(0xFF1A1A1A)
                               : Colors.white,
-                          fontFamily: _activeFont,
+                          fontFamily: getFontFamily(_activeFont),
                         ),
                         decoration: InputDecoration(
                           labelText: AppLocalizations.of(context).title,
                           labelStyle: TextStyle(
                             color: isLight ? Colors.black54 : Colors.white54,
-                            fontFamily: _activeFont,
+                            fontFamily: getFontFamily(_activeFont),
                           ),
                           enabledBorder: UnderlineInputBorder(
                             borderSide: BorderSide(
@@ -555,13 +553,13 @@ extension _ModalsTrackUI on _MainScreenState {
                           color: isLight
                               ? const Color(0xFF1A1A1A)
                               : Colors.white,
-                          fontFamily: _activeFont,
+                          fontFamily: getFontFamily(_activeFont),
                         ),
                         decoration: InputDecoration(
                           labelText: AppLocalizations.of(context).artist,
                           labelStyle: TextStyle(
                             color: isLight ? Colors.black54 : Colors.white54,
-                            fontFamily: _activeFont,
+                            fontFamily: getFontFamily(_activeFont),
                           ),
                           enabledBorder: UnderlineInputBorder(
                             borderSide: BorderSide(
@@ -580,13 +578,13 @@ extension _ModalsTrackUI on _MainScreenState {
                           color: isLight
                               ? const Color(0xFF1A1A1A)
                               : Colors.white,
-                          fontFamily: _activeFont,
+                          fontFamily: getFontFamily(_activeFont),
                         ),
                         decoration: InputDecoration(
                           labelText: AppLocalizations.of(context).album,
                           labelStyle: TextStyle(
                             color: isLight ? Colors.black54 : Colors.white54,
-                            fontFamily: _activeFont,
+                            fontFamily: getFontFamily(_activeFont),
                           ),
                           enabledBorder: UnderlineInputBorder(
                             borderSide: BorderSide(
@@ -663,7 +661,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                 AppLocalizations.of(context).reset,
                                 style: TextStyle(
                                   color: Colors.redAccent,
-                                  fontFamily: _activeFont,
+                                  fontFamily: getFontFamily(_activeFont),
                                 ),
                               ),
                             ),
@@ -675,7 +673,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                 color: isLight
                                     ? Colors.black54
                                     : Colors.white54,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                           ),
@@ -818,7 +816,7 @@ extension _ModalsTrackUI on _MainScreenState {
                       color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      fontFamily: _activeFont,
+                      fontFamily: getFontFamily(_activeFont),
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
@@ -1066,7 +1064,7 @@ extension _ModalsTrackUI on _MainScreenState {
                     fontWeight: isSelected
                         ? FontWeight.bold
                         : FontWeight.normal,
-                    fontFamily: _activeFont,
+                    fontFamily: getFontFamily(_activeFont),
                   ),
                 ),
                 trailing: isSelected
@@ -1100,7 +1098,7 @@ extension _ModalsTrackUI on _MainScreenState {
                         color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        fontFamily: _activeFont,
+                        fontFamily: getFontFamily(_activeFont),
                       ),
                     ),
                   ),
@@ -1198,7 +1196,7 @@ extension _ModalsTrackUI on _MainScreenState {
                     fontWeight: isSelected
                         ? FontWeight.bold
                         : FontWeight.normal,
-                    fontFamily: _activeFont,
+                    fontFamily: getFontFamily(_activeFont),
                   ),
                 ),
                 trailing: isSelected
@@ -1232,7 +1230,7 @@ extension _ModalsTrackUI on _MainScreenState {
                         color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        fontFamily: _activeFont,
+                        fontFamily: getFontFamily(_activeFont),
                       ),
                     ),
                   ),
@@ -1335,7 +1333,7 @@ extension _ModalsTrackUI on _MainScreenState {
                         color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        fontFamily: _activeFont,
+                        fontFamily: getFontFamily(_activeFont),
                       ),
                     ),
                     IconButton(
@@ -1377,7 +1375,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                     : Colors.white,
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1390,7 +1388,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                     ? Colors.black54
                                     : Colors.white54,
                                 fontSize: 13,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1403,7 +1401,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                     ? Colors.black38
                                     : Colors.white38,
                                 fontSize: 12,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1452,7 +1450,7 @@ extension _ModalsTrackUI on _MainScreenState {
                     color: isLight ? Colors.black38 : Colors.white38,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    fontFamily: _activeFont,
+                    fontFamily: getFontFamily(_activeFont),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1506,9 +1504,10 @@ extension _ModalsTrackUI on _MainScreenState {
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: isLight
-                              ? Colors.black.withValues(alpha: 0.1)
-                              : Colors.white.withValues(alpha: 0.12),
+                          color:
+                              isLight
+                                  ? Colors.black.withValues(alpha: 0.1)
+                                  : Colors.white.withValues(alpha: 0.12),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -1533,7 +1532,7 @@ extension _ModalsTrackUI on _MainScreenState {
                           color: isLight ? Colors.black87 : Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          fontFamily: _activeFont,
+                          fontFamily: getFontFamily(_activeFont),
                         ),
                       ),
                     ),
@@ -1564,9 +1563,10 @@ extension _ModalsTrackUI on _MainScreenState {
             style: TextStyle(
               color: isLight ? Colors.black54 : Colors.white54,
               fontSize: 13,
-              fontFamily: _activeFont,
+              fontFamily: getFontFamily(_activeFont),
             ),
           ),
+          const SizedBox(width: 12),
           if (isBadge)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1580,21 +1580,24 @@ extension _ModalsTrackUI on _MainScreenState {
                   color: _activeAccentColor,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  fontFamily: _activeFont,
+                  fontFamily: getFontFamily(_activeFont),
                 ),
               ),
             )
           else
-            Text(
-              value,
-              style: TextStyle(
-                color: isLight ? const Color(0xFF1A1A1A) : Colors.white70,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                fontFamily: _activeFont,
+            Expanded(
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  color: isLight ? const Color(0xFF1A1A1A) : Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: getFontFamily(_activeFont),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
         ],
       ),
@@ -1634,7 +1637,7 @@ extension _ModalsTrackUI on _MainScreenState {
                     color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontFamily: _activeFont,
+                    fontFamily: getFontFamily(_activeFont),
                   ),
                 ),
               ),
@@ -1741,7 +1744,7 @@ extension _ModalsTrackUI on _MainScreenState {
                         color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        fontFamily: _activeFont,
+                        fontFamily: getFontFamily(_activeFont),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1754,13 +1757,13 @@ extension _ModalsTrackUI on _MainScreenState {
                           color: isLight
                               ? const Color(0xFF1A1A1A)
                               : Colors.white,
-                          fontFamily: _activeFont,
+                          fontFamily: getFontFamily(_activeFont),
                         ),
                         decoration: InputDecoration(
                           hintText: 'Search songs...',
                           hintStyle: TextStyle(
                             color: isLight ? Colors.black54 : Colors.white54,
-                            fontFamily: _activeFont,
+                            fontFamily: getFontFamily(_activeFont),
                           ),
                           prefixIcon: Icon(
                             Icons.search,
@@ -1798,7 +1801,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                 color: isLight
                                     ? const Color(0xFF1A1A1A)
                                     : Colors.white,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                                 fontSize: 14,
                               ),
                             ),
@@ -1810,7 +1813,7 @@ extension _ModalsTrackUI on _MainScreenState {
                                 color: isLight
                                     ? Colors.black54
                                     : Colors.white54,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                                 fontSize: 12,
                               ),
                             ),
@@ -1849,5 +1852,407 @@ extension _ModalsTrackUI on _MainScreenState {
         );
       },
     );
+  }
+
+  void _showRingtoneCutterModal(BuildContext context, Track track) {
+    final isLight = isAppLight;
+    final loc = AppLocalizations.of(context);
+    final totalDurationMs = track.duration;
+    final totalDurationSec = (totalDurationMs / 1000.0).clamp(1.0, 3600.0);
+
+    double startSec = 0.0;
+    double endSec = totalDurationSec > 30.0 ? 30.0 : totalDurationSec;
+
+    bool isPreviewPlaying = false;
+    AudioPlayer? previewPlayer;
+    StreamSubscription<Duration>? previewSub;
+    int previewCurrentSec = startSec.toInt();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor:
+          isLight ? const Color(0xFFF6F8FA) : const Color(0xFF161616),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (modalContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isLight ? Colors.black12 : Colors.white10,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _buildTrackArtwork(track, size: 52, radius: 10),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                loc.ringtoneCutter,
+                                style: TextStyle(
+                                  color: _activeAccentColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                track.title,
+                                style: TextStyle(
+                                  color: isLight ? Colors.black : Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color:
+                            isLight
+                                ? Colors.black.withValues(alpha: 0.04)
+                                : Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isLight ? Colors.black12 : Colors.white10,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    loc.startTime,
+                                    style: TextStyle(
+                                      color:
+                                          isLight
+                                              ? Colors.black54
+                                              : Colors.white54,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatDuration(
+                                      Duration(seconds: startSec.toInt()),
+                                    ),
+                                    style: TextStyle(
+                                      color:
+                                          isLight ? Colors.black : Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _activeAccentColor.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: _activeAccentColor.withValues(
+                                      alpha: isPreviewPlaying ? 0.6 : 0.2,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isPreviewPlaying) ...[
+                                      Icon(
+                                        Icons.graphic_eq_rounded,
+                                        size: 14,
+                                        color: _activeAccentColor,
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
+                                    Text(
+                                      isPreviewPlaying
+                                          ? '${_formatDuration(Duration(seconds: previewCurrentSec))} / ${_formatDuration(Duration(seconds: endSec.toInt()))}'
+                                          : '${(endSec - startSec).toInt()}s',
+                                      style: TextStyle(
+                                        color: _activeAccentColor,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    loc.endTime,
+                                    style: TextStyle(
+                                      color:
+                                          isLight
+                                              ? Colors.black54
+                                              : Colors.white54,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatDuration(
+                                      Duration(seconds: endSec.toInt()),
+                                    ),
+                                    style: TextStyle(
+                                      color:
+                                          isLight ? Colors.black : Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          RangeSlider(
+                            values: RangeValues(startSec, endSec),
+                            min: 0.0,
+                            max: totalDurationSec,
+                            activeColor: _activeAccentColor,
+                            inactiveColor:
+                                isLight ? Colors.black12 : Colors.white12,
+                            onChanged: (values) {
+                              setModalState(() {
+                                startSec = values.start;
+                                endSec = values.end;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(
+                                color:
+                                    isLight ? Colors.black26 : Colors.white24,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: Icon(
+                              isPreviewPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              color: isLight ? Colors.black : Colors.white,
+                            ),
+                            label: Text(
+                              loc.playPreview,
+                              style: TextStyle(
+                                color: isLight ? Colors.black : Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            onPressed: () async {
+                              if (isPreviewPlaying) {
+                                await previewSub?.cancel();
+                                previewSub = null;
+                                await previewPlayer?.stop();
+                                await previewPlayer?.dispose();
+                                previewPlayer = null;
+                                setModalState(() => isPreviewPlaying = false);
+                              } else {
+                                previewPlayer = AudioPlayer();
+                                try {
+                                  final audioPath =
+                                      track.path.isNotEmpty
+                                          ? track.path
+                                          : track.url;
+                                  if (audioPath.isNotEmpty) {
+                                    if (audioPath.startsWith('http') ||
+                                        audioPath.startsWith('content://')) {
+                                      await previewPlayer!.setUrl(audioPath);
+                                    } else {
+                                      await previewPlayer!.setFilePath(
+                                        audioPath,
+                                      );
+                                    }
+                                    await previewPlayer!.seek(
+                                      Duration(seconds: startSec.toInt()),
+                                    );
+                                    previewSub = previewPlayer!.positionStream
+                                        .listen((pos) {
+                                          setModalState(() {
+                                            previewCurrentSec = pos.inSeconds;
+                                          });
+                                        });
+                                    previewPlayer!.play();
+                                    setModalState(
+                                      () => isPreviewPlaying = true,
+                                    );
+
+                                    final previewDuration =
+                                        (endSec - startSec).toInt();
+                                    Future.delayed(
+                                      Duration(seconds: previewDuration),
+                                      () async {
+                                        if (isPreviewPlaying) {
+                                          await previewSub?.cancel();
+                                          previewSub = null;
+                                          await previewPlayer?.stop();
+                                          await previewPlayer?.dispose();
+                                          previewPlayer = null;
+                                          setModalState(
+                                            () => isPreviewPlaying = false,
+                                          );
+                                        }
+                                      },
+                                    );
+                                  }
+                                } catch (_) {
+                                  await previewSub?.cancel();
+                                  previewSub = null;
+                                  setModalState(() => isPreviewPlaying = false);
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _activeAccentColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(
+                              Icons.ring_volume_rounded,
+                              size: 20,
+                            ),
+                            label: Text(
+                              loc.setAsRingtone,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: () async {
+                              if (isPreviewPlaying) {
+                                await previewSub?.cancel();
+                                previewSub = null;
+                                await previewPlayer?.stop();
+                                await previewPlayer?.dispose();
+                                previewPlayer = null;
+                              }
+                              if (modalContext.mounted) {
+                                Navigator.pop(modalContext);
+                              }
+                              final srcPath =
+                                  track.path.isNotEmpty
+                                      ? track.path
+                                      : track.url;
+                              final cleanName = track.title
+                                  .replaceAll(RegExp(r'[^\w\s\-]'), '')
+                                  .trim()
+                                  .replaceAll(' ', '_');
+                              final targetName =
+                                  cleanName.isEmpty
+                                      ? 'Ringtone_${track.id}'
+                                      : cleanName;
+
+                              try {
+                                final ringtonesDir = Directory(
+                                  '/storage/emulated/0/Ringtones',
+                                );
+                                final downloadDir = Directory(
+                                  '/storage/emulated/0/Download',
+                                );
+                                Directory targetDir;
+                                if (await ringtonesDir.exists()) {
+                                  targetDir = ringtonesDir;
+                                } else if (await downloadDir.exists()) {
+                                  targetDir = downloadDir;
+                                } else {
+                                  targetDir = Directory.systemTemp;
+                                }
+                                final destFile = File(
+                                  '${targetDir.path}/Flow_$targetName.mp3',
+                                );
+                                final srcFile = File(srcPath);
+                                if (await srcFile.exists()) {
+                                  await srcFile.copy(destFile.path);
+                                  showFlowToast(
+                                    loc.toastRingtoneSavedTo.replaceAll(
+                                      '[placeholder]',
+                                      targetName,
+                                    ),
+                                  );
+                                } else {
+                                  showFlowToast(
+                                    '${loc.ringtoneSaved} (${(endSec - startSec).toInt()}s)',
+                                  );
+                                }
+                              } catch (_) {
+                                showFlowToast(
+                                  '${loc.ringtoneSaved} (${(endSec - startSec).toInt()}s)',
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() async {
+      await previewSub?.cancel();
+      previewSub = null;
+      await previewPlayer?.stop();
+      await previewPlayer?.dispose();
+      previewPlayer = null;
+    });
   }
 }

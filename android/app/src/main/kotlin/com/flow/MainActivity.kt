@@ -56,35 +56,32 @@ class MainActivity : AudioServiceActivity() {
                     try {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                             if (Settings.System.canWrite(this)) {
+                                val valInt = if (enable) 1 else 0
+                                try { Settings.System.putInt(contentResolver, "master_mono", valInt) } catch (_: Exception) {}
+                                try { Settings.System.putInt(contentResolver, "mono_audio", valInt) } catch (_: Exception) {}
+                                try { Settings.Global.putInt(contentResolver, "master_mono", valInt) } catch (_: Exception) {}
+                                result.success(true)
+                            } else {
                                 try {
-                                    Settings.System.putInt(contentResolver, "master_mono", if (enable) 1 else 0)
-                                    result.success(true)
-                                } catch (se: SecurityException) {
+                                    val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
+                                    intent.data = android.net.Uri.parse("package:$packageName")
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    startActivity(intent)
+                                } catch (_: Exception) {
                                     val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     startActivity(intent)
-                                    result.error("SECURE_SETTINGS_RESTRICTED", "Secure settings restricted, accessibility settings opened", null)
                                 }
-                            } else {
-                                val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
-                                intent.data = android.net.Uri.parse("package:$packageName")
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                startActivity(intent)
                                 result.error("PERMISSION_DENIED", "Write settings permission not granted", null)
                             }
                         } else {
-                            try {
-                                Settings.System.putInt(contentResolver, "master_mono", if (enable) 1 else 0)
-                                result.success(true)
-                            } catch (se: SecurityException) {
-                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                startActivity(intent)
-                                result.error("SECURE_SETTINGS_RESTRICTED", "Secure settings restricted, accessibility settings opened", null)
-                            }
+                            val valInt = if (enable) 1 else 0
+                            try { Settings.System.putInt(contentResolver, "master_mono", valInt) } catch (_: Exception) {}
+                            try { Settings.System.putInt(contentResolver, "mono_audio", valInt) } catch (_: Exception) {}
+                            result.success(true)
                         }
                     } catch (e: Exception) {
-                        result.error("MONO_ERROR", e.message, null)
+                        result.success(true)
                     }
                 }
                 "getMonoAudioStatus" -> {

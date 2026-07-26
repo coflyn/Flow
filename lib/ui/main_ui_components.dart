@@ -222,14 +222,10 @@ extension _MainUIComponents on _MainScreenState {
           } else if (title == AppLocalizations.of(context).recentlyAdded) {
             pSongs = List.from(_allTracks);
           } else if (title == AppLocalizations.of(context).lastPlayed) {
-            pSongs = _lastPlayedTrackIds
-                .map(
-                  (id) => _allTracks.firstWhere(
-                    (t) => t.id == id,
-                    orElse: () => _allTracks[0],
-                  ),
-                )
-                .where((t) => _lastPlayedTrackIds.contains(t.id))
+            final trackMap = {for (var t in _allTracks) t.id: t};
+            pSongs = _allPlayedTrackIdsOrdered
+                .where((id) => trackMap.containsKey(id))
+                .map((id) => trackMap[id]!)
                 .toList();
           } else if (title == AppLocalizations.of(context).mostPlayed) {
             pSongs = List.from(_allTracks);
@@ -238,6 +234,10 @@ extension _MainUIComponents on _MainScreenState {
                   (_playCounts[b.id] ?? 0).compareTo(_playCounts[a.id] ?? 0),
             );
             pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
+          } else if (title == AppLocalizations.of(context).forgottenGems) {
+            pSongs = _allTracks
+                .where((t) => (_playCounts[t.id] ?? 0) <= 2)
+                .toList();
           } else if (_userPlaylists.containsKey(title)) {
             pSongs = _allTracks
                 .where((t) => _userPlaylists[title]!.contains(t.id))

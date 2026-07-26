@@ -71,6 +71,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _playerCustomBgPath;
   double _playerCustomBgBlur = 0.0;
   double _playerCustomBgDim = 0.4;
+  bool _autoCheckUpdates = true;
+  String _libraryDensity = 'standard';
+  bool _autoPlayOnConnect = false;
+  double _playbackSpeed = 1.0;
+  bool _pitchLock = true;
+  double _lyricFontSize = 22.0;
   String _appVersion = 'Loading...';
   Future<List<SongModel>>? _songsFuture;
 
@@ -144,11 +150,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
         if (latestVersion != currentVersion) {
           if (!mounted) return;
+          final isLight = isAppLight;
           showDialog(
             context: context,
             builder: (context) {
               return AlertDialog(
-                backgroundColor: const Color(0xFF161616),
+                backgroundColor: isLight
+                    ? const Color(0xFFF0F0F3)
+                    : const Color(0xFF161616),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -158,11 +167,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       Icons.system_update_rounded,
                       color: _activeAccentColor,
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Text(
                       AppLocalizations.of(context).updateAvailable,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -174,13 +183,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   children: [
                     Text(
                       AppLocalizations.of(context).newVersionAvailable,
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(
+                        color: isLight ? Colors.black87 : Colors.white70,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       '${AppLocalizations.of(context).currentVersion}: v$currentVersion\n${AppLocalizations.of(context).latestVersion}: $latestVersionTag',
-                      style: const TextStyle(
-                        color: Colors.white54,
+                      style: TextStyle(
+                        color: isLight ? Colors.black54 : Colors.white54,
                         fontFamily: 'monospace',
                       ),
                     ),
@@ -191,7 +202,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onPressed: () => Navigator.pop(context),
                     child: Text(
                       AppLocalizations.of(context).later,
-                      style: const TextStyle(color: Colors.white54),
+                      style: TextStyle(
+                        color: isLight ? Colors.black54 : Colors.white54,
+                      ),
                     ),
                   ),
                   TextButton(
@@ -245,27 +258,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     bool monoAudio = prefs.getBool('monoAudio') ?? false;
-    if (monoAudio) {
-      try {
-        const channel = MethodChannel('com.flow.audio/equalizer');
-        final hasPermission =
-            await channel.invokeMethod<bool>('checkWriteSettingsPermission') ??
-            false;
-        if (!hasPermission) {
-          monoAudio = false;
-          await prefs.setBool('monoAudio', false);
-        } else {
-          final systemMono =
-              await channel.invokeMethod<bool>('getMonoAudioStatus') ?? false;
-          if (!systemMono) {
-            await channel.invokeMethod('toggleMonoAudio', {'enable': true});
-          }
-        }
-      } catch (_) {
-        monoAudio = false;
-        await prefs.setBool('monoAudio', false);
-      }
-    }
 
     setState(() {
       _filterShortAudio = prefs.getBool('filterShortAudio') ?? false;
@@ -294,6 +286,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _playerCustomBgPath = prefs.getString('playerCustomBgPath');
       _playerCustomBgBlur = prefs.getDouble('playerCustomBgBlur') ?? 0.0;
       _playerCustomBgDim = prefs.getDouble('playerCustomBgDim') ?? 0.4;
+      _autoCheckUpdates = prefs.getBool('auto_check_updates') ?? true;
+      _libraryDensity = prefs.getString('libraryDensity') ?? 'standard';
+      _autoPlayOnConnect = prefs.getBool('autoPlayOnConnect') ?? false;
+      _playbackSpeed = prefs.getDouble('playbackSpeed') ?? 1.0;
+      _pitchLock = prefs.getBool('pitchLock') ?? true;
+      _lyricFontSize = prefs.getDouble('lyricFontSize') ?? 18.0;
     });
 
     final packageInfo = await PackageInfo.fromPlatform();
@@ -426,6 +424,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SettingsPremiumListTile(
                 isLight: _selectedThemeMode == 'light',
                 activeAccentColor: _activeAccentColor,
+                icon: Icons.density_medium_rounded,
+                title: AppLocalizations.of(context).libraryDensity,
+                subtitle: _libraryDensity == 'compact'
+                    ? AppLocalizations.of(context).densityCompact
+                    : AppLocalizations.of(context).densityStandard,
+                onTap: () => _showLibraryDensityDialog(),
+              ),
+              const Divider(color: Colors.white10, height: 1),
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
+                icon: Icons.format_size_rounded,
+                title: AppLocalizations.of(context).lyricFontSize,
+                subtitle: '${_lyricFontSize.toInt()} sp',
+                onTap: () => _showLyricFontSizeDialog(),
+              ),
+              const Divider(color: Colors.white10, height: 1),
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: _selectedThemeMode == 'light'
                     ? Icons.light_mode_outlined
                     : _selectedThemeMode == 'custom'
@@ -543,7 +561,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               color: _activeAccentColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
-                              fontFamily: _activeFont,
+                              fontFamily: getFontFamily(_activeFont),
                             ),
                           ),
                           TextButton.icon(
@@ -563,7 +581,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               AppLocalizations.of(context).changePhoto,
                               style: TextStyle(
                                 fontSize: 12,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                             onPressed: () => _pickAndSaveImage(
@@ -803,7 +821,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     ? Colors.black54
                                     : Colors.white70,
                                 fontSize: 13,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                             Text(
@@ -813,7 +831,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     ? Colors.black38
                                     : Colors.white38,
                                 fontSize: 13,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                           ],
@@ -846,7 +864,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     ? Colors.black54
                                     : Colors.white70,
                                 fontSize: 13,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                             Text(
@@ -856,7 +874,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     ? Colors.black38
                                     : Colors.white38,
                                 fontSize: 13,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                           ],
@@ -887,7 +905,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             style: TextStyle(
                               color: isLight ? Colors.black54 : Colors.white54,
                               fontSize: 12,
-                              fontFamily: _activeFont,
+                              fontFamily: getFontFamily(_activeFont),
                             ),
                           ),
                         ),
@@ -929,7 +947,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               color: _activeAccentColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
-                              fontFamily: _activeFont,
+                              fontFamily: getFontFamily(_activeFont),
                             ),
                           ),
                           TextButton.icon(
@@ -949,7 +967,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               AppLocalizations.of(context).changePhoto,
                               style: TextStyle(
                                 fontSize: 12,
-                                fontFamily: _activeFont,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                             onPressed: () => _pickAndSaveImage(
@@ -1308,6 +1326,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SettingsPremiumSwitchTile(
                 isLight: _selectedThemeMode == 'light',
                 activeAccentColor: _activeAccentColor,
+                icon: Icons.headset_mic_outlined,
+                title: AppLocalizations.of(context).autoPlayOnConnect,
+                subtitle: AppLocalizations.of(
+                  context,
+                ).autoPlayOnConnectSubtitle,
+                value: _autoPlayOnConnect,
+                onChanged: (val) {
+                  setState(() => _autoPlayOnConnect = val);
+                  _saveBool('autoPlayOnConnect', val);
+                },
+              ),
+              SettingsPremiumListTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
+                icon: Icons.speed_rounded,
+                title: AppLocalizations.of(context).playbackSpeed,
+                subtitle:
+                    '${_playbackSpeed}x${_pitchLock ? ' • ${AppLocalizations.of(context).pitchLock}' : ''}',
+                onTap: () => _showPlaybackSpeedDialog(),
+              ),
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
                 icon: Icons.call_missed_outgoing_rounded,
                 title: AppLocalizations.of(context).resumeAfterCall,
                 subtitle: AppLocalizations.of(context).resumeAfterCallSubtitle,
@@ -1368,43 +1409,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: AppLocalizations.of(context).monoAudioSubtitle,
                 value: _monoAudio,
                 onChanged: (val) async {
+                  setState(() => _monoAudio = val);
+                  await _saveBool('monoAudio', val);
                   try {
                     const channel = MethodChannel('com.flow.audio/equalizer');
                     await channel.invokeMethod('toggleMonoAudio', {
                       'enable': val,
                     });
-                    setState(() => _monoAudio = val);
-                    await _saveBool('monoAudio', val);
                   } catch (e) {
                     if (e is PlatformException &&
-                        e.code == 'SECURE_SETTINGS_RESTRICTED') {
-                      setState(() => _monoAudio = val);
-                      await _saveBool('monoAudio', val);
+                        e.code == 'PERMISSION_DENIED') {
                       showFlowToast(
                         lookupAppLocalizations(
                           Locale(FlowStrings.currentLang),
-                        ).monoAudioInfo,
+                        ).monoAudioPermission,
                         isLong: true,
                       );
-                    } else {
-                      setState(() => _monoAudio = false);
-                      await _saveBool('monoAudio', false);
-                      if (e is PlatformException &&
-                          e.code == 'PERMISSION_DENIED') {
-                        showFlowToast(
-                          lookupAppLocalizations(
-                            Locale(FlowStrings.currentLang),
-                          ).monoAudioPermission,
-                          isLong: true,
-                        );
-                      } else {
-                        showFlowToast(
-                          lookupAppLocalizations(
-                            Locale(FlowStrings.currentLang),
-                          ).monoAudioNotSupported,
-                          isLong: true,
-                        );
-                      }
                     }
                   }
                 },
@@ -1559,6 +1579,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: AppLocalizations.of(context).checkUpdates,
                 subtitle: 'Version $_appVersion',
                 onTap: () => _checkForUpdates(),
+              ),
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
+                icon: Icons.autorenew_rounded,
+                title: AppLocalizations.of(context).autoCheckUpdates,
+                subtitle:
+                    AppLocalizations.of(context).autoCheckUpdatesSubtitle,
+                value: _autoCheckUpdates,
+                onChanged: (value) async {
+                  setState(() => _autoCheckUpdates = value);
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('auto_check_updates', value);
+                },
               ),
               SettingsPremiumListTile(
                 isLight: _selectedThemeMode == 'light',
