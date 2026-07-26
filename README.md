@@ -99,10 +99,15 @@ The project has been refactored into a highly modular, decoupled architecture us
 - **`lib/ui/player_ui.dart`**: Fullscreen adaptive music player UI. Houses physics-based swipe-down gestures, sliding mini players, and dynamic palette-based gradients.
 - **`lib/ui/detail_views_ui.dart`**: Dynamic detail overlays for Artists, Albums, and custom/default Playlists.
 - **`lib/ui/tabs_ui.dart`**: Viewport page layouts hosting horizontal swipable tabs (Songs list, Playlist cards, Artist list, Album cards) and the standard search system.
-- **`lib/ui/modals_track_ui.dart` / `modals_playlist_ui.dart` / `modals_utility_ui.dart`**: Highly specialized, domain-driven modal architectures for handling track operations, robust playlist CRUD, and utility tools (Sleep Timer, Equalizer, Folder Scans).
+- **`lib/ui/modals_track_ui.dart` / `modals_playlist_ui.dart` / `modals_utility_ui.dart`**: Highly specialized, domain-driven modal architectures for handling track operations, robust playlist CRUD, Ringtone Cutter, and utility tools (Sleep Timer, Equalizer, Folder Scans).
 - **`lib/screens/settings_screen.dart` & `settings_modals.dart`**: A standalone, polished Material 3 settings hub entirely decoupled from monolithic implementations, utilizing isolated component builders and dedicated modal controllers.
+- **`lib/widgets/settings/settings_ui_components.dart`**: Modularized stateless building blocks for the Settings screen (Section Headers, Premium Cards, Switch Tiles, List Tiles).
+- **`lib/providers/settings_provider.dart`**: Riverpod state management providers for reactive settings updates across the app.
 - **`lib/services/audio_handler.dart`**: OS-level audio intent interception and background service hooks (`MyAudioHandler`).
+- **`lib/utils/artwork_cache_manager.dart`**: Ultra-fast multi-tier background artwork preloading and memory caching engine.
+- **`lib/utils/image_cropper_util.dart`**: Native and pure Flutter 1:1 and 9:16 aspect ratio image cropping utilities.
 - **`lib/utils/globals.dart`**: Centralized dependency injection for global state `ValueNotifiers`, theme configuration tools, and app-wide Toast notification helpers.
+- **`lib/l10n/`**: Type-safe Flutter `AppLocalizations` ARB files (`app_en.arb`, `app_id.arb`, `app_ja.arb`) for full English, Indonesian, and Japanese internationalization.
 
 ## Dependencies
 
@@ -111,24 +116,28 @@ The project has been refactored into a highly modular, decoupled architecture us
 - **`on_audio_query`**: Scoped querying of local media storage structures.
 - **`permission_handler`**: Runtime operating system authorization checks (Storage/Notification).
 - **`shared_preferences`**: Local key-value state persistence (play count, custom playlists, settings).
-- **`google_fonts`**: Premium text styles and typography integration.
+- **`flutter_riverpod`**: Reactive state management framework for clean decoupled architecture.
+- **`google_fonts`**: Premium text styles and typography integration (Figtree, Inter, Plus Jakarta Sans).
 - **`mini_music_visualizer`**: Real-time visual music playing equalizer bars.
-- **fluttertoast**: Non-blocking platform native alert toasts.
+- **`fluttertoast`**: Non-blocking platform native alert toasts.
 - **`palette_generator`**: Extraction of dynamic dominant palette colors from album art.
 - **`image_picker`**: Device photo gallery selection utilities.
-- **`crop_image`**: Pure Flutter interactive image cropping framework.
-- **`audio_session`**: Native platform hardware-level audio session interrupt binds.
+- **`image_cropper` / `crop_image`**: Pure Flutter and native interactive image cropping framework.
+- **`audio_session`**: Native platform hardware-level audio session interrupt binds and headset connect listeners.
 - **`url_launcher`**: Intent dispatching to external links (GitHub / Sociabuzz).
 - **`package_info_plus`**: Dynamic application version extraction.
 
 ## Build Requirements
 
 - **Android**: Requires `minSdk` 21, `targetSdk` 34 (or higher), and Java 17 for compilation. Note that the project utilizes Flutter's Built-in Kotlin compatibility.
+- **Gradle & Kotlin**: Android Gradle Plugin 8.+ with Kotlin Built-in compiler options (`JVM 17`).
+- **Split Release Command**: Build optimized target-architecture APKs using `flutter build apk --release --split-per-abi`.
 
 ## Development Notes
 
 - When running on Android 13 or higher, ensure that the application is granted the `READ_MEDIA_AUDIO` permission for proper library scanning. The application uses `content://` URIs to support scoped storage natively.
 - Make sure to use JDK 17 for compiling the Android build due to updated Kotlin and Gradle Plugin (`build.gradle.kts`) requirements.
+- Native Android methods (Equalizer, Mono Audio, Ringtone export) are bridged via MethodChannels in `MainActivity.kt`.
 
 ## License
 
