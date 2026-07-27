@@ -87,7 +87,7 @@ extension _TabsUI on _MainScreenState {
       (a, b) => (_playCounts[b.id] ?? 0).compareTo(_playCounts[a.id] ?? 0),
     );
     mostPlayed = mostPlayed.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
-    final forgottenGems = _allTracks
+    final forgottenGems = _allTracks.reversed
         .where((t) => (_playCounts[t.id] ?? 0) <= 2)
         .toList();
 
@@ -104,7 +104,7 @@ extension _TabsUI on _MainScreenState {
           child: Icon(Icons.add, color: _activeAccentColor),
         ),
         title: Text(
-          'Create New Playlist',
+          AppLocalizations.of(context).createNewPlaylist,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,

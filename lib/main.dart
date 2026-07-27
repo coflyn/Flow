@@ -510,10 +510,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.detached) {
-      if (!_audioPlayer.playing) {
-        _audioPlayer.stop();
-        audioHandler.stop();
-      }
+      _audioPlayer.stop();
+      audioHandler.stop();
     }
     super.didChangeAppLifecycleState(state);
   }

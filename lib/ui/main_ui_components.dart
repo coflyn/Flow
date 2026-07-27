@@ -235,7 +235,7 @@ extension _MainUIComponents on _MainScreenState {
             );
             pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
           } else if (title == AppLocalizations.of(context).forgottenGems) {
-            pSongs = _allTracks
+            pSongs = _allTracks.reversed
                 .where((t) => (_playCounts[t.id] ?? 0) <= 2)
                 .toList();
           } else if (_userPlaylists.containsKey(title)) {
@@ -279,7 +279,7 @@ extension _MainUIComponents on _MainScreenState {
         ),
       ),
       subtitle: Text(
-        '${songs.length} songs',
+        '${songs.length} ${AppLocalizations.of(context).songsCount}',
         style: TextStyle(
           fontSize: 13,
           color: isAppLight ? Colors.black54 : Colors.white54,

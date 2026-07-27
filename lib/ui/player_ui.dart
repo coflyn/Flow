@@ -261,7 +261,7 @@ extension _PlayerUI on _MainScreenState {
                             : Text(
                                 line.text,
                                 textAlign: TextAlign.center,
-                                maxLines: 2,
+                                maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
                               ),
                       ),
@@ -397,12 +397,15 @@ extension _PlayerUI on _MainScreenState {
                     final cleanTitle = currentTrack.title;
                     final cleanArtist =
                         (currentTrack.artist.trim().isEmpty ||
-                            currentTrack.artist == '<unknown>')
-                        ? AppLocalizations.of(context).unknownArtist
-                        : currentTrack.artist;
-                    final query = Uri.encodeComponent(
-                      '$cleanArtist $cleanTitle lyrics',
-                    );
+                            currentTrack.artist == '<unknown>' ||
+                            currentTrack.artist ==
+                                AppLocalizations.of(context).unknownArtist)
+                        ? ''
+                        : currentTrack.artist.trim();
+                    final queryText = cleanArtist.isNotEmpty
+                        ? '$cleanArtist $cleanTitle lrc'
+                        : '$cleanTitle lrc';
+                    final query = Uri.encodeComponent(queryText);
                     final url = Uri.parse(
                       'https://www.google.com/search?q=$query',
                     );
@@ -781,11 +784,39 @@ extension _PlayerUI on _MainScreenState {
                                           ),
                                         );
                                       }
+                                      String typeLabel;
+                                      if (_playingFromType == 'PLAYLIST') {
+                                        typeLabel = AppLocalizations.of(context).playlists;
+                                      } else if (_playingFromType == 'ARTIST') {
+                                        typeLabel = AppLocalizations.of(context).artists;
+                                      } else if (_playingFromType == 'ALBUM') {
+                                        typeLabel = AppLocalizations.of(context).albums;
+                                      } else {
+                                        typeLabel = AppLocalizations.of(context).library;
+                                      }
+
+                                      String displayName = _playingFromName;
+                                      if (_playingFromName == 'All Songs' ||
+                                          _playingFromName == 'All Tracks') {
+                                        displayName = AppLocalizations.of(context).allSongs;
+                                      } else if (_playingFromName == 'Favourites' ||
+                                          _playingFromName == 'Favorite Songs') {
+                                        displayName = AppLocalizations.of(context).favourites;
+                                      } else if (_playingFromName == 'Recently Added') {
+                                        displayName = AppLocalizations.of(context).recentlyAdded;
+                                      } else if (_playingFromName == 'Most Played') {
+                                        displayName = AppLocalizations.of(context).mostPlayed;
+                                      } else if (_playingFromName == 'Forgotten Gems') {
+                                        displayName = AppLocalizations.of(context).forgottenGems;
+                                      } else if (_playingFromName == 'Last Played') {
+                                        displayName = AppLocalizations.of(context).lastPlayed;
+                                      }
+
                                       return Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            '${AppLocalizations.of(context).playingFrom.toUpperCase()} $_playingFromType',
+                                            '${AppLocalizations.of(context).playingFrom.toUpperCase()} ${typeLabel.toUpperCase()}',
                                             textAlign: TextAlign.center,
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w600,
@@ -796,9 +827,7 @@ extension _PlayerUI on _MainScreenState {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            _playingFromName == 'All Songs'
-                                                ? AppLocalizations.of(context).allSongs
-                                                : _playingFromName,
+                                            displayName,
                                             textAlign: TextAlign.center,
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,

@@ -76,7 +76,7 @@ extension _DetailViewsUI on _MainScreenState {
           );
           pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
         } else if (baseName == AppLocalizations.of(context).forgottenGems) {
-          pSongs = _allTracks
+          pSongs = _allTracks.reversed
               .where((t) => (_playCounts[t.id] ?? 0) <= 2)
               .toList();
         } else if (_userPlaylists.containsKey(baseName)) {
@@ -236,7 +236,8 @@ extension _DetailViewsUI on _MainScreenState {
 
     _lastDetailView = _buildDetailView(
       title: baseName,
-      subtitle: '${_cachedDetailSongs!.length} songs • $durationStr',
+      subtitle:
+          '${_cachedDetailSongs!.length} ${AppLocalizations.of(context).songsCount} • $durationStr',
       type: type,
       tracks: _cachedDetailSongs!,
       imageWidget: _cachedDetailImage!,

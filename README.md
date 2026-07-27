@@ -3,8 +3,9 @@
 ![License](https://img.shields.io/badge/license-GPLv3-blue.svg)
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?logo=flutter&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Android-lightgrey)
+![i18n](https://img.shields.io/badge/i18n-EN%20%7C%20ID%20%7C%20JA-blueviolet)
 
-Flow is a modern, feature-rich local audio player built with Flutter. It focuses on providing a premium listening experience with a clean user interface, seamless background playback, and smart track management.
+Flow is a clean, modern offline music player for Android built with Flutter. It offers a smooth listening experience with synced lyrics, customizable themes, and smart playlist management.
 
 ## Previews
 
@@ -19,34 +20,56 @@ Flow is a modern, feature-rich local audio player built with Flutter. It focuses
   <img src="previews/6.jpeg" width="32%" alt="Preview 6">
 </p>
 
+## Downloads
+
+Download the latest release APKs directly from the [GitHub Releases](https://github.com/coflyn/Flow/releases) page:
+
+- **`app-arm64-v8a-release.apk`**: Recommended for modern 64-bit Android smartphones.
+- **`app-armeabi-v7a-release.apk`**: For older 32-bit Android devices.
+- **`app-x86_64-release.apk`**: For Android emulators and x86_64 architecture.
+
 ## Features
 
-- **Local Audio Scanning**: Automatically queries and fetches audio files from scoped device storage with reactive permission controls.
-- **Smart Playlists Engine**: Dynamically aggregates tracks into _Favourites_, _Recently Added_, _Last Played_, and _Most Played_ lists based on secure play statistics.
-- **Custom User Playlists**: Create, rename, and manage custom playlists. Batch add multiple songs using the **Hold-to-Select (Multi-Select)** mode. Personalize playlists by picking custom image covers directly from the device gallery.
-- **Background Playback**: OS-level backgrounding service with system notifications, lock screen media controls, and native audio sessions.
-- **Adaptive Aesthetics**: Spotify-like dynamic background color extraction from album art using `palette_generator`, painting beautiful rich linear gradients.
-- **Custom Player Background Styles & Real-Time Wallpaper Editor**: Support for four breathtaking Now Playing rendering modes: **Dynamic Gradient** (color extracted linear blend), **Apple Blurred Cover** (clean, high-fidelity glassmorphic overlay powered by an optimized hardware-accelerated `ImageFiltered` widget wrapped inside a precise `ClipRect` to prevent bleeding), **AMOLED Deep Black** (pure solid black for visual minimalism and battery saving), and **Custom Gallery Image**. Features a **real-time wallpaper editor** under Settings to adjust **Blur Level (0-60)** and **Dim Level (0-90%)** with an interactive 9:16 miniature live mockup preview.
-- **Global 3-Choice Theme Modes**: Rich selection between:
-  - **Dark Mode**: Sleek, battery-saving dark theme (`#0A0A0A` scaffold, `#161616` cards).
-  - **Light Mode**: Gorgeous, clean light theme (`#F6F8FA` scaffold, `#FFFFFF` cards).
-  - **Custom Theme Mode**: High-fidelity theme customizer supporting a glowing **Dynamic (Artwork)** background, **5 Luxury Solid Color Backdrops**, or **Custom Gallery Image Wallpaper**. Features a **real-time theme wallpaper editor** inside the Settings panel to customize blur and dim levels with an interactive live miniature replica of the Library Home Screen.
-- **Dynamic Theme Accent Customization**: High-fidelity custom accent preset selector with 9 premium solid presets (Spotify Green, Apple Red, Deep Purple, Tidal Cyan, Sunset Orange, Sakura Pink, Luxury Gold, Sapphire Blue, Electric Lime) or **Dynamic (Artwork)** color matching.
-- **HSL Contrast Safety (Auto-Brightener)**: Real-time mathematical luminance safety interceptor that automatically boosts dark extracted cover art colors into readable pastels/neons, mapping pure black/desaturated covers to a sleek, premium Silver-Grey.
-- **ValueNotifier Real-Time State Sync**: Continuous visual color stream coupling that propagates theme modifications and cover artwork changes instantly across all pushed settings panels, switches, and sliders in real-time.
-- **Interactive Lyrics Engine**: Synced LRC & plain text support with zero truncation. Renders dynamic word-wrapping karaoke streams styled perfectly to Flow's custom fonts without cutting off text. Features jitter-free layout rendering and global typography inheritance for flawless text animations.
-- **Built-in Image Cropper**: Fully integrated, pure Flutter 1:1 and 9:16 aspect ratio image cropping engines with a sleek custom UI for effortlessly editing custom album covers and portrait player backgrounds.
-- **Multi-Select Batch Actions**: Intuitive "Hold to Select" mode across all song lists for rapid queueing or mass additions to playlists, powered by a dynamic theme-adaptive action bar.
-- **Dynamic Sleep Timer**: Automatically stop audio playback with built-in presets (15m, 30m, 60m) or custom inputs, complete with a live counting indicator on the player header.
-- **Precision Audio Transitions**: Custom Crossfade adjustments (0ms to 3000ms) with a 150ms fade-in/fade-out playing transition to avoid pops/crackles.
-- **Auto Regex Cleaner**: An aggressive, native RegExp title cleaner that removes underscores, empty brackets, and cluttered suffixes (like `4K Remastered`, `Official Video`, `Remastered`).
-- **Dynamic Artist Extraction**: Automatically parses song titles to extract and populate missing artist fields when the local file's metadata tags are empty or unrecognized.
-- **Virtual Metadata Editor**: Edit song Titles, Artists, and Albums virtually inside the app interface without touching the physical source files.
-- **Dynamic Durations & Equalizers**: Formatted track durations are beautifully shown next to song lists, which seamlessly transform into live-animated `MiniMusicVisualizer` equalizers when tracks are actively playing.
-- **Pixel-Perfect Margin Alignment**: Custom spatial translations (`Transform.translate`) align song controls and durations at a precise `24px` horizontal screen margin, perfectly lining up with page pills, search headers, and playlist card boundaries.
-- **Robust Cache Manager**: Ultra-fast artwork preloading engine with multi-tier retries and anti-null failure mechanisms, guaranteeing that all thumbnails load instantly upon opening the application without race condition blank-outs.
+- **Local Audio Scanning & Deduplication**: Queries audio files from scoped device storage with strict file path deduplication (`seenPaths.add(song.data)`), filtering out MediaStore ghost entries.
+- **Smart Playlists Engine**: Dynamically aggregates tracks into _Favourites_, _Recently Added_, _Last Played_, _Most Played_, and _Forgotten Gems_ lists based on play statistics and recency.
+- **Custom User Playlists**: Create, rename, and manage custom playlists. Batch add multiple songs using **Hold-to-Select (Multi-Select)** mode. Personalize playlists with custom gallery artwork.
+- **Background Playback & Clean Task Cleanup**: OS-level backgrounding service with lock screen media controls. Automatically terminates background service and cleans up notifications when swiped away from recent task history (`stopWithTask="true"`).
+- **Adaptive Aesthetics**: Spotify-like dynamic background color extraction from album art using `palette_generator`, painting rich linear gradients.
+- **Custom Player Background Styles & Real-Time Wallpaper Editor**: Four Now Playing rendering modes: **Dynamic Gradient**, **Apple Blurred Cover** (glassmorphic overlay with hardware acceleration), **AMOLED Deep Black**, and **Custom Gallery Image**. Includes a real-time wallpaper editor to adjust blur (0-60) and dim (0-90%).
+- **Global 3-Choice Theme Modes**: Support for Dark Mode, Light Mode, and Custom Theme Mode with dynamic or gallery wallpapers and live mockup previews.
+- **Dynamic Theme Accent Customization**: Accent selector with 9 presets (Spotify Green, Apple Red, Deep Purple, Tidal Cyan, Sunset Orange, Sakura Pink, Luxury Gold, Sapphire Blue, Electric Lime) or **Dynamic (Artwork)** color matching.
+- **Interactive Lyrics Engine**: Synced LRC & plain text lyrics up to 3 wrapped lines (`maxLines: 3`). Features **Automatic Instrumental Melody Detection (3-Dots Wave)** for intros, instrumental solos/bridges ($\ge 8\text{s}$), and outros without cutting off active vocals.
+- **Audio Ringtone Trimmer & Cutter**: Dedicated ringtone editor with dual-handle slider duration selection, real-time slice preview, and 1-tap saving to `/Ringtones/`.
+- **Playback Speed & Pitch Controls**: Smooth tempo adjustment (0.5x - 2.0x) with optional Pitch Lock, optimized with clean DSP routing to eliminate audio crackling.
+- **Auto-Play on Headset Connect**: Automatically resumes music playback when headphones or Bluetooth audio devices are connected.
+- **Library Layout Density Selector**: Customizable track list density (Standard vs Compact) to fit up to 25% more songs on screen.
+- **Multi-Language (i18n) Support**: Complete internationalization across English, Indonesian, and Japanese, automatically matching system locale or manual selection.
+- **HSL Contrast Safety (Auto-Brightener)**: Real-time mathematical luminance safety interceptor that boosts dark extracted cover art colors into readable pastels/neons.
+- **ValueNotifier Real-Time State Sync**: Continuous visual color stream coupling that propagates theme modifications instantly across all UI controls.
+- **Built-in Image Cropper**: Integrated 1:1 and 9:16 aspect ratio image cropping for editing custom album covers and portrait player backgrounds.
+- **Multi-Select Batch Actions**: Intuitive "Hold to Select" mode across all song lists for rapid queueing or mass additions to playlists.
+- **Dynamic Sleep Timer**: Automatically stop audio playback with built-in presets (15m, 30m, 60m) or custom inputs, complete with soft volume fade-out.
+- **Precision Audio Transitions**: Custom Crossfade adjustments (0ms to 3000ms) with a 150ms fade-in/fade-out playing transition.
+- **Auto Regex Cleaner & Virtual Metadata Editor**: Native RegExp title cleaner and virtual metadata editor for song titles, artists, and albums.
+- **Dynamic Durations & Equalizers**: Formatted track durations next to song lists, transforming into live-animated `MiniMusicVisualizer` equalizers when actively playing.
+- **Pixel-Perfect Margin Alignment**: Custom spatial translations (`Transform.translate`) aligning song controls at a precise `24px` horizontal screen margin.
+- **Robust Cache Manager**: Ultra-fast artwork preloading engine with multi-tier retries and anti-null failure mechanisms.
 
-## What's New (v1.0.3)
+## What's New (v1.0.4)
+
+- **Smart "Forgotten Gems" Recency Ordering**: Re-ordered the "Forgotten Gems" smart playlist to display true forgotten songs (oldest added tracks with `playCount <= 2`) at the top, while newly scanned/added songs are placed at the very bottom.
+- **Strict MediaStore Duplicate Song Removal**: Implemented a strict file path and content URI deduplication layer during media scanning (`seenPaths.add(song.data)`), automatically filtering out Android MediaStore ghost entries and preventing duplicate songs from appearing in the library.
+- **Automatic Instrumental Melody Detection (3-Dots Wave)**: Intelligent LRC parser that detects intro melodies, instrumental solos/bridges ($\ge 8\text{s}$), and outros, automatically inserting animated 3-dots wave indicators (`♪`) without cutting off active vocals.
+- **Enhanced 3-Row Synced Lyrics Layout**: Expanded synced lyrics display capacity to 3 full lines (`maxLines: 3`) with uniform font size across active and inactive states, ensuring long lyrics wrap cleanly without line jumps or text truncation.
+- **Localized "Create New Playlist" Action**: Wrapped the playlist creation tile in `AppLocalizations.of(context).createNewPlaylist`, providing seamless i18n support across English, Indonesian, and Japanese.
+- **Optimized Google LRC Lyric Search**: Updated the "Search on Google" button query format to use `$artist $title lrc` instead of generic `lyrics`, prioritizing `.lrc` synced file search results on Google.
+- **Prevented Duplicate 3-Dots Wave Lines**: Refined empty line detection in the LRC parser (`isWaveLine()`), skipping duplicate wave insertions if the `.lrc` file already contains explicit empty/instrumental timestamps.
+- **Full Player Header i18n Localization**: Localized the "PLAYING FROM" category header and smart playlist names (`_playingFromName`), dynamically translating titles (e.g. "Semua Lagu", "Lagu Terlupakan", "Perpustakaan") across English, Indonesian, and Japanese.
+- **Semantic Versioning & Update Dialog Overflow Fix**: Upgraded update checks to use strict semantic versioning (`isNewer()`), preventing false-positive update prompts when on newer local versions. Wrapped dialog title text in `Expanded` to prevent horizontal text overflows across all screen sizes and languages.
+- **Localized Playlist Track Counts**: Updated playlist card and detail view subtitles to use `AppLocalizations.of(context).songsCount`, ensuring track counts (e.g. `14 lagu`, `14 曲`, `14 songs`) are localized across all languages.
+- **Task Removal Notification Cleanup**: Overrode `onTaskRemoved()` in `MyAudioHandler` and updated `didChangeAppLifecycleState` to immediately stop playback and clear the Android media notification whenever the app is swiped away from recent task history.
+
+## Previous Updates (v1.0.3)
 
 - **Library Layout Density Selector**: Added a "Library Density" setting (Standard vs Compact) allowing users to customize track row spacing, thumbnail sizing, and padding to fit up to 25% more songs on screen.
 - **Auto-Play on Headset Connect**: Implemented an "Auto-play on Headset Connect" toggle under Audio & Playback. Flow listens to native `AudioSession` device change events and automatically resumes playback when headphones or Bluetooth audio devices connect.
@@ -71,23 +94,6 @@ Flow is a modern, feature-rich local audio player built with Flutter. It focuses
 - **Startup Artwork Preload Race Condition Fix**: Solved a race condition bug where the top 3 tracks lost their thumbnails upon opening the app. During app launch, concurrent native `queryArtwork` requests flooded the Android MethodChannel, causing transient `null` responses that permanently poisoned `ArtworkCacheManager`'s memory cache. Fixed by implementing retry backoff in `fetchAndCacheNativeArtwork`, preventing `null` poison caching on transient startup failures, and configuring `CachedTrackArtwork` to seamlessly fall back to `QueryArtworkWidget` whenever memory cache bytes are pending.
 - **Global Context Menu & System Popup Font Inheritance**: Resolved an issue where native context menus (text selection toolbars, popup menus, dropdowns), dialogs, and bottom sheets defaulted to standard system fallback fonts instead of the user's active font configured in Settings. Applied `fontFamily` directly to global `ThemeData`, guaranteeing that all overlays and controls inherit selected typography app-wide.
 - **Unified Font Family Resolver Engine**: Built a robust `getFontFamily()` helper method in `globals.dart` to map setting labels (`Spotify Style`, `Apple Music Style`, `Plus Jakarta Sans`) to valid registered Google Fonts identifiers (`Figtree`, `Inter`, `PlusJakartaSans`), permanently eliminating invalid font string fallbacks across all modals, sheets, and views.
-
-## Previous Updates (v1.0.2)
-
-- **Riverpod Migration & Prop-Drilling Elimination**: Successfully replaced a massive 30-parameter deep prop-drilling system with Riverpod's `NotifierProvider`. The entire Settings module now reactively listens to global state without passing callback functions deeply through the widget tree, leading to a vastly cleaner and highly scalable architecture.
-- **Settings Micro-Components Extraction**: Modularized the monolithic 3000-line Settings UI by cleanly separating all fundamental building blocks (e.g., Section Headers, Premium Cards, and Switch Tiles) into pristine stateless widgets within `lib/widgets/settings/`.
-- **ARB Localization (i18n) Engine**: Successfully migrated the legacy custom map-based `FlowStrings.get(...)` system into the industry-standard Flutter `AppLocalizations` (`.arb`) framework. Implemented an automated bulk-migration system that replaced over 500 string usages across 50+ files to guarantee absolute type-safety (`AppLocalizations.of(context)`). Engineered a highly robust `lookupAppLocalizations(Locale(...))` wrapper pipeline specifically designed to securely stream translated text directly into non-widget logic layers (like `main_audio_logic.dart`) without requiring explicit `BuildContext` prop-drilling, permanently eliminating all `use_build_context_synchronously` async gap warnings.
-- **Light Mode UI Polish**: Fixed text visibility bugs in the Settings page where Player Custom Background elements retained hardcoded dark colors under Light Mode.
-- **Code Refactoring & DRY Principles**: Unified all opacity configurations to the modern `withValues(alpha: ...)` API. Eliminated redundant `ImagePicker` block duplications by extracting them into a dedicated robust handler.
-- **Mockup Player Legibility**: Added precise drop shadows to the media control icons within the Custom Player Background miniature mockup, guaranteeing perfect visibility even when users upload completely white/bright images with zero dim levels.
-- **Dynamic Versioning & Update Checker**: Upgraded the "Check for Updates" mechanism to automatically read and sync with the active `pubspec.yaml` package version dynamically using `package_info_plus`. The Settings UI now accurately reports the real-time application build version instead of a hardcoded string, ensuring flawless OTA update validation.
-- **Context-Aware Track Options**: Enhanced the track options modal to dynamically inject a "Remove from Playlist" action exclusively when the user is browsing custom "My Playlists", preventing UI clutter across default generic views (Albums, Artists, etc.).
-- **Robust Playback Queue State Sync**: Solved a long-standing bug where hiding, deleting, or unfavoriting a track failed to instantly purge it from the active `Up Next` playback queue. Engineered a robust `_removeFromQueueAndPlayer(trackId)` algorithm that safely shifts `_currentIndex` and random `_shuffledIndices`, followed by a seamless internal reconstruction of the `just_audio` `ConcatenatingAudioSource` around the active track, ensuring real-time UI/engine sync without dropping the current playback session.
-- **Dynamic Queue Appending**: Built an intelligent `_addTrackToQueueDynamically` logic layer that detects if the user is currently playing a playlist (e.g., Favourites or My Mix). When a user actively likes a new song or inserts a track into the active playlist, the application will instantly and silently append the track into the active `_playbackQueue` and Up Next UI without requiring a full playback reload.
-- **Robust String Localization Payloads**: Audited all `AppLocalizations` translation payloads and fixed broken `String.replaceFirst` matchers. Replaced hardcoded `{}` interceptors with exact `[placeholder]` regex matches to correctly populate dynamic localized Toast notifications across all languages, resolving raw string leakages.
-- **Metadata Reset State Sync**: Solved an issue where resetting a currently playing track's metadata or cover art failed to instantly update the active Player UI and OS-level notifications (audio session). Resetting metadata now correctly synchronizes `_playingTrack`, `audioHandler.mediaItem`, and `_playbackQueue` back to their native factory metadata instantly without requiring a track skip.
-- **Custom Cover Art Scroll Lag Fix**: Eliminated heavy UI stuttering (FPS drops) when scrolling through lists containing custom-assigned covers. Hardcoded the requested thumbnail `cacheWidth` to precisely `144px` inside `CachedTrackArtwork` to perfectly align with `ArtworkCacheManager`'s background preloading logic. This forces a 100% cache hit in Flutter's `ImageCache`, completely bypassing synchronous disk I/O reads (`FileImage`).
-- **PageView State Preservation**: Resolved a major visual desync bug where the main `PageView` would reset to the "Songs" tab while the TabBar still highlighted other tabs after a library refresh. The UI refresh mechanism was re-engineered to use a `Stack` overlay for the loading indicator instead of destroying the active widget tree, perfectly preserving the `_pageController`'s internal index and all scroll positions.
 
 ## Project Structure
 

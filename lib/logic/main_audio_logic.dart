@@ -465,8 +465,9 @@ extension _MainAudioLogic on _MainScreenState {
         _hiddenTrackIds.clear();
         _hiddenTrackIds.addAll(hidden);
       }
-      if (lastPlayed != null)
+      if (lastPlayed != null) {
         _lastPlayedTrackIds = List<String>.from(lastPlayed);
+      }
       if (playCountsStr != null) {
         try {
           Map<String, dynamic> decoded = jsonDecode(playCountsStr);
@@ -569,7 +570,28 @@ extension _MainAudioLogic on _MainScreenState {
               }
             } catch (_) {}
           }
-          _allTracks = filteredSongs
+
+          final seenPaths = <String>{};
+          final seenUris = <String>{};
+          final List<SongModel> deduplicatedSongs = [];
+
+          for (final song in filteredSongs) {
+            final pathKey = song.data.trim().toLowerCase();
+            final uriKey = (song.uri != null && song.uri!.isNotEmpty)
+                ? song.uri!
+                : 'content://media/external/audio/media/${song.id}';
+
+            if (pathKey.isNotEmpty) {
+              if (seenPaths.add(pathKey)) {
+                seenUris.add(uriKey);
+                deduplicatedSongs.add(song);
+              }
+            } else if (seenUris.add(uriKey)) {
+              deduplicatedSongs.add(song);
+            }
+          }
+
+          _allTracks = deduplicatedSongs
               .map((song) {
                 String safeUri = (song.uri != null && song.uri!.isNotEmpty)
                     ? song.uri!
@@ -689,7 +711,21 @@ extension _MainAudioLogic on _MainScreenState {
         final packageInfo = await PackageInfo.fromPlatform();
         final currentVersion = packageInfo.version;
 
-        if (latestVersion != currentVersion) {
+        bool isNewer(String latest, String current) {
+          try {
+            final l = latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+            final c = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+            for (int i = 0; i < 3; i++) {
+              final lp = i < l.length ? l[i] : 0;
+              final cp = i < c.length ? c[i] : 0;
+              if (lp > cp) return true;
+              if (lp < cp) return false;
+            }
+          } catch (_) {}
+          return false;
+        }
+
+        if (isNewer(latestVersion, currentVersion)) {
           if (!mounted) return;
           final isLight = isAppLight;
           showDialog(
@@ -709,11 +745,14 @@ extension _MainAudioLogic on _MainScreenState {
                       color: _activeAccentColor,
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      AppLocalizations.of(context).updateAvailable,
-                      style: TextStyle(
-                        color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context).updateAvailable,
+                        style: TextStyle(
+                          color:
+                              isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -1697,7 +1736,47 @@ extension _MainAudioLogic on _MainScreenState {
       }
     }
     lines.sort((a, b) => a.time.compareTo(b.time));
-    return lines;
+
+    if (lines.isEmpty) return lines;
+
+    final List<LyricsLine> processedLines = [];
+
+    bool isWaveLine(LyricsLine line) {
+      final t = line.text.trim().toLowerCase();
+      return t.isEmpty ||
+          t == '♪' ||
+          t == '[music]' ||
+          t == 'instrumental' ||
+          t == '(instrumental)';
+    }
+
+    // Auto-insert 3-dots wave for intro melody if first lyric starts after >= 4s and first line is not already wave
+    if (lines.first.time >= const Duration(seconds: 4) &&
+        !isWaveLine(lines.first)) {
+      processedLines.add(LyricsLine(time: Duration.zero, text: '♪'));
+    }
+
+    for (int i = 0; i < lines.length; i++) {
+      final currentLine = lines[i];
+      processedLines.add(currentLine);
+
+      // Skip if currentLine or nextLine is already an explicit empty/instrumental line in LRC
+      if (i < lines.length - 1) {
+        final nextLine = lines[i + 1];
+        if (!isWaveLine(currentLine) && !isWaveLine(nextLine)) {
+          final gap = nextLine.time - currentLine.time;
+          if (gap >= const Duration(seconds: 8)) {
+            final instTime =
+                currentLine.time + const Duration(milliseconds: 6000);
+            if (nextLine.time - instTime >= const Duration(seconds: 2)) {
+              processedLines.add(LyricsLine(time: instTime, text: '♪'));
+            }
+          }
+        }
+      }
+    }
+
+    return processedLines;
   }
 
   Future<void> _loadLyricsForTrack(Track track) async {

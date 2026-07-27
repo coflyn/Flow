@@ -148,7 +148,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         final packageInfo = await PackageInfo.fromPlatform();
         final currentVersion = packageInfo.version;
 
-        if (latestVersion != currentVersion) {
+        bool isNewer(String latest, String current) {
+          try {
+            final l = latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+            final c = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+            for (int i = 0; i < 3; i++) {
+              final lp = i < l.length ? l[i] : 0;
+              final cp = i < c.length ? c[i] : 0;
+              if (lp > cp) return true;
+              if (lp < cp) return false;
+            }
+          } catch (_) {}
+          return false;
+        }
+
+        if (isNewer(latestVersion, currentVersion)) {
           if (!mounted) return;
           final isLight = isAppLight;
           showDialog(
@@ -168,11 +182,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: _activeAccentColor,
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      AppLocalizations.of(context).updateAvailable,
-                      style: TextStyle(
-                        color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context).updateAvailable,
+                        style: TextStyle(
+                          color:
+                              isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
