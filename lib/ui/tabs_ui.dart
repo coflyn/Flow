@@ -88,7 +88,7 @@ extension _TabsUI on _MainScreenState {
     );
     mostPlayed = mostPlayed.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
     final forgottenGems = _allTracks.reversed
-        .where((t) => (_playCounts[t.id] ?? 0) <= 2)
+        .where((t) => (_playCounts[t.id] ?? 0) <= 1)
         .toList();
 
     final children = [

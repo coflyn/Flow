@@ -386,5 +386,9 @@
   "playbackSpeedSubtitle": "Adjust playback rate and audio pitch",
   "pitchLock": "Pitch Lock",
   "lyricFontSize": "Lyric Font Size",
-  "lyricFontSizeSubtitle": "Adjust typography size in lyrics viewer"
+  "lyricFontSizeSubtitle": "Adjust typography size in lyrics viewer",
+  "lyricsHidePast": "Hide Past Lyrics",
+  "lyricsHidePastSubtitle": "Fade out lyrics that have already played",
+  "lyricsAutoFollow": "Auto-follow Lyrics",
+  "lyricsAutoFollowSubtitle": "Smoothly scroll to the active lyric line"
 }

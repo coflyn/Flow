@@ -236,7 +236,7 @@ extension _MainUIComponents on _MainScreenState {
             pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
           } else if (title == AppLocalizations.of(context).forgottenGems) {
             pSongs = _allTracks.reversed
-                .where((t) => (_playCounts[t.id] ?? 0) <= 2)
+                .where((t) => (_playCounts[t.id] ?? 0) <= 1)
                 .toList();
           } else if (_userPlaylists.containsKey(title)) {
             pSongs = _allTracks

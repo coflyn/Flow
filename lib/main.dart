@@ -2,6 +2,7 @@
 import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
@@ -145,9 +146,9 @@ class FlowApp extends StatelessWidget {
                                   locale: Locale(lang),
                                   builder: (context, child) {
                                     return MediaQuery(
-                                      data: MediaQuery.of(
-                                        context,
-                                      ).copyWith(textScaler: TextScaler.linear(scale)),
+                                      data: MediaQuery.of(context).copyWith(
+                                        textScaler: TextScaler.linear(scale),
+                                      ),
                                       child: child!,
                                     );
                                   },
@@ -279,9 +280,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool _isLyricsLoading = false;
   bool _isLyricsSynced = false;
   int _lastActiveLyricsIndex = -1;
+  bool _lyricsUserScrolling = false;
+  Timer? _lyricsResumeTimer;
+  DateTime? _lyricsOpenedTime;
   String _playingFromType = 'LIBRARY';
   String _playingFromName = 'All Songs';
   String? _lastIncrementedTrackId;
+  bool _hasResetPosition = false;
 
   List<Track> _playbackQueue = [];
   List<int> _shuffledIndices = [];
@@ -331,6 +336,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     }
     return result;
   }
+
   Map<String, int> _playCounts = {};
   Map<String, List<String>> _userPlaylists = {};
   Map<String, String> _playlistCovers = {};
@@ -521,6 +527,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _batteryCheckTimer?.cancel();
     _searchController.dispose();
+    _lyricsResumeTimer?.cancel();
     _lyricsScrollController.dispose();
     _detailScrollController.dispose();
     _pageController.dispose();
@@ -619,7 +626,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                                                 Positioned.fill(
                                                   child: Container(
                                                     color: Colors.black
-                                                        .withValues(alpha: dimVal),
+                                                        .withValues(
+                                                          alpha: dimVal,
+                                                        ),
                                                   ),
                                                 ),
                                               ],

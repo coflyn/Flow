@@ -386,5 +386,9 @@
   "playbackSpeedSubtitle": "Atur kecepatan pemutaran dan nada audio",
   "pitchLock": "Kunci Pitch (Nada Alami)",
   "lyricFontSize": "Ukuran Teks Lirik",
-  "lyricFontSizeSubtitle": "Atur ukuran huruf pada tampilan lirik"
+  "lyricFontSizeSubtitle": "Atur ukuran huruf pada tampilan lirik",
+  "lyricsHidePast": "Sembunyikan Lirik Terlewati",
+  "lyricsHidePastSubtitle": "Redupkan lirik yang sudah diputar",
+  "lyricsAutoFollow": "Ikuti Lirik Otomatis",
+  "lyricsAutoFollowSubtitle": "Gulir halus ke baris lirik aktif"
 }

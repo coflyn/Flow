@@ -119,8 +119,9 @@ extension SettingsModals on _SettingsScreenState {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor:
-              isLight ? const Color(0xFFFFFFFF) : const Color(0xFF1E1E26),
+          backgroundColor: isLight
+              ? const Color(0xFFFFFFFF)
+              : const Color(0xFF1E1E26),
           title: Text(
             loc.customTimer,
             style: TextStyle(color: isLight ? Colors.black : Colors.white),
@@ -304,10 +305,13 @@ extension SettingsModals on _SettingsScreenState {
   }
 
   Future<void> _showHiddenTracksSheet(BuildContext context) {
+    final isLight = isAppLight;
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: isLight
+          ? const Color(0xFFF0F0F3)
+          : const Color(0xFF161616),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -361,7 +365,7 @@ extension SettingsModals on _SettingsScreenState {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.white24,
+                            color: isLight ? Colors.black12 : Colors.white24,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -374,8 +378,10 @@ extension SettingsModals on _SettingsScreenState {
                             AppLocalizations.of(
                               context,
                             ).hiddenFilteredTracksTitle,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: isLight
+                                  ? const Color(0xFF1A1A1A)
+                                  : Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -383,7 +389,7 @@ extension SettingsModals on _SettingsScreenState {
                           Text(
                             '${displaySongs.length}${AppLocalizations.of(context).tracksCountSuffix}',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.4),
+                              color: isLight ? Colors.black45 : Colors.white54,
                               fontSize: 13,
                             ),
                           ),
@@ -393,7 +399,7 @@ extension SettingsModals on _SettingsScreenState {
                       Text(
                         AppLocalizations.of(context).hiddenTracksDesc,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
+                          color: isLight ? Colors.black54 : Colors.white54,
                           fontSize: 12,
                         ),
                       ),
@@ -404,7 +410,9 @@ extension SettingsModals on _SettingsScreenState {
                                 child: Text(
                                   AppLocalizations.of(context).noHiddenTracks,
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.3),
+                                    color: isLight
+                                        ? Colors.black38
+                                        : Colors.white38,
                                     fontSize: 14,
                                   ),
                                 ),
@@ -423,15 +431,53 @@ extension SettingsModals on _SettingsScreenState {
                                   return Container(
                                     margin: const EdgeInsets.only(bottom: 8),
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 10,
+                                      horizontal: 12,
+                                      vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF161616),
+                                      color: isLight
+                                          ? Colors.black.withValues(alpha: 0.05)
+                                          : const Color(0xFF1F1F1F),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Row(
                                       children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: QueryArtworkWidget(
+                                            id: song.id,
+                                            type: ArtworkType.AUDIO,
+                                            artworkWidth: 42,
+                                            artworkHeight: 42,
+                                            artworkBorder:
+                                                BorderRadius.circular(8),
+                                            artworkFit: BoxFit.cover,
+                                            keepOldArtwork: true,
+                                            nullArtworkWidget: Container(
+                                              width: 42,
+                                              height: 42,
+                                              decoration: BoxDecoration(
+                                                color: isLight
+                                                    ? Colors.black.withValues(
+                                                        alpha: 0.08,
+                                                      )
+                                                    : Colors.white10,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Icon(
+                                                Icons.music_note,
+                                                color: isLight
+                                                    ? Colors.black38
+                                                    : Colors.white38,
+                                                size: 22,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
@@ -441,8 +487,10 @@ extension SettingsModals on _SettingsScreenState {
                                                 song.title,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
+                                                style: TextStyle(
+                                                  color: isLight
+                                                      ? const Color(0xFF1A1A1A)
+                                                      : Colors.white,
                                                   fontWeight: FontWeight.w600,
                                                   fontSize: 14,
                                                 ),
@@ -463,9 +511,10 @@ extension SettingsModals on _SettingsScreenState {
                                                       overflow:
                                                           TextOverflow.ellipsis,
                                                       style: TextStyle(
-                                                        color: Colors.white
-                                                            .withOpacity(0.3),
-                                                        fontSize: 11,
+                                                        color: isLight
+                                                            ? Colors.black45
+                                                            : Colors.white38,
+                                                        fontSize: 12,
                                                       ),
                                                     ),
                                                   ),
@@ -539,7 +588,7 @@ extension SettingsModals on _SettingsScreenState {
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: 8),
                                         if (isManuallyHidden)
                                           IconButton(
                                             icon: Icon(
@@ -571,9 +620,11 @@ extension SettingsModals on _SettingsScreenState {
                                           )
                                         else
                                           IconButton(
-                                            icon: const Icon(
+                                            icon: Icon(
                                               Icons.info_outline_rounded,
-                                              color: Colors.white30,
+                                              color: isLight
+                                                  ? Colors.black38
+                                                  : Colors.white30,
                                               size: 20,
                                             ),
                                             tooltip: AppLocalizations.of(
@@ -741,7 +792,8 @@ extension SettingsModals on _SettingsScreenState {
               final baseStyle = TextStyle(
                 fontSize: size * tempFontScale,
                 fontWeight: weight,
-                color: color ?? (isLight ? const Color(0xFF1A1A1A) : Colors.white),
+                color:
+                    color ?? (isLight ? const Color(0xFF1A1A1A) : Colors.white),
               );
               if (tempFont == 'Spotify Style') {
                 return GoogleFonts.figtree(textStyle: baseStyle);
@@ -783,7 +835,9 @@ extension SettingsModals on _SettingsScreenState {
                         child: Text(
                           AppLocalizations.of(context).typographyFontSize,
                           style: TextStyle(
-                            color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                            color: isLight
+                                ? const Color(0xFF1A1A1A)
+                                : Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1388,8 +1442,8 @@ extension SettingsModals on _SettingsScreenState {
                                   color: isSelected
                                       ? color
                                       : (isLight
-                                          ? Colors.black12
-                                          : Colors.white10),
+                                            ? Colors.black12
+                                            : Colors.white10),
                                   width: isSelected ? 2.5 : 1,
                                 ),
                               ),
@@ -1419,8 +1473,12 @@ extension SettingsModals on _SettingsScreenState {
                               p['label'] as String,
                               style: TextStyle(
                                 color: isSelected
-                                    ? (isLight ? const Color(0xFF1A1A1A) : Colors.white)
-                                    : (isLight ? Colors.black87 : Colors.white70),
+                                    ? (isLight
+                                          ? const Color(0xFF1A1A1A)
+                                          : Colors.white)
+                                    : (isLight
+                                          ? Colors.black87
+                                          : Colors.white70),
                                 fontWeight: isSelected
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -1429,7 +1487,9 @@ extension SettingsModals on _SettingsScreenState {
                             subtitle: Text(
                               p['desc'] as String,
                               style: TextStyle(
-                                color: isLight ? Colors.black45 : Colors.white30,
+                                color: isLight
+                                    ? Colors.black45
+                                    : Colors.white30,
                                 fontSize: 11,
                               ),
                             ),
@@ -2311,18 +2371,30 @@ extension SettingsModals on _SettingsScreenState {
                 height: 1,
               ),
               ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                leading: Icon(Icons.reorder_rounded, color: _libraryDensity == 'standard' ? _activeAccentColor : Colors.white54),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 4,
+                ),
+                leading: Icon(
+                  Icons.reorder_rounded,
+                  color: _libraryDensity == 'standard'
+                      ? _activeAccentColor
+                      : Colors.white54,
+                ),
                 title: Text(
                   AppLocalizations.of(context).densityStandard,
                   style: TextStyle(
                     color: _libraryDensity == 'standard'
                         ? _activeAccentColor
                         : (isLight ? const Color(0xFF1A1A1A) : Colors.white),
-                    fontWeight: _libraryDensity == 'standard' ? FontWeight.bold : FontWeight.w400,
+                    fontWeight: _libraryDensity == 'standard'
+                        ? FontWeight.bold
+                        : FontWeight.w400,
                   ),
                 ),
-                trailing: _libraryDensity == 'standard' ? Icon(Icons.check, color: _activeAccentColor) : null,
+                trailing: _libraryDensity == 'standard'
+                    ? Icon(Icons.check, color: _activeAccentColor)
+                    : null,
                 onTap: () async {
                   final nav = Navigator.of(context);
                   final prefs = await SharedPreferences.getInstance();
@@ -2333,18 +2405,30 @@ extension SettingsModals on _SettingsScreenState {
                 },
               ),
               ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                leading: Icon(Icons.density_small_rounded, color: _libraryDensity == 'compact' ? _activeAccentColor : Colors.white54),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 4,
+                ),
+                leading: Icon(
+                  Icons.density_small_rounded,
+                  color: _libraryDensity == 'compact'
+                      ? _activeAccentColor
+                      : Colors.white54,
+                ),
                 title: Text(
                   AppLocalizations.of(context).densityCompact,
                   style: TextStyle(
                     color: _libraryDensity == 'compact'
                         ? _activeAccentColor
                         : (isLight ? const Color(0xFF1A1A1A) : Colors.white),
-                    fontWeight: _libraryDensity == 'compact' ? FontWeight.bold : FontWeight.w400,
+                    fontWeight: _libraryDensity == 'compact'
+                        ? FontWeight.bold
+                        : FontWeight.w400,
                   ),
                 ),
-                trailing: _libraryDensity == 'compact' ? Icon(Icons.check, color: _activeAccentColor) : null,
+                trailing: _libraryDensity == 'compact'
+                    ? Icon(Icons.check, color: _activeAccentColor)
+                    : null,
                 onTap: () async {
                   final nav = Navigator.of(context);
                   final prefs = await SharedPreferences.getInstance();
@@ -2424,9 +2508,25 @@ extension SettingsModals on _SettingsScreenState {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("14sp", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54)),
-                        Text("${_lyricFontSize.toInt()} sp", style: TextStyle(color: _activeAccentColor, fontWeight: FontWeight.bold)),
-                        Text("30sp", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54)),
+                        Text(
+                          "14sp",
+                          style: TextStyle(
+                            color: isLight ? Colors.black54 : Colors.white54,
+                          ),
+                        ),
+                        Text(
+                          "${_lyricFontSize.toInt()} sp",
+                          style: TextStyle(
+                            color: _activeAccentColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          "30sp",
+                          style: TextStyle(
+                            color: isLight ? Colors.black54 : Colors.white54,
+                          ),
+                        ),
                       ],
                     ),
                     Slider(
@@ -2499,14 +2599,19 @@ extension SettingsModals on _SettingsScreenState {
                     height: 1,
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     child: SwitchListTile(
                       value: _pitchLock,
                       activeColor: _activeAccentColor,
                       title: Text(
                         AppLocalizations.of(context).pitchLock,
                         style: TextStyle(
-                          color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                          color: isLight
+                              ? const Color(0xFF1A1A1A)
+                              : Colors.white,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -2525,17 +2630,26 @@ extension SettingsModals on _SettingsScreenState {
                   ),
                   for (final spd in speeds)
                     ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 2,
+                      ),
                       title: Text(
                         '${spd}x',
                         style: TextStyle(
                           color: _playbackSpeed == spd
                               ? _activeAccentColor
-                              : (isLight ? const Color(0xFF1A1A1A) : Colors.white),
-                          fontWeight: _playbackSpeed == spd ? FontWeight.bold : FontWeight.w400,
+                              : (isLight
+                                    ? const Color(0xFF1A1A1A)
+                                    : Colors.white),
+                          fontWeight: _playbackSpeed == spd
+                              ? FontWeight.bold
+                              : FontWeight.w400,
                         ),
                       ),
-                      trailing: _playbackSpeed == spd ? Icon(Icons.check, color: _activeAccentColor) : null,
+                      trailing: _playbackSpeed == spd
+                          ? Icon(Icons.check, color: _activeAccentColor)
+                          : null,
                       onTap: () async {
                         final nav = Navigator.of(context);
                         final prefs = await SharedPreferences.getInstance();

@@ -172,100 +172,171 @@ extension _PlayerUI on _MainScreenState {
   }
 
   Widget _buildSyncedLyricsList(Track currentTrack) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double viewportHeight = constraints.maxHeight;
-        final double itemHeight = 125.0;
-        final double verticalPadding = (viewportHeight / 2) - (itemHeight / 2);
+    return ValueListenableBuilder<bool>(
+      valueListenable: lyricsHidePastNotifier,
+      builder: (context, hidePast, _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: lyricsAutoFollowNotifier,
+          builder: (context, autoFollow, _) {
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final double viewportHeight = constraints.maxHeight;
+                final double itemHeight = 125.0;
+                final double verticalPadding =
+                    (viewportHeight / 2) - (itemHeight / 2);
 
-        return StreamBuilder<Duration>(
-          stream: _audioPlayer.positionStream,
-          builder: (context, snapshot) {
-            final position = snapshot.data ?? Duration.zero;
-
-            // Find activeIndex
-            int activeIndex = -1;
-            for (int i = 0; i < _currentLyricsSynced.length; i++) {
-              if (position >= _currentLyricsSynced[i].time) {
-                activeIndex = i;
-              } else {
-                break;
-              }
-            }
-
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_lyricsScrollController.hasClients &&
-                  activeIndex != -1 &&
-                  activeIndex != _lastActiveLyricsIndex) {
-                _lastActiveLyricsIndex = activeIndex;
-                final targetOffset = activeIndex * itemHeight;
-                _lyricsScrollController.animateTo(
-                  targetOffset.clamp(
-                    0.0,
-                    _lyricsScrollController.position.maxScrollExtent,
-                  ),
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeOutCubic,
-                );
-              }
-            });
-
-            return ListView.builder(
-              controller: _lyricsScrollController,
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(vertical: verticalPadding),
-              itemCount: _currentLyricsSynced.length,
-              itemBuilder: (context, index) {
-                final line = _currentLyricsSynced[index];
-                final isHighlighted = index == activeIndex;
-                final rawText = line.text.trim();
-                final isEmptyLine =
-                    rawText.isEmpty ||
-                    rawText == '♪' ||
-                    rawText.toLowerCase() == '[music]' ||
-                    rawText.toLowerCase() == 'instrumental' ||
-                    rawText.toLowerCase() == '(instrumental)';
-
-                return GestureDetector(
-                  onTap: () {
-                    _smoothSeek(line.time);
+                return NotificationListener<UserScrollNotification>(
+                  onNotification: (notification) {
+                    if (autoFollow &&
+                        notification.direction != ScrollDirection.idle) {
+                      if (!_lyricsUserScrolling) {
+                        setState(() => _lyricsUserScrolling = true);
+                      }
+                      _lyricsResumeTimer?.cancel();
+                      _lyricsResumeTimer = Timer(
+                        const Duration(seconds: 4),
+                        () {
+                          if (!mounted) return;
+                          setState(() {
+                            _lyricsUserScrolling = false;
+                            _lastActiveLyricsIndex = -1;
+                          });
+                        },
+                      );
+                    }
+                    return false;
                   },
-                  child: SizedBox(
-                    height: itemHeight,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24.0,
-                        vertical: 6.0,
-                      ),
-                      alignment: Alignment.center,
-                      color: Colors.transparent,
-                      width: double.infinity,
-                      child: AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeOutCubic,
-                        style: GoogleFonts.getFont(
-                          activeFontNotifier.value == 'Spotify Style'
-                              ? 'Figtree'
-                              : activeFontNotifier.value == 'Apple Music Style'
-                              ? 'Inter'
-                              : 'Plus Jakarta Sans',
-                          fontSize: _lyricFontSize,
-                          fontWeight: FontWeight.bold,
-                          color: isHighlighted
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.35),
-                          height: 1.3,
+                  child: StreamBuilder<Duration>(
+                    stream: _audioPlayer.positionStream,
+                    builder: (context, snapshot) {
+                      final position = snapshot.data ?? Duration.zero;
+
+                      // Find activeIndex
+                      int activeIndex = -1;
+                      for (int i = 0; i < _currentLyricsSynced.length; i++) {
+                        if (position >= _currentLyricsSynced[i].time) {
+                          activeIndex = i;
+                        } else {
+                          break;
+                        }
+                      }
+
+                      if (!_lyricsUserScrolling && autoFollow) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (_lyricsScrollController.hasClients &&
+                              activeIndex != -1 &&
+                              activeIndex != _lastActiveLyricsIndex) {
+                            final bool isInitial = _lastActiveLyricsIndex == -1;
+                            _lastActiveLyricsIndex = activeIndex;
+                            final targetOffset = activeIndex * itemHeight;
+                            final clampedOffset = targetOffset.clamp(
+                              0.0,
+                              _lyricsScrollController.position.maxScrollExtent,
+                            );
+                            if (isInitial) {
+                              _lyricsScrollController.jumpTo(clampedOffset);
+                            } else {
+                              _lyricsScrollController.animateTo(
+                                clampedOffset,
+                                duration: const Duration(milliseconds: 600),
+                                curve: Curves.easeOutCubic,
+                              );
+                            }
+                          }
+                        });
+                      }
+
+                      return ListView.builder(
+                        controller: _lyricsScrollController,
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.symmetric(
+                          vertical: verticalPadding,
                         ),
-                        child: isEmptyLine
-                            ? _WaveDots(isHighlighted: isHighlighted)
-                            : Text(
-                                line.text,
-                                textAlign: TextAlign.center,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
+                        itemCount: _currentLyricsSynced.length,
+                        itemBuilder: (context, index) {
+                          final line = _currentLyricsSynced[index];
+                          final isHighlighted = index == activeIndex;
+                          final rawText = line.text.trim();
+                          final isEmptyLine =
+                              rawText.isEmpty ||
+                              rawText == '♪' ||
+                              rawText.toLowerCase() == '[music]' ||
+                              rawText.toLowerCase() == 'instrumental' ||
+                              rawText.toLowerCase() == '(instrumental)';
+
+                          // Spotify-style: past lines hidden while auto-following,
+                          // all lines visible once the user scrolls manually.
+                          double alpha;
+                          if (_lyricsUserScrolling) {
+                            alpha = isHighlighted ? 1.0 : 0.4;
+                          } else if (hidePast && index < activeIndex) {
+                            alpha = 0.0;
+                          } else {
+                            alpha = isHighlighted ? 1.0 : 0.4;
+                          }
+                          final Color textColor = Colors.white.withValues(
+                            alpha: alpha,
+                          );
+
+                          return GestureDetector(
+                            onTap: () {
+                              if (_lyricsOpenedTime != null &&
+                                  DateTime.now()
+                                          .difference(_lyricsOpenedTime!)
+                                          .inMilliseconds <
+                                      350) {
+                                return;
+                              }
+                              _smoothSeek(line.time);
+                            },
+                            child: SizedBox(
+                              height: itemHeight,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24.0,
+                                  vertical: 6.0,
+                                ),
+                                alignment: Alignment.center,
+                                color: Colors.transparent,
+                                width: double.infinity,
+                                child: AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 350),
+                                  curve: Curves.easeOutCubic,
+                                  style: GoogleFonts.getFont(
+                                    activeFontNotifier.value == 'Spotify Style'
+                                        ? 'Figtree'
+                                        : activeFontNotifier.value ==
+                                              'Apple Music Style'
+                                        ? 'Inter'
+                                        : 'Plus Jakarta Sans',
+                                    fontSize: _lyricFontSize,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                    height: 1.3,
+                                  ),
+                                  child: isEmptyLine
+                                      ? AnimatedOpacity(
+                                          opacity: alpha,
+                                          duration: const Duration(
+                                            milliseconds: 350,
+                                          ),
+                                          child: _WaveDots(
+                                            isHighlighted: isHighlighted,
+                                          ),
+                                        )
+                                      : Text(
+                                          line.text,
+                                          textAlign: TextAlign.center,
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                ),
                               ),
-                      ),
-                    ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 );
               },
@@ -450,7 +521,11 @@ extension _PlayerUI on _MainScreenState {
                 }
                 navigator.pop();
                 _loadLyricsForTrack(currentTrack);
-                showFlowToast(lookupAppLocalizations(Locale(FlowStrings.currentLang)).toastLyricsUpdated);
+                showFlowToast(
+                  lookupAppLocalizations(
+                    Locale(FlowStrings.currentLang),
+                  ).toastLyricsUpdated,
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _activeAccentColor,
@@ -492,10 +567,7 @@ extension _PlayerUI on _MainScreenState {
     );
 
     if (heroTag != null && heroTag.isNotEmpty) {
-      return Hero(
-        tag: heroTag,
-        child: artwork,
-      );
+      return Hero(tag: heroTag, child: artwork);
     }
     return artwork;
   }
@@ -738,7 +810,9 @@ extension _PlayerUI on _MainScreenState {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        AppLocalizations.of(context).lyrics.toUpperCase(),
+                                        AppLocalizations.of(
+                                          context,
+                                        ).lyrics.toUpperCase(),
                                         textAlign: TextAlign.center,
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w600,
@@ -786,30 +860,56 @@ extension _PlayerUI on _MainScreenState {
                                       }
                                       String typeLabel;
                                       if (_playingFromType == 'PLAYLIST') {
-                                        typeLabel = AppLocalizations.of(context).playlists;
+                                        typeLabel = AppLocalizations.of(
+                                          context,
+                                        ).playlists;
                                       } else if (_playingFromType == 'ARTIST') {
-                                        typeLabel = AppLocalizations.of(context).artists;
+                                        typeLabel = AppLocalizations.of(
+                                          context,
+                                        ).artists;
                                       } else if (_playingFromType == 'ALBUM') {
-                                        typeLabel = AppLocalizations.of(context).albums;
+                                        typeLabel = AppLocalizations.of(
+                                          context,
+                                        ).albums;
                                       } else {
-                                        typeLabel = AppLocalizations.of(context).library;
+                                        typeLabel = AppLocalizations.of(
+                                          context,
+                                        ).library;
                                       }
 
                                       String displayName = _playingFromName;
                                       if (_playingFromName == 'All Songs' ||
                                           _playingFromName == 'All Tracks') {
-                                        displayName = AppLocalizations.of(context).allSongs;
-                                      } else if (_playingFromName == 'Favourites' ||
-                                          _playingFromName == 'Favorite Songs') {
-                                        displayName = AppLocalizations.of(context).favourites;
-                                      } else if (_playingFromName == 'Recently Added') {
-                                        displayName = AppLocalizations.of(context).recentlyAdded;
-                                      } else if (_playingFromName == 'Most Played') {
-                                        displayName = AppLocalizations.of(context).mostPlayed;
-                                      } else if (_playingFromName == 'Forgotten Gems') {
-                                        displayName = AppLocalizations.of(context).forgottenGems;
-                                      } else if (_playingFromName == 'Last Played') {
-                                        displayName = AppLocalizations.of(context).lastPlayed;
+                                        displayName = AppLocalizations.of(
+                                          context,
+                                        ).allSongs;
+                                      } else if (_playingFromName ==
+                                              'Favourites' ||
+                                          _playingFromName ==
+                                              'Favorite Songs') {
+                                        displayName = AppLocalizations.of(
+                                          context,
+                                        ).favourites;
+                                      } else if (_playingFromName ==
+                                          'Recently Added') {
+                                        displayName = AppLocalizations.of(
+                                          context,
+                                        ).recentlyAdded;
+                                      } else if (_playingFromName ==
+                                          'Most Played') {
+                                        displayName = AppLocalizations.of(
+                                          context,
+                                        ).mostPlayed;
+                                      } else if (_playingFromName ==
+                                          'Forgotten Gems') {
+                                        displayName = AppLocalizations.of(
+                                          context,
+                                        ).forgottenGems;
+                                      } else if (_playingFromName ==
+                                          'Last Played') {
+                                        displayName = AppLocalizations.of(
+                                          context,
+                                        ).lastPlayed;
                                       }
 
                                       return Column(
@@ -884,8 +984,28 @@ extension _PlayerUI on _MainScreenState {
                               ignoring: _showLyrics,
                               child: GestureDetector(
                                 onTap: () {
-                                  setState(() => _showLyrics = true);
+                                  setState(() {
+                                    _showLyrics = true;
+                                    _lastActiveLyricsIndex = -1;
+                                    _lyricsUserScrolling = false;
+                                    _lyricsOpenedTime = DateTime.now();
+                                  });
                                   _loadLyricsForTrack(currentTrack);
+                                },
+                                onDoubleTap: () {
+                                  final wasFavorited = _favoriteTrackIds
+                                      .contains(currentTrack.id);
+                                  _toggleFavorite(currentTrack.id);
+                                  if (wasFavorited) {
+                                    final loc = lookupAppLocalizations(
+                                      Locale(FlowStrings.currentLang),
+                                    );
+                                    if (_playingFromName == loc.favourites) {
+                                      _removeFromQueueAndPlayer(
+                                        currentTrack.id,
+                                      );
+                                    }
+                                  }
                                 },
                                 child: AnimatedScale(
                                   scale: _isPlayerOpen ? 1.0 : 0.35,
@@ -901,8 +1021,9 @@ extension _PlayerUI on _MainScreenState {
                                         aspectRatio: 1.0,
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(24),
+                                            borderRadius: BorderRadius.circular(
+                                              24,
+                                            ),
                                             boxShadow: [
                                               BoxShadow(
                                                 color: Colors.black.withValues(
@@ -914,8 +1035,9 @@ extension _PlayerUI on _MainScreenState {
                                             ],
                                           ),
                                           child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(24),
+                                            borderRadius: BorderRadius.circular(
+                                              24,
+                                            ),
                                             child: _buildTrackArtwork(
                                               currentTrack,
                                               size:
@@ -994,10 +1116,14 @@ extension _PlayerUI on _MainScreenState {
                             size: 26,
                           ),
                           onPressed: () {
-                            final wasFavorited = _favoriteTrackIds.contains(currentTrack.id);
+                            final wasFavorited = _favoriteTrackIds.contains(
+                              currentTrack.id,
+                            );
                             _toggleFavorite(currentTrack.id);
                             if (wasFavorited) {
-                              final loc = lookupAppLocalizations(Locale(FlowStrings.currentLang));
+                              final loc = lookupAppLocalizations(
+                                Locale(FlowStrings.currentLang),
+                              );
                               if (_playingFromName == loc.favourites) {
                                 _removeFromQueueAndPlayer(currentTrack.id);
                               }
@@ -1187,6 +1313,11 @@ extension _PlayerUI on _MainScreenState {
                               onPressed: () {
                                 setState(() {
                                   _showLyrics = !_showLyrics;
+                                  if (_showLyrics) {
+                                    _lastActiveLyricsIndex = -1;
+                                    _lyricsUserScrolling = false;
+                                    _lyricsOpenedTime = DateTime.now();
+                                  }
                                 });
                                 if (_showLyrics) {
                                   _loadLyricsForTrack(currentTrack);
@@ -1462,9 +1593,11 @@ class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
       final ImageProvider customImageProvider = widget.size > 100
           ? FileImage(File(widget.customPath!))
           : (widget.cacheWidthOverride != null
-              ? ResizeImage(FileImage(File(widget.customPath!)),
-                  width: widget.cacheWidthOverride!)
-              : ResizeImage(FileImage(File(widget.customPath!)), width: 300));
+                ? ResizeImage(
+                    FileImage(File(widget.customPath!)),
+                    width: widget.cacheWidthOverride!,
+                  )
+                : ResizeImage(FileImage(File(widget.customPath!)), width: 300));
       return Container(
         width: widget.size,
         height: widget.size,

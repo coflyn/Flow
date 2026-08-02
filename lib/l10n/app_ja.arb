@@ -386,5 +386,9 @@
   "playbackSpeedSubtitle": "再生速度とオーディオピッチを調整",
   "pitchLock": "ピッチロック",
   "lyricFontSize": "歌詞の文字サイズ",
-  "lyricFontSizeSubtitle": "歌詞ビューアの文字サイズを調整"
+  "lyricFontSizeSubtitle": "歌詞ビューアの文字サイズを調整",
+  "lyricsHidePast": "過去の歌詞を隠す",
+  "lyricsHidePastSubtitle": "再生済みの歌詞をフェードアウト",
+  "lyricsAutoFollow": "歌詞を自動追従",
+  "lyricsAutoFollowSubtitle": "アクティブな歌詞行へスムーズにスクロール"
 }

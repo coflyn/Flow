@@ -77,6 +77,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   double _playbackSpeed = 1.0;
   bool _pitchLock = true;
   double _lyricFontSize = 22.0;
+  bool _lyricsHidePast = true;
+  bool _lyricsAutoFollow = true;
   String _appVersion = 'Loading...';
   Future<List<SongModel>>? _songsFuture;
 
@@ -150,8 +152,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
         bool isNewer(String latest, String current) {
           try {
-            final l = latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-            final c = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+            final l = latest
+                .split('.')
+                .map((e) => int.tryParse(e) ?? 0)
+                .toList();
+            final c = current
+                .split('.')
+                .map((e) => int.tryParse(e) ?? 0)
+                .toList();
             for (int i = 0; i < 3; i++) {
               final lp = i < l.length ? l[i] : 0;
               final cp = i < c.length ? c[i] : 0;
@@ -186,8 +194,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       child: Text(
                         AppLocalizations.of(context).updateAvailable,
                         style: TextStyle(
-                          color:
-                              isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                          color: isLight
+                              ? const Color(0xFF1A1A1A)
+                              : Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -309,6 +318,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _playbackSpeed = prefs.getDouble('playbackSpeed') ?? 1.0;
       _pitchLock = prefs.getBool('pitchLock') ?? true;
       _lyricFontSize = prefs.getDouble('lyricFontSize') ?? 18.0;
+      _lyricsHidePast = prefs.getBool('lyricsHidePast') ?? true;
+      _lyricsAutoFollow = prefs.getBool('lyricsAutoFollow') ?? true;
     });
 
     final packageInfo = await PackageInfo.fromPlatform();
@@ -456,6 +467,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: AppLocalizations.of(context).lyricFontSize,
                 subtitle: '${_lyricFontSize.toInt()} sp',
                 onTap: () => _showLyricFontSizeDialog(),
+              ),
+              const Divider(color: Colors.white10, height: 1),
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
+                icon: Icons.compare_arrows_rounded,
+                title: AppLocalizations.of(context).lyricsAutoFollow,
+                subtitle: AppLocalizations.of(context).lyricsAutoFollowSubtitle,
+                value: _lyricsAutoFollow,
+                onChanged: (val) {
+                  setState(() => _lyricsAutoFollow = val);
+                  _saveBool('lyricsAutoFollow', val);
+                },
+              ),
+              const Divider(color: Colors.white10, height: 1),
+              SettingsPremiumSwitchTile(
+                isLight: _selectedThemeMode == 'light',
+                activeAccentColor: _activeAccentColor,
+                icon: Icons.visibility_off_rounded,
+                title: AppLocalizations.of(context).lyricsHidePast,
+                subtitle: AppLocalizations.of(context).lyricsHidePastSubtitle,
+                value: _lyricsHidePast,
+                onChanged: (val) {
+                  setState(() => _lyricsHidePast = val);
+                  _saveBool('lyricsHidePast', val);
+                },
               ),
               const Divider(color: Colors.white10, height: 1),
               SettingsPremiumListTile(
@@ -1602,8 +1639,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 activeAccentColor: _activeAccentColor,
                 icon: Icons.autorenew_rounded,
                 title: AppLocalizations.of(context).autoCheckUpdates,
-                subtitle:
-                    AppLocalizations.of(context).autoCheckUpdatesSubtitle,
+                subtitle: AppLocalizations.of(context).autoCheckUpdatesSubtitle,
                 value: _autoCheckUpdates,
                 onChanged: (value) async {
                   setState(() => _autoCheckUpdates = value);

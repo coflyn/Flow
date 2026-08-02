@@ -27,6 +27,9 @@ extension _MainAudioLogic on _MainScreenState {
       _playbackSpeed = prefs.getDouble('playbackSpeed') ?? 1.0;
       _pitchLock = prefs.getBool('pitchLock') ?? true;
       _lyricFontSize = prefs.getDouble('lyricFontSize') ?? 22.0;
+      lyricsHidePastNotifier.value = prefs.getBool('lyricsHidePast') ?? true;
+      lyricsAutoFollowNotifier.value =
+          prefs.getBool('lyricsAutoFollow') ?? true;
 
       _applyPlaybackSpeedAndPitch();
       _sortBy = prefs.getString('sortBy') ?? 'date';
@@ -308,7 +311,11 @@ extension _MainAudioLogic on _MainScreenState {
     });
 
     _audioPlayer.positionStream.listen((pos) {
+      if (pos.inSeconds < 2) {
+        _hasResetPosition = true;
+      }
       if (_playingTrack != null &&
+          _hasResetPosition &&
           _lastIncrementedTrackId != _playingTrack!.id) {
         final duration = _audioPlayer.duration ?? Duration.zero;
         final trackDuration = Duration(milliseconds: _playingTrack!.duration);
@@ -344,7 +351,7 @@ extension _MainAudioLogic on _MainScreenState {
         }
       }
 
-      if (_sleepAtEndOfTrack) {
+      if (_sleepAtEndOfTrack && _hasResetPosition) {
         final duration = _audioPlayer.duration ?? Duration.zero;
         if (duration > Duration.zero &&
             pos >= duration - const Duration(milliseconds: 350)) {
@@ -713,8 +720,14 @@ extension _MainAudioLogic on _MainScreenState {
 
         bool isNewer(String latest, String current) {
           try {
-            final l = latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-            final c = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+            final l = latest
+                .split('.')
+                .map((e) => int.tryParse(e) ?? 0)
+                .toList();
+            final c = current
+                .split('.')
+                .map((e) => int.tryParse(e) ?? 0)
+                .toList();
             for (int i = 0; i < 3; i++) {
               final lp = i < l.length ? l[i] : 0;
               final cp = i < c.length ? c[i] : 0;
@@ -749,8 +762,9 @@ extension _MainAudioLogic on _MainScreenState {
                       child: Text(
                         AppLocalizations.of(context).updateAvailable,
                         style: TextStyle(
-                          color:
-                              isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                          color: isLight
+                              ? const Color(0xFF1A1A1A)
+                              : Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1146,6 +1160,7 @@ extension _MainAudioLogic on _MainScreenState {
       _currentIndex = index;
       _playingTrack = track;
       _lastIncrementedTrackId = null;
+      _hasResetPosition = false;
       _isNaturalFadingOut = false;
       _lastActiveLyricsIndex = -1;
       if (_isShuffle && !queueMatches && sourceList != null) {
@@ -1507,6 +1522,7 @@ extension _MainAudioLogic on _MainScreenState {
         _currentIndex = newQueueIndex;
         _playingTrack = track;
         _lastIncrementedTrackId = null;
+        _hasResetPosition = false;
         _isNaturalFadingOut = false; // Reset the natural fade variable
         _lastActiveLyricsIndex = -1;
       });
@@ -1780,6 +1796,8 @@ extension _MainAudioLogic on _MainScreenState {
   }
 
   Future<void> _loadLyricsForTrack(Track track) async {
+    _lyricsResumeTimer?.cancel();
+    _lyricsUserScrolling = false;
     if (_lyricsScrollController.hasClients) {
       _lyricsScrollController.jumpTo(0);
     }

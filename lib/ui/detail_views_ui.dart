@@ -23,15 +23,17 @@ extension _DetailViewsUI on _MainScreenState {
     if (baseName == AppLocalizations.of(context).favourites) {
       dynamicKeyPart = _favoriteTrackIds.length.toString();
     } else if (baseName == AppLocalizations.of(context).lastPlayed) {
-      dynamicKeyPart = _allPlayedTrackIdsOrdered.length.toString();
+      dynamicKeyPart = _allPlayedTrackIdsOrdered.join(',').hashCode.toString();
     } else if (baseName == AppLocalizations.of(context).mostPlayed) {
       dynamicKeyPart = _playCounts.values
           .fold<int>(0, (a, b) => a + b)
           .toString();
     } else if (baseName == AppLocalizations.of(context).forgottenGems) {
-      dynamicKeyPart = _allTracks
-          .where((t) => (_playCounts[t.id] ?? 0) == 0)
-          .length
+      dynamicKeyPart = _allTracks.reversed
+          .where((t) => (_playCounts[t.id] ?? 0) <= 1)
+          .map((t) => t.id)
+          .join(',')
+          .hashCode
           .toString();
     } else if (_userPlaylists.containsKey(baseName)) {
       dynamicKeyPart = _userPlaylists[baseName]?.length.toString() ?? '0';
@@ -77,7 +79,7 @@ extension _DetailViewsUI on _MainScreenState {
           pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
         } else if (baseName == AppLocalizations.of(context).forgottenGems) {
           pSongs = _allTracks.reversed
-              .where((t) => (_playCounts[t.id] ?? 0) <= 2)
+              .where((t) => (_playCounts[t.id] ?? 0) <= 1)
               .toList();
         } else if (_userPlaylists.containsKey(baseName)) {
           final trackIds = _userPlaylists[baseName]!.toSet();
@@ -727,16 +729,19 @@ extension _DetailViewsUI on _MainScreenState {
           ValueListenableBuilder<double>(
             valueListenable: _detailScrollOffsetNotifier,
             builder: (context, scrollOffset, child) {
-              final double progress =
-                  ((scrollOffset - 120.0) / 100.0).clamp(0.0, 1.0);
+              final double progress = ((scrollOffset - 120.0) / 100.0).clamp(
+                0.0,
+                1.0,
+              );
               if (progress <= 0) return const SizedBox.shrink();
 
               final navBgColor = isLight
                   ? const Color(0xFFF6F8FA).withValues(alpha: progress * 0.96)
                   : const Color(0xFF0A0A0A).withValues(alpha: progress * 0.96);
 
-              final textColor =
-                  isLight ? const Color(0xFF1A1A1A) : Colors.white;
+              final textColor = isLight
+                  ? const Color(0xFF1A1A1A)
+                  : Colors.white;
 
               return Positioned(
                 top: 0,
@@ -783,8 +788,9 @@ extension _DetailViewsUI on _MainScreenState {
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: textColor,
-                                  fontFamily:
-                                      getFontFamily(activeFontNotifier.value),
+                                  fontFamily: getFontFamily(
+                                    activeFontNotifier.value,
+                                  ),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

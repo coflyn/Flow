@@ -137,8 +137,9 @@ extension _ModalsUtilityUI on _MainScreenState {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor:
-              isLight ? const Color(0xFFFFFFFF) : const Color(0xFF1E1E26),
+          backgroundColor: isLight
+              ? const Color(0xFFFFFFFF)
+              : const Color(0xFF1E1E26),
           title: Text(
             loc.customTimer,
             style: TextStyle(
@@ -430,7 +431,9 @@ extension _ModalsUtilityUI on _MainScreenState {
                                               : Colors.white,
                                           fontWeight: FontWeight.w600,
                                           fontSize: 14,
-                                          fontFamily: getFontFamily(_activeFont),
+                                          fontFamily: getFontFamily(
+                                            _activeFont,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -457,7 +460,9 @@ extension _ModalsUtilityUI on _MainScreenState {
                                               : Colors.white70,
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          fontFamily: getFontFamily(_activeFont),
+                                          fontFamily: getFontFamily(
+                                            _activeFont,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -535,9 +540,12 @@ extension _ModalsUtilityUI on _MainScreenState {
   }
 
   void _showEqualizerSheet(BuildContext context) {
+    final isLight = isAppLight;
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: isLight
+          ? const Color(0xFFF0F0F3)
+          : const Color(0xFF121212),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -717,16 +725,16 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = GoogleFonts.getFont(
-      widget.activeFont,
-      color: Colors.white,
+    final isLight = isAppLight;
+    final textStyle = TextStyle(
+      color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+      fontFamily: getFontFamily(widget.activeFont),
     );
-
     if (!_initialized) {
       return Container(
         height: 400,
         alignment: Alignment.center,
-        color: const Color(0xFF121212),
+        color: isLight ? const Color(0xFFF0F0F3) : const Color(0xFF121212),
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(widget.accentColor),
         ),
@@ -736,7 +744,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
     if (_error != null) {
       return Container(
         padding: const EdgeInsets.all(24),
-        color: const Color(0xFF121212),
+        color: isLight ? const Color(0xFFF0F0F3) : const Color(0xFF121212),
         child: SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -745,7 +753,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                 width: 48,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: isLight ? Colors.black12 : Colors.white24,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -757,16 +765,11 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
               ),
               const SizedBox(height: 16),
               Text(
-                AppLocalizations.of(context).systemEqualizer,
-                style: textStyle.copyWith(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
                 _error!,
-                style: textStyle.copyWith(fontSize: 14, color: Colors.white54),
+                style: textStyle.copyWith(
+                  fontSize: 14,
+                  color: isLight ? Colors.black45 : Colors.white54,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -777,7 +780,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
     }
 
     return Container(
-      color: const Color(0xFF121212),
+      color: isLight ? const Color(0xFFF0F0F3) : const Color(0xFF121212),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       child: SafeArea(
         child: Column(
@@ -789,7 +792,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                 width: 48,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: isLight ? Colors.black12 : Colors.white24,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -815,7 +818,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                       AppLocalizations.of(context).equalizerSubtitle,
                       style: textStyle.copyWith(
                         fontSize: 12,
-                        color: Colors.white38,
+                        color: isLight ? Colors.black54 : Colors.white38,
                       ),
                     ),
                   ],
@@ -846,13 +849,17 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                           label: Text(presetName),
                           selected: isActive,
                           selectedColor: widget.accentColor,
-                          backgroundColor: const Color(0xFF1E1E1E),
+                          backgroundColor: isLight
+                              ? Colors.black.withValues(alpha: 0.05)
+                              : const Color(0xFF1E1E1E),
                           labelStyle: textStyle.copyWith(
                             fontSize: 13,
                             fontWeight: isActive
                                 ? FontWeight.bold
                                 : FontWeight.normal,
-                            color: isActive ? Colors.white : Colors.white70,
+                            color: isActive
+                                ? Colors.white
+                                : (isLight ? Colors.black87 : Colors.white70),
                           ),
                           onSelected: (selected) {
                             if (selected) {
@@ -876,7 +883,9 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                   height: 220,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
+                    color: isLight
+                        ? Colors.black.withValues(alpha: 0.05)
+                        : const Color(0xFF1A1A1A),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -895,7 +904,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                             '${dbVal}dB',
                             style: textStyle.copyWith(
                               fontSize: 10,
-                              color: Colors.white54,
+                              color: isLight ? Colors.black54 : Colors.white54,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -908,8 +917,12 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                                 data: SliderThemeData(
                                   trackHeight: 3.5,
                                   activeTrackColor: widget.accentColor,
-                                  inactiveTrackColor: Colors.white12,
-                                  thumbColor: Colors.white,
+                                  inactiveTrackColor: isLight
+                                      ? Colors.black12
+                                      : Colors.white12,
+                                  thumbColor: isLight
+                                      ? widget.accentColor
+                                      : Colors.white,
                                   overlayColor: widget.accentColor.withValues(
                                     alpha: 0.2,
                                   ),
@@ -935,7 +948,7 @@ class _EqualizerSheetContentState extends State<_EqualizerSheetContent> {
                             '${freqLabel}Hz',
                             style: textStyle.copyWith(
                               fontSize: 11,
-                              color: Colors.white38,
+                              color: isLight ? Colors.black45 : Colors.white38,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
