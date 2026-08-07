@@ -13,13 +13,21 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../main.dart';
 import '../utils/globals.dart';
 import '../utils/image_cropper_util.dart';
 
 import '../widgets/settings/settings_ui_components.dart';
 import 'package:flow/l10n/app_localizations.dart';
-part 'settings_modals.dart';
+part 'settings_sleep_timer.dart';
+part 'settings_backup_restore.dart';
+part 'settings_hidden_tracks.dart';
+part 'settings_threshold_ui.dart';
+part 'settings_typography_ui.dart';
+part 'settings_theme_accent_ui.dart';
+part 'settings_theme_mode_ui.dart';
+part 'settings_language_density_ui.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   final VoidCallback onRescanLibrary;
@@ -53,7 +61,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _autoPlayAfterCall = true;
   bool _playTogether = false;
   int _playCountThreshold = 10;
-  String _activeFont = 'Plus Jakarta Sans';
+  String _activeFont = activeFontNotifier.value;
   double _fontScale = 1.0;
   String _language = 'en';
   bool _skipSilence = false;

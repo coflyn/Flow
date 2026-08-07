@@ -33,12 +33,28 @@ import 'package:flow/l10n/app_localizations.dart';
 part 'ui/player_ui.dart';
 part 'ui/detail_views_ui.dart';
 part 'ui/tabs_ui.dart';
-part 'ui/modals_track_ui.dart';
-part 'ui/modals_playlist_ui.dart';
+part 'ui/track_options_ui.dart';
+part 'ui/edit_metadata_ui.dart';
+part 'ui/sort_ui.dart';
+part 'ui/sort_modal_ui.dart';
+part 'ui/detail_sort_ui.dart';
+part 'ui/song_info_ui.dart';
+part 'ui/cover_picker_ui.dart';
+part 'ui/song_cover_picker_ui.dart';
+part 'ui/ringtone_cutter_ui.dart';
+part 'ui/playlist_edit_songs_ui.dart';
+part 'ui/playlist_manage_ui.dart';
+part 'ui/sleep_timer_ui.dart';
+part 'ui/folder_scan_ui.dart';
 part 'ui/modals_utility_ui.dart';
+part 'ui/equalizer_sheet_ui.dart';
 part 'services/audio_handler.dart';
 part 'ui/main_ui_components.dart';
-part 'logic/main_audio_logic.dart';
+part 'logic/audio_settings_logic.dart';
+part 'logic/audio_streams_logic.dart';
+part 'logic/audio_equalizer_logic.dart';
+part 'logic/audio_library_scan_logic.dart';
+part 'logic/audio_playback_logic.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +82,39 @@ void main() async {
     debugPrint('StackTrace: $stackTrace');
     backgroundInitError = '$e\n$stackTrace';
     isBackgroundInitialized = false;
+  }
+
+  // Initialize ValueNotifiers directly from prefs BEFORE runApp so first frame renders with correct settings
+  final savedFont = prefs.getString('activeFont') ?? 'Plus Jakarta Sans';
+  activeFontNotifier.value = savedFont;
+  themeModeNotifier.value = prefs.getString('themeMode') ?? 'dark';
+  customThemeBgNotifier.value = prefs.getString('customThemeBg') ?? 'dynamic';
+  languageNotifier.value = prefs.getString('language') ?? 'en';
+  fontScaleNotifier.value = prefs.getDouble('fontScale') ?? 1.0;
+
+  // Preload selected Google font to avoid default-font flash on first frame.
+  try {
+    if (savedFont == 'Spotify Style') {
+      await GoogleFonts.pendingFonts([
+        GoogleFonts.figtree(),
+        GoogleFonts.figtree(fontWeight: FontWeight.bold),
+        GoogleFonts.figtree(fontWeight: FontWeight.w600),
+      ]);
+    } else if (savedFont == 'Apple Music Style') {
+      await GoogleFonts.pendingFonts([
+        GoogleFonts.inter(),
+        GoogleFonts.inter(fontWeight: FontWeight.bold),
+        GoogleFonts.inter(fontWeight: FontWeight.w600),
+      ]);
+    } else {
+      await GoogleFonts.pendingFonts([
+        GoogleFonts.plusJakartaSans(),
+        GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+        GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+      ]);
+    }
+  } catch (e) {
+    debugPrint('Font preload error: $e');
   }
 
   runApp(const ProviderScope(child: FlowApp()));
@@ -252,7 +301,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool _autoPlayAfterCall = true;
   bool _playTogether = false;
   int _playCountThreshold = 10;
-  String _activeFont = 'Plus Jakarta Sans';
+  String _activeFont = activeFontNotifier.value;
   double _fontScale = 1.0;
   String _specificFolderScan = '';
   bool _skipSilence = false;
@@ -277,6 +326,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool _showLyrics = false;
   String? _currentLyricsPlain;
   List<LyricsLine> _currentLyricsSynced = [];
+  double _lyricsOffsetSec = 0.0;
   bool _isLyricsLoading = false;
   bool _isLyricsSynced = false;
   int _lastActiveLyricsIndex = -1;

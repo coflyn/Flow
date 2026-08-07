@@ -199,7 +199,6 @@ extension _PlayerUI on _MainScreenState {
                           if (!mounted) return;
                           setState(() {
                             _lyricsUserScrolling = false;
-                            _lastActiveLyricsIndex = -1;
                           });
                         },
                       );
@@ -234,7 +233,11 @@ extension _PlayerUI on _MainScreenState {
                               _lyricsScrollController.position.maxScrollExtent,
                             );
                             if (isInitial) {
-                              _lyricsScrollController.jumpTo(clampedOffset);
+                              _lyricsScrollController.animateTo(
+                                clampedOffset,
+                                duration: const Duration(milliseconds: 900),
+                                curve: Curves.easeOutCubic,
+                              );
                             } else {
                               _lyricsScrollController.animateTo(
                                 clampedOffset,
@@ -404,6 +407,11 @@ extension _PlayerUI on _MainScreenState {
     final textController = TextEditingController(
       text: _currentLyricsPlain ?? '',
     );
+    final offsetController = TextEditingController(
+      text: _lyricsOffsetSec == 0.0
+          ? '0'
+          : _lyricsOffsetSec.toStringAsFixed(1),
+    );
 
     SharedPreferences.getInstance().then((prefs) {
       final manualKey = 'lyrics_manual_${currentTrack.id}';
@@ -443,8 +451,81 @@ extension _PlayerUI on _MainScreenState {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Paste plain lyrics or synced LRC format lyrics below.',
+                  AppLocalizations.of(context).lyricsPasteHint,
                   style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(
+                      AppLocalizations.of(context).lyricsOffsetLabel,
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: offsetController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '0.0',
+                          hintStyle: const TextStyle(color: Colors.white24),
+                          filled: true,
+                          fillColor: Colors.white.withValues(alpha: 0.05),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    for (final step in [-0.5, -0.1, 0.1, 0.5])
+                      OutlinedButton(
+                        onPressed: () {
+                          final current = double.tryParse(
+                                offsetController.text.replaceAll(',', '.'),
+                              ) ??
+                              0.0;
+                          offsetController.text = (current + step)
+                              .toStringAsFixed(1);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
+                          side: BorderSide(
+                            color: Colors.white24,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          step > 0 ? '+${step.toStringAsFixed(1)}s' : '${step.toStringAsFixed(1)}s',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -518,6 +599,16 @@ extension _PlayerUI on _MainScreenState {
                   await prefs.remove(manualKey);
                 } else {
                   await prefs.setString(manualKey, text);
+                }
+                final offsetVal = double.tryParse(
+                      offsetController.text.replaceAll(',', '.'),
+                    ) ??
+                    0.0;
+                final offsetKey = 'lyrics_offset_${currentTrack.id}';
+                if (offsetVal == 0.0) {
+                  await prefs.remove(offsetKey);
+                } else {
+                  await prefs.setDouble(offsetKey, offsetVal);
                 }
                 navigator.pop();
                 _loadLyricsForTrack(currentTrack);
@@ -991,21 +1082,6 @@ extension _PlayerUI on _MainScreenState {
                                     _lyricsOpenedTime = DateTime.now();
                                   });
                                   _loadLyricsForTrack(currentTrack);
-                                },
-                                onDoubleTap: () {
-                                  final wasFavorited = _favoriteTrackIds
-                                      .contains(currentTrack.id);
-                                  _toggleFavorite(currentTrack.id);
-                                  if (wasFavorited) {
-                                    final loc = lookupAppLocalizations(
-                                      Locale(FlowStrings.currentLang),
-                                    );
-                                    if (_playingFromName == loc.favourites) {
-                                      _removeFromQueueAndPlayer(
-                                        currentTrack.id,
-                                      );
-                                    }
-                                  }
                                 },
                                 child: AnimatedScale(
                                   scale: _isPlayerOpen ? 1.0 : 0.35,

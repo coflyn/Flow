@@ -55,7 +55,18 @@ Download the latest release APKs directly from the [GitHub Releases](https://git
 - **Pixel-Perfect Margin Alignment**: Custom spatial translations (`Transform.translate`) aligning song controls at a precise `24px` horizontal screen margin.
 - **Robust Cache Manager**: Ultra-fast artwork preloading engine with multi-tier retries and anti-null failure mechanisms.
 
-## What's New (v1.0.5)
+## What's New (v1.0.6)
+
+- **Massive Internal Refactoring**: Decomposed monolithic God-Object files into 28 focused `part` files across `lib/ui/`, `lib/logic/`, and `lib/screens/`. `main_audio_logic.dart` (2054 lines) split into 5 domain files, `modals_track_ui.dart` (2258 lines) into 9 UI files, `settings_modals.dart` (2671 lines) into 8 settings files. Zero behavior changes — all 98 methods preserved, `flutter analyze` clean.
+- **Smooth Synced Lyrics Auto-Follow Return Animation**: Resolved stiff, abrupt position snaps when returning to auto-follow mode after user manual scrolling. Replaced zero-delay jumps with a fluid 900ms `Curves.fastOutSlowIn` curve animation, allowing the lyrics view to glide back to the active line naturally. Tap-to-lyric seek glides instantly to the tapped line, and initial load glides smoothly to the active line instead of jumping from the top.
+- **Ringtone Cutter Preview Race Fix**: Fixed a race condition where restarting a cut preview after pausing caused the old preview timer to silently kill the new playback mid-cue. Session-scoped timers now guarantee only the active preview can stop itself.
+- **Lyrics Timing Offset**: Fix desynced LRC lyrics directly from Edit/Add Lyrics — set a per-track offset in seconds (positive = lyrics later, negative = lyrics earlier) with quick ±0.1s / ±0.5s steps. Persisted per track and applied automatically on every load. Fully localized (EN/ID/JA).
+- **Font Flash Elimination**: Selected Google Font (Figtree / Inter / Plus Jakarta Sans) is now preloaded before the first frame renders, eliminating the default-font flash when launching the app.
+- **Removed Double-Tap Album Art Favorite**: Double-tapping the album artwork no longer toggles Favorite status — single tap opens Lyrics only, preventing accidental favorites while browsing.
+- **Dynamic Viewport Stagger Animations**: Replaced fixed absolute-index stagger logic with viewport-based count tracking (top 8 visible items) across all tab pills (Songs, Playlists, Artists, Albums). Switching tabs or returning to a scrolled tab now consistently plays cascading slide-up entrance animations for the top visible items regardless of scroll depth.
+- **Fail-Safe Backup & Restore Engine**: Resolved `errno = 13 (Permission Denied)` on Android 10–15 Scoped Storage via multi-tiered fallback paths (Public Downloads → App External Storage → App Documents Directory). Guarantees seamless JSON backups and restores across all Android versions.
+
+## Previous Updates (v1.0.5)
 
 - **Smooth Synced Lyrics View**: Redesigned the synced lyrics viewer with smooth auto-scrolling — the active line glides to the center of the screen with a 600ms ease-out curve, past lines fade out, and the view automatically resumes following after 4 seconds of idle manual scrolling.
 - **Uniform Lyric Typography**: Removed font-size scaling between active and inactive lines so lyrics never visually jump or shift as playback advances — only opacity changes to mark the active line.
@@ -67,32 +78,25 @@ Download the latest release APKs directly from the [GitHub Releases](https://git
 - **Accurate "Most Played" Threshold Increments**: Fixed premature play count increments when switching tracks — position stream listeners now require a verified position reset (`_hasResetPosition`) before evaluating the 30-second play count threshold, preventing stale positions of previous tracks from accidentally inflating play counts.
 - **Unified Hidden Tracks & Equalizer Sheet UI**: Redesigned the "Hidden Tracks" and "Equalizer" bottom sheets to seamlessly match Flow's theme design system (supporting Light/Dark modes), adding 42x42 album artwork thumbnails (`QueryArtworkWidget`) and clean pill badges for hidden tracks.
 
-## Previous Updates (v1.0.4)
-
-- **Smart "Forgotten Gems" Recency Ordering**: Re-ordered the "Forgotten Gems" smart playlist to display true forgotten songs (oldest added tracks with `playCount <= 2`) at the top, while newly scanned/added songs are placed at the very bottom.
-- **Strict MediaStore Duplicate Song Removal**: Implemented a strict file path and content URI deduplication layer during media scanning (`seenPaths.add(song.data)`), automatically filtering out Android MediaStore ghost entries and preventing duplicate songs from appearing in the library.
-- **Automatic Instrumental Melody Detection (3-Dots Wave)**: Intelligent LRC parser that detects intro melodies, instrumental solos/bridges ($\ge 8\text{s}$), and outros, automatically inserting animated 3-dots wave indicators (`♪`) without cutting off active vocals.
-- **Enhanced 3-Row Synced Lyrics Layout**: Expanded synced lyrics display capacity to 3 full lines (`maxLines: 3`) with uniform font size across active and inactive states, ensuring long lyrics wrap cleanly without line jumps or text truncation.
-- **Localized "Create New Playlist" Action**: Wrapped the playlist creation tile in `AppLocalizations.of(context).createNewPlaylist`, providing seamless i18n support across English, Indonesian, and Japanese.
-- **Optimized Google LRC Lyric Search**: Updated the "Search on Google" button query format to use `$artist $title lrc` instead of generic `lyrics`, prioritizing `.lrc` synced file search results on Google.
-- **Prevented Duplicate 3-Dots Wave Lines**: Refined empty line detection in the LRC parser (`isWaveLine()`), skipping duplicate wave insertions if the `.lrc` file already contains explicit empty/instrumental timestamps.
-- **Full Player Header i18n Localization**: Localized the "PLAYING FROM" category header and smart playlist names (`_playingFromName`), dynamically translating titles (e.g. "Semua Lagu", "Lagu Terlupakan", "Perpustakaan") across English, Indonesian, and Japanese.
-- **Semantic Versioning & Update Dialog Overflow Fix**: Upgraded update checks to use strict semantic versioning (`isNewer()`), preventing false-positive update prompts when on newer local versions. Wrapped dialog title text in `Expanded` to prevent horizontal text overflows across all screen sizes and languages.
-- **Localized Playlist Track Counts**: Updated playlist card and detail view subtitles to use `AppLocalizations.of(context).songsCount`, ensuring track counts (e.g. `14 lagu`, `14 曲`, `14 songs`) are localized across all languages.
-- **Task Removal Notification Cleanup**: Overrode `onTaskRemoved()` in `MyAudioHandler` and updated `didChangeAppLifecycleState` to immediately stop playback and clear the Android media notification whenever the app is swiped away from recent task history.
-
 ## Project Structure
 
 The project has been refactored into a highly modular, decoupled architecture using Dart's `part` and `part of` directives, keeping local state synchronization lightweight and seamless:
 
 - **`lib/main.dart`**: Root application entry, boot sequence initialization, and core Scaffold state container. Now elegantly stripped of massive logic blocks for a clean ~700 line entrypoint.
-- **`lib/logic/main_audio_logic.dart`**: The brain of the application. Houses all complex state mutations, audio streaming integrations, dynamic lyric fetching, crossfade lifecycle management, and playback queue transformations.
+- **`lib/logic/audio_playback_logic.dart`**: Playback queue transformations, smooth seek, repeat modes, and dynamic lyric fetching. (split from `main_audio_logic.dart`)
+- **`lib/logic/audio_settings_logic.dart`**: Settings persistence, sleep timer, and detail-color extraction.
+- **`lib/logic/audio_streams_logic.dart`**: Audio stream wiring and playback state synchronization.
+- **`lib/logic/audio_library_scan_logic.dart`**: Library scanning, permission flow, and startup update checks.
+- **`lib/logic/audio_equalizer_logic.dart`**: Saved equalizer session restore.
 - **`lib/ui/main_ui_components.dart`**: Core skeletal UI renderers extracted from the main tree, including custom headers, empty states, and dynamic playlist grid covers.
 - **`lib/ui/player_ui.dart`**: Fullscreen adaptive music player UI. Houses physics-based swipe-down gestures, sliding mini players, and dynamic palette-based gradients.
 - **`lib/ui/detail_views_ui.dart`**: Dynamic detail overlays for Artists, Albums, and custom/default Playlists.
 - **`lib/ui/tabs_ui.dart`**: Viewport page layouts hosting horizontal swipable tabs (Songs list, Playlist cards, Artist list, Album cards) and the standard search system.
-- **`lib/ui/modals_track_ui.dart` / `modals_playlist_ui.dart` / `modals_utility_ui.dart`**: Highly specialized, domain-driven modal architectures for handling track operations, robust playlist CRUD, Ringtone Cutter, and utility tools (Sleep Timer, Equalizer, Folder Scans).
-- **`lib/screens/settings_screen.dart` & `settings_modals.dart`**: A standalone, polished Material 3 settings hub entirely decoupled from monolithic implementations, utilizing isolated component builders and dedicated modal controllers.
+- **`lib/ui/track_options_ui.dart` / `edit_metadata_ui.dart` / `sort_ui.dart` / `sort_modal_ui.dart` / `detail_sort_ui.dart`**: Track option modals, metadata editor, and sort/detail-sort sheets. (split from `modals_track_ui.dart`)
+- **`lib/ui/song_info_ui.dart` / `cover_picker_ui.dart` / `song_cover_picker_ui.dart` / `ringtone_cutter_ui.dart`**: Song info, cover selection, and ringtone cutter modals. (split from `modals_track_ui.dart`)
+- **`lib/ui/playlist_edit_songs_ui.dart` / `playlist_manage_ui.dart`**: Playlist song editing and management CRUD modals. (split from `modals_playlist_ui.dart`)
+- **`lib/ui/sleep_timer_ui.dart` / `folder_scan_ui.dart` / `modals_utility_ui.dart` / `equalizer_sheet_ui.dart`**: Sleep timer, folder scan, and equalizer sheet modals. (split from `modals_utility_ui.dart`)
+- **`lib/screens/settings_screen.dart` & split settings modals** (`settings_sleep_timer.dart`, `settings_backup_restore.dart`, `settings_hidden_tracks.dart`, `settings_threshold_ui.dart`, `settings_typography_ui.dart`, `settings_theme_accent_ui.dart`, `settings_theme_mode_ui.dart`, `settings_language_density_ui.dart`): A standalone, polished Material 3 settings hub entirely decoupled from monolithic implementations, utilizing isolated component builders and dedicated modal controllers.
 - **`lib/widgets/settings/settings_ui_components.dart`**: Modularized stateless building blocks for the Settings screen (Section Headers, Premium Cards, Switch Tiles, List Tiles).
 - **`lib/providers/settings_provider.dart`**: Riverpod state management providers for reactive settings updates across the app.
 - **`lib/services/audio_handler.dart`**: OS-level audio intent interception and background service hooks (`MyAudioHandler`).

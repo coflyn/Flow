@@ -390,5 +390,7 @@
   "lyricsHidePast": "過去の歌詞を隠す",
   "lyricsHidePastSubtitle": "再生済みの歌詞をフェードアウト",
   "lyricsAutoFollow": "歌詞を自動追従",
-  "lyricsAutoFollowSubtitle": "アクティブな歌詞行へスムーズにスクロール"
+  "lyricsAutoFollowSubtitle": "アクティブな歌詞行へスムーズにスクロール",
+  "lyricsOffsetLabel": "オフセット（秒）:",
+  "lyricsPasteHint": "下にプレーンの歌詞または同期済みLRC形式の歌詞を貼り付けてください。"
 }

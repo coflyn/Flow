@@ -390,5 +390,7 @@
   "lyricsHidePast": "Hide Past Lyrics",
   "lyricsHidePastSubtitle": "Fade out lyrics that have already played",
   "lyricsAutoFollow": "Auto-follow Lyrics",
-  "lyricsAutoFollowSubtitle": "Smoothly scroll to the active lyric line"
+  "lyricsAutoFollowSubtitle": "Smoothly scroll to the active lyric line",
+  "lyricsOffsetLabel": "Offset (seconds):",
+  "lyricsPasteHint": "Paste plain lyrics or synced LRC format lyrics below."
 }

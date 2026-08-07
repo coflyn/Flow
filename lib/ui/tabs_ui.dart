@@ -178,9 +178,10 @@ extension _TabsUI on _MainScreenState {
       ),
       itemCount: children.length,
       itemBuilder: (context, index) {
-        final staggerIndex = index < 8 ? index : 0;
         final keyStr = "playlist_$index";
         final shouldAnimate = !_animatedPlaylistIds.contains(keyStr);
+        final count = _animatedPlaylistIds.length;
+        final staggerIndex = count < 8 ? count : 0;
         if (shouldAnimate) {
           _animatedPlaylistIds.add(keyStr);
         }
@@ -260,8 +261,9 @@ extension _TabsUI on _MainScreenState {
         final artist = artists[index];
         final songCount = _allTracks.where((t) => t.artist == artist).length;
         final firstTrack = _allTracks.firstWhere((t) => t.artist == artist);
-        final staggerIndex = index < 8 ? index : 0;
         final shouldAnimate = !_animatedArtistIds.contains(artist);
+        final count = _animatedArtistIds.length;
+        final staggerIndex = count < 8 ? count : 0;
         if (shouldAnimate) {
           _animatedArtistIds.add(artist);
         }
@@ -377,8 +379,9 @@ extension _TabsUI on _MainScreenState {
         final album = albums[index];
         final songCount = _allTracks.where((t) => t.album == album).length;
         final firstTrack = _allTracks.firstWhere((t) => t.album == album);
-        final staggerIndex = index < 8 ? index : 0;
         final shouldAnimate = !_animatedAlbumIds.contains(album);
+        final count = _animatedAlbumIds.length;
+        final staggerIndex = count < 8 ? count : 0;
         if (shouldAnimate) {
           _animatedAlbumIds.add(album);
         }
@@ -463,10 +466,11 @@ extension _TabsUI on _MainScreenState {
         final isSelected =
             _playingTrack != null && track.id == _playingTrack!.id;
 
-        final staggerIndex = trackIndex < 8 ? trackIndex : 0;
         final isDetail = header != null;
         final shouldAnimate =
             !isDetail && !_animatedTrackIds.contains(track.id);
+        final count = _animatedTrackIds.length;
+        final staggerIndex = count < 8 ? count : 0;
         if (shouldAnimate) {
           _animatedTrackIds.add(track.id);
         }
