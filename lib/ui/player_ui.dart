@@ -9,11 +9,17 @@ extension _PlayerUI on _MainScreenState {
       left: 0,
       right: 0,
       child: GestureDetector(
-        onTap: () => setState(() {
-          _isPlayerOpen = true;
-          _playerDragOffsetNotifier.value = 0.0;
-        }),
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _searchFocusNode.unfocus();
+          setState(() {
+            _isPlayerOpen = true;
+            _playerDragOffsetNotifier.value = 0.0;
+          });
+        },
         onVerticalDragStart: (details) {
+          FocusScope.of(context).unfocus();
+          _searchFocusNode.unfocus();
           setState(() => _isPlayerOpen = true);
           _isDraggingPlayerNotifier.value = true;
           _playerDragOffsetNotifier.value = 1.0;
@@ -654,10 +660,46 @@ extension _PlayerUI on _MainScreenState {
         width: size,
         height: size,
         decoration: BoxDecoration(
+          color: Colors.white10,
           borderRadius: BorderRadius.circular(radius),
-          image: DecorationImage(
-            image: NetworkImage(track.thumbnailUrl!),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(radius),
+          child: Image.network(
+            track.thumbnailUrl!,
+            width: size,
+            height: size,
             fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              if (track.videoId != null) {
+                return Image.network(
+                  'https://i.ytimg.com/vi/${track.videoId}/hqdefault.jpg',
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, e, s) => Container(
+                    color: isAppLight
+                        ? Colors.black.withValues(alpha: 0.08)
+                        : Colors.white10,
+                    child: Icon(
+                      Icons.music_note,
+                      size: size * 0.5,
+                      color: isAppLight ? Colors.black45 : Colors.white38,
+                    ),
+                  ),
+                );
+              }
+              return Container(
+                color: isAppLight
+                    ? Colors.black.withValues(alpha: 0.08)
+                    : Colors.white10,
+                child: Icon(
+                  Icons.music_note,
+                  size: size * 0.5,
+                  color: isAppLight ? Colors.black45 : Colors.white38,
+                ),
+              );
+            },
           ),
         ),
       );
@@ -687,7 +729,13 @@ extension _PlayerUI on _MainScreenState {
     return Material(
       color: Colors.transparent,
       child: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _searchFocusNode.unfocus();
+        },
         onVerticalDragStart: (details) {
+          FocusScope.of(context).unfocus();
+          _searchFocusNode.unfocus();
           _isDraggingPlayerNotifier.value = true;
         },
         onVerticalDragUpdate: (details) {

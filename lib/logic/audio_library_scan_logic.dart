@@ -222,6 +222,38 @@ extension _AudioLibraryScanLogic on _MainScreenState {
         }
       }
 
+      // Reload downloaded online tracks from permanent storage
+      final downloadedListJson =
+          prefs.getStringList('downloaded_tracks_v1') ?? [];
+      final List<Track> downloadedTracks = [];
+      for (final item in downloadedListJson) {
+        try {
+          final Map<String, dynamic> map = jsonDecode(item);
+          final path = map['path'] as String;
+          if (File(path).existsSync()) {
+            final track = Track(
+              id: map['id'] as String,
+              title: map['title'] as String,
+              artist: map['artist'] as String,
+              album: map['album'] as String,
+              url: path,
+              path: path,
+              lyrics: const [],
+              duration: map['duration'] as int? ?? 0,
+              isOnline: false,
+              thumbnailUrl: map['coverPath'] as String?,
+              videoId: map['videoId'] as String?,
+            );
+            downloadedTracks.add(track);
+          }
+        } catch (_) {}
+      }
+      for (final dlTrack in downloadedTracks.reversed) {
+        if (!_allTracks.any((t) => t.id == dlTrack.id)) {
+          _allTracks.insert(0, dlTrack);
+        }
+      }
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -401,48 +433,58 @@ extension _AudioLibraryScanLogic on _MainScreenState {
       final customPath = _metadataOverrides[track.id]?['coverPath'];
       ImageProvider? imageProvider;
 
-      if (customPath != null) {
-        imageProvider = ResizeImage(FileImage(File(customPath)), width: 600);
-      } else {
-        final artwork = await _audioQuery.queryArtwork(
-          int.parse(track.id),
-          ArtworkType.AUDIO,
-          size: 200,
+      if (customPath != null && File(customPath).existsSync()) {
+        imageProvider = ResizeImage(FileImage(File(customPath)), width: 200);
+      } else if (track.isOnline &&
+          track.thumbnailUrl != null &&
+          track.thumbnailUrl!.isNotEmpty) {
+        // Downsample network image to tiny 32x32 px so PaletteGenerator processes in <1ms!
+        imageProvider = ResizeImage(
+          NetworkImage(track.thumbnailUrl!),
+          width: 32,
+          height: 32,
         );
-        if (artwork != null) {
-          imageProvider = MemoryImage(artwork);
+      } else {
+        final id = int.tryParse(track.id);
+        if (id != null) {
+          final artwork = await _audioQuery.queryArtwork(
+            id,
+            ArtworkType.AUDIO,
+            size: 200,
+          );
+          if (artwork != null) {
+            imageProvider = MemoryImage(artwork);
+          }
         }
       }
 
       if (imageProvider != null) {
-        final palette = await PaletteGenerator.fromImageProvider(imageProvider);
-        if (mounted) {
-          setState(() {
-            _dominantColor =
-                palette.dominantColor?.color ??
-                palette.vibrantColor?.color ??
-                palette.mutedColor?.color;
-            _dominantColorNotifier.value = _dominantColor != null
-                ? _ensureLuminance(_dominantColor!)
-                : null;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _dominantColor = null;
-            _dominantColorNotifier.value = null;
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _dominantColor = null;
-          _dominantColorNotifier.value = null;
+        final targetImage = imageProvider;
+        Future.microtask(() async {
+          try {
+            final palette = await PaletteGenerator.fromImageProvider(
+              targetImage,
+              maximumColorCount: 8,
+            ).timeout(const Duration(seconds: 2));
+
+            if (mounted && _playingTrack?.id == track.id) {
+              final extracted =
+                  palette.dominantColor?.color ??
+                  palette.vibrantColor?.color ??
+                  palette.mutedColor?.color ??
+                  palette.lightVibrantColor?.color;
+
+              if (extracted != null) {
+                setState(() {
+                  _dominantColor = extracted;
+                  _dominantColorNotifier.value = _ensureLuminance(extracted);
+                });
+              }
+            }
+          } catch (_) {}
         });
       }
-    }
+    } catch (_) {}
   }
 
   Future<Uri?> _getCoverUriForTrack(Track track) async {
@@ -524,5 +566,113 @@ extension _AudioLibraryScanLogic on _MainScreenState {
         }
       }
     } catch (_) {}
+  }
+
+  Future<void> _downloadOnlineTrack(Track track) async {
+    final loc = lookupAppLocalizations(Locale(FlowStrings.currentLang));
+    final vId = track.videoId ?? track.id;
+    try {
+      Directory musicDir;
+      if (Platform.isAndroid) {
+        musicDir = Directory('/storage/emulated/0/Music/Flow');
+        if (!musicDir.existsSync()) {
+          try {
+            musicDir.createSync(recursive: true);
+          } catch (_) {
+            final ext = await getExternalStorageDirectory();
+            musicDir = Directory('${ext?.path}/Flow');
+            musicDir.createSync(recursive: true);
+          }
+        }
+      } else {
+        final docs = await getApplicationDocumentsDirectory();
+        musicDir = Directory('${docs.path}/Flow');
+        musicDir.createSync(recursive: true);
+      }
+
+      String safeTitle =
+          track.title.replaceAll(RegExp(r'[\\/:*?"<>|]'), '').trim();
+      String safeArtist =
+          track.artist.replaceAll(RegExp(r'[\\/:*?"<>|]'), '').trim();
+      if (safeTitle.isEmpty) safeTitle = 'Downloaded Song';
+
+      final fileName = (safeArtist.isNotEmpty && safeArtist != '<unknown>')
+          ? '$safeArtist - $safeTitle.m4a'
+          : '$safeTitle.m4a';
+
+      final targetAudioPath = '${musicDir.path}/$fileName';
+      final localTrackId = 'dl_$vId';
+
+      final existingIndex = _allTracks.indexWhere(
+        (t) => t.id == localTrackId || t.path == targetAudioPath,
+      );
+      if (existingIndex != -1 || File(targetAudioPath).existsSync()) {
+        showFlowToast(
+          loc.alreadyDownloaded.replaceAll('[placeholder]', track.title),
+        );
+        return;
+      }
+
+      showFlowToast(
+        loc.downloadingTrack.replaceAll('[placeholder]', track.title),
+      );
+
+      final audioPath = await InnerTubeService().getAudioStreamFilePath(vId);
+      if (audioPath == null || !File(audioPath).existsSync()) {
+        showFlowToast(
+          loc.downloadFailed.replaceAll('[placeholder]', track.title),
+        );
+        return;
+      }
+
+      await File(audioPath).copy(targetAudioPath);
+
+      final localTrack = Track(
+        id: localTrackId,
+        title: track.title,
+        artist: track.artist,
+        album:
+            track.album.trim().isEmpty || track.album == 'YouTube Music'
+                ? 'Downloaded'
+                : track.album,
+        url: targetAudioPath,
+        path: targetAudioPath,
+        lyrics: const [],
+        duration: track.duration,
+        isOnline: false,
+        thumbnailUrl: track.thumbnailUrl,
+        videoId: vId,
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      final downloadedListJson =
+          prefs.getStringList('downloaded_tracks_v1') ?? [];
+      final trackMap = {
+        'id': localTrackId,
+        'title': localTrack.title,
+        'artist': localTrack.artist,
+        'album': localTrack.album,
+        'path': targetAudioPath,
+        'duration': localTrack.duration,
+        'coverPath': track.thumbnailUrl,
+        'videoId': vId,
+      };
+      downloadedListJson.add(jsonEncode(trackMap));
+      await prefs.setStringList('downloaded_tracks_v1', downloadedListJson);
+
+      setState(() {
+        if (!_allTracks.any((t) => t.id == localTrack.id)) {
+          _allTracks.insert(0, localTrack);
+        }
+      });
+
+      showFlowToast(
+        loc.downloadSuccess.replaceAll('[placeholder]', track.title),
+      );
+    } catch (e) {
+      showFlowToast(
+        loc.downloadFailed.replaceAll('[placeholder]', track.title),
+      );
+    }
   }
 }

@@ -392,5 +392,12 @@
   "lyricsAutoFollow": "歌詞を自動追従",
   "lyricsAutoFollowSubtitle": "アクティブな歌詞行へスムーズにスクロール",
   "lyricsOffsetLabel": "オフセット（秒）:",
-  "lyricsPasteHint": "下にプレーンの歌詞または同期済みLRC形式の歌詞を貼り付けてください。"
+  "lyricsPasteHint": "下にプレーンの歌詞または同期済みLRC形式の歌詞を貼り付けてください。",
+  "downloadTrack": "曲をダウンロード",
+  "downloadingTrack": "'[placeholder]' をダウンロード中...",
+  "downloadSuccess": "'[placeholder]' のダウンロードが完了しました！",
+  "alreadyDownloaded": "'[placeholder]' はすでにダウンロードされています",
+  "downloadFailed": "'[placeholder]' のダウンロードに失敗しました",
+  "removeFromHistory": "履歴から削除",
+  "historyRemoved": "履歴とキャッシュを削除しました"
 }

@@ -20,6 +20,7 @@ import 'package:palette_generator/palette_generator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'models/track.dart';
 import 'models/lyrics_line.dart';
@@ -351,6 +352,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   int _searchSourceIndex = 0; // 0: Local, 1: YouTube Music
   List<Track> _onlineSearchResults = [];
   bool _isOnlineSearching = false;
+  bool _isShowingOnlineHistory = false;
   String? _selectedArtistDetail;
   String? _selectedAlbumDetail;
   String? _selectedPlaylistDetail;
@@ -398,6 +400,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   Timer? _searchDebouncer;
+  int _onlineSearchRequestId = 0;
   final ImagePicker _imagePicker = ImagePicker();
 
   bool _isPlaying = false;

@@ -173,6 +173,9 @@ extension _AudioPlaybackLogic on _MainScreenState {
     final listToPlay = sourceList ?? _playbackQueue;
     if (listToPlay.isEmpty || index < 0 || index >= listToPlay.length) return;
 
+    _searchFocusNode.unfocus();
+    FocusScope.of(context).unfocus();
+
     bool queueMatches = _playbackQueue.length == listToPlay.length;
     if (queueMatches && sourceList != null) {
       for (int i = 0; i < _playbackQueue.length; i++) {
@@ -183,19 +186,18 @@ extension _AudioPlaybackLogic on _MainScreenState {
       }
     }
 
-    if (!queueMatches && sourceList != null) {
-      setState(() {
+    final track = listToPlay[index];
+
+    // Instant UI state update on tap (0ms latency)
+    setState(() {
+      if (!queueMatches && sourceList != null) {
         _playbackQueue = List.from(listToPlay);
         if (_isShuffle) {
           _shuffledIndices = List.generate(_playbackQueue.length, (i) => i);
           _shuffledIndices.shuffle();
         }
-      });
-    }
+      }
 
-    final track = _playbackQueue[index];
-
-    setState(() {
       _currentIndex = index;
       _playingTrack = track;
       _lastIncrementedTrackId = null;
@@ -213,9 +215,19 @@ extension _AudioPlaybackLogic on _MainScreenState {
       }
     });
 
+    if (playImmediately) {
+      _fadeSessionId++;
+      _audioPlayer.setVolume(0.0);
+      _audioPlayer.stop();
+    }
+
     _loadLyricsForTrack(track);
 
-    _updateDominantColor(track);
+    Future.microtask(() => _updateDominantColor(track));
+
+    if (track.isOnline) {
+      InnerTubeService().saveOnlineTrackToHistory(track);
+    }
 
     SharedPreferences.getInstance().then((prefs) {
       prefs.setString('last_playing_track_id', track.id);
@@ -359,44 +371,14 @@ extension _AudioPlaybackLogic on _MainScreenState {
 
       final int sessionId = ++_fadeSessionId;
 
-      if (_audioPlayer.playing && _crossfadeDuration > 0) {
-        // Smooth fade out
-        final int steps = 10;
-        final int stepDelay = (_crossfadeDuration / steps).round();
-        for (int i = steps; i >= 0; i--) {
-          if (_fadeSessionId != sessionId) return;
-          await _audioPlayer.setVolume(_volume * (i / steps.toDouble()));
-          if (stepDelay > 0) {
-            await Future.delayed(Duration(milliseconds: stepDelay));
-          }
-        }
-      }
-
       if (_fadeSessionId != sessionId) return;
       await _audioPlayer.setAudioSource(source, initialIndex: initialIndex);
 
       if (_fadeSessionId != sessionId) return;
 
+      await _audioPlayer.setVolume(_volume);
       if (playImmediately) {
-        await _audioPlayer.setVolume(0.0);
-        _audioPlayer.play();
-        if (_crossfadeDuration > 0) {
-          // Smooth fade in
-          final int steps = 10;
-          final int stepDelay = (_crossfadeDuration / steps).round();
-          for (int i = 1; i <= steps; i++) {
-            if (_fadeSessionId != sessionId) return;
-            await _audioPlayer.setVolume(_volume * (i / steps.toDouble()));
-            if (stepDelay > 0) {
-              await Future.delayed(Duration(milliseconds: stepDelay));
-            }
-          }
-        }
-        if (_fadeSessionId == sessionId) {
-          await _audioPlayer.setVolume(_volume);
-        }
-      } else {
-        await _audioPlayer.setVolume(_volume);
+        await _audioPlayer.play();
       }
     } catch (e) {
       if (e.toString().toLowerCase().contains('abort')) return;

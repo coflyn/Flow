@@ -57,4 +57,32 @@ class Track {
       videoId: map['videoId'],
     );
   }
+
+  Track copyWith({
+    String? id,
+    String? title,
+    String? artist,
+    String? album,
+    String? url,
+    String? path,
+    List<String>? lyrics,
+    int? duration,
+    bool? isOnline,
+    String? thumbnailUrl,
+    String? videoId,
+  }) {
+    return Track(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      album: album ?? this.album,
+      url: url ?? this.url,
+      path: path ?? this.path,
+      lyrics: lyrics ?? this.lyrics,
+      duration: duration ?? this.duration,
+      isOnline: isOnline ?? this.isOnline,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      videoId: videoId ?? this.videoId,
+    );
+  }
 }

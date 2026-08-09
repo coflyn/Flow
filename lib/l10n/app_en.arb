@@ -392,5 +392,12 @@
   "lyricsAutoFollow": "Auto-follow Lyrics",
   "lyricsAutoFollowSubtitle": "Smoothly scroll to the active lyric line",
   "lyricsOffsetLabel": "Offset (seconds):",
-  "lyricsPasteHint": "Paste plain lyrics or synced LRC format lyrics below."
+  "lyricsPasteHint": "Paste plain lyrics or synced LRC format lyrics below.",
+  "downloadTrack": "Download Track",
+  "downloadingTrack": "Downloading '[placeholder]'...",
+  "downloadSuccess": "Downloaded '[placeholder]' successfully!",
+  "alreadyDownloaded": "'[placeholder]' is already downloaded",
+  "downloadFailed": "Failed to download '[placeholder]'",
+  "removeFromHistory": "Remove from History",
+  "historyRemoved": "Removed from history & cache cleared"
 }

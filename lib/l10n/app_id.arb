@@ -392,5 +392,12 @@
   "lyricsAutoFollow": "Ikuti Lirik Otomatis",
   "lyricsAutoFollowSubtitle": "Gulir halus ke baris lirik aktif",
   "lyricsOffsetLabel": "Offset (detik):",
-  "lyricsPasteHint": "Tempel lirik biasa atau lirik format LRC tersinkron di bawah."
+  "lyricsPasteHint": "Tempel lirik biasa atau lirik format LRC tersinkron di bawah.",
+  "downloadTrack": "Unduh Lagu",
+  "downloadingTrack": "Mengunduh '[placeholder]'...",
+  "downloadSuccess": "'[placeholder]' berhasil diunduh!",
+  "alreadyDownloaded": "'[placeholder]' sudah diunduh",
+  "downloadFailed": "Gagal mengunduh '[placeholder]'",
+  "removeFromHistory": "Hapus dari Riwayat",
+  "historyRemoved": "Dihapus dari riwayat & cache dibersihkan"
 }

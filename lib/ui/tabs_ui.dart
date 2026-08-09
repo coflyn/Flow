@@ -33,30 +33,6 @@ extension _TabsUI on _MainScreenState {
 
   Widget _buildSongsTab() {
     if (_searchSourceIndex == 1) {
-      if (_searchQuery.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.music_note_rounded, size: 54, color: _activeAccentColor),
-              const SizedBox(height: 14),
-              const Text(
-                'YouTube Music Search',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Type a title, artist, or song name above to search online',
-                style: TextStyle(color: Colors.white54, fontSize: 13),
-              ),
-            ],
-          ),
-        );
-      }
       if (_isOnlineSearching) {
         return Center(
           child: Column(
@@ -71,15 +47,29 @@ extension _TabsUI on _MainScreenState {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Searching YouTube Music...',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+              Text(
+                _searchQuery.isEmpty
+                    ? (_isShowingOnlineHistory
+                          ? 'Loading Recently Played...'
+                          : 'Loading Trending Music...')
+                    : 'Searching YouTube Music...',
+                style: TextStyle(
+                  color: isAppLight ? Colors.black54 : Colors.white70,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
         );
       }
       if (_onlineSearchResults.isEmpty) {
+        if (_searchQuery.isEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_isOnlineSearching) {
+              _loadOnlineTabInitialContent();
+            }
+          });
+        }
         return const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -94,9 +84,48 @@ extension _TabsUI on _MainScreenState {
           ),
         );
       }
-      return _buildSongList(
-        _onlineSearchResults,
-        fullQueueList: _onlineSearchResults,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_searchQuery.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 12,
+                bottom: 4,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isShowingOnlineHistory
+                        ? Icons.history_rounded
+                        : Icons.local_fire_department_rounded,
+                    size: 16,
+                    color: isAppLight ? Colors.black54 : Colors.white70,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _isShowingOnlineHistory
+                        ? 'Recently Played'
+                        : 'Trending & Recommended',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: isAppLight ? Colors.black54 : Colors.white70,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: _buildSongList(
+              _onlineSearchResults,
+              fullQueueList: _onlineSearchResults,
+            ),
+          ),
+        ],
       );
     }
 
@@ -673,22 +702,59 @@ extension _TabsUI on _MainScreenState {
     );
   }
 
-  void _triggerOnlineSearch(String query) {
-    if (query.trim().isEmpty) {
-      setState(() {
-        _onlineSearchResults = [];
-        _isOnlineSearching = false;
-      });
-      return;
-    }
+  void _loadOnlineTabInitialContent() {
+    final requestId = ++_onlineSearchRequestId;
     setState(() {
       _isOnlineSearching = true;
     });
-    InnerTubeService().searchTracks(query).then((results) {
-      if (mounted) {
+    InnerTubeService().getOnlineTrackHistory().then((historyTracks) {
+      if (!mounted || _onlineSearchRequestId != requestId) return;
+      if (historyTracks.isNotEmpty) {
+        setState(() {
+          _onlineSearchResults = historyTracks;
+          _isOnlineSearching = false;
+          _isShowingOnlineHistory = true;
+        });
+      } else {
+        _loadTrendingOnlineTracks(requestId);
+      }
+    });
+  }
+
+  void _loadTrendingOnlineTracks([int? existingRequestId]) {
+    final requestId = existingRequestId ?? ++_onlineSearchRequestId;
+    setState(() {
+      _isOnlineSearching = true;
+      _isShowingOnlineHistory = false;
+    });
+    InnerTubeService().fetchTrendingOrRandomTracks().then((results) {
+      if (mounted && _onlineSearchRequestId == requestId) {
         setState(() {
           _onlineSearchResults = results;
           _isOnlineSearching = false;
+          _isShowingOnlineHistory = false;
+        });
+      }
+    });
+  }
+
+  void _triggerOnlineSearch(String query) {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      _loadOnlineTabInitialContent();
+      return;
+    }
+    final requestId = ++_onlineSearchRequestId;
+    setState(() {
+      _isOnlineSearching = true;
+      _isShowingOnlineHistory = false;
+    });
+    InnerTubeService().searchTracks(trimmed).then((results) {
+      if (mounted && _onlineSearchRequestId == requestId) {
+        setState(() {
+          _onlineSearchResults = results;
+          _isOnlineSearching = false;
+          _isShowingOnlineHistory = false;
         });
       }
     });
@@ -698,14 +764,29 @@ extension _TabsUI on _MainScreenState {
     final isLight = isAppLight;
     final isYt = _searchSourceIndex == 1;
 
+    final activeBg = isLight
+        ? Colors.black.withValues(alpha: 0.12)
+        : const Color(0xFF2C2C2E);
+    final activeBorder = isLight ? Colors.black26 : Colors.white30;
+    final activeTextColor = isLight ? const Color(0xFF1A1A1A) : Colors.white;
+
+    final inactiveBg = Colors.transparent;
+    final inactiveTextColor = isLight ? Colors.black45 : Colors.white54;
+
     return Container(
-      height: 32,
-      padding: const EdgeInsets.all(2),
+      height: 36,
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: isLight
-            ? Colors.black.withValues(alpha: 0.06)
-            : const Color(0xFF222222),
-        borderRadius: BorderRadius.circular(16),
+            ? Colors.black.withValues(alpha: 0.05)
+            : const Color(0xFF161616),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isLight
+              ? Colors.black.withValues(alpha: 0.08)
+              : Colors.white10,
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -720,35 +801,35 @@ extension _TabsUI on _MainScreenState {
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: !isYt ? _activeAccentColor : Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
+                color: !isYt ? activeBg : inactiveBg,
+                borderRadius: BorderRadius.circular(11),
+                border: !isYt
+                    ? Border.all(color: activeBorder, width: 1.2)
+                    : null,
               ),
               child: Row(
                 children: [
                   Icon(
-                    Icons.phone_android,
-                    size: 13,
-                    color: !isYt
-                        ? Colors.black
-                        : (isLight ? Colors.black54 : Colors.white70),
+                    Icons.phone_android_rounded,
+                    size: 14,
+                    color: !isYt ? activeTextColor : inactiveTextColor,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 5),
                   Text(
                     'Local',
                     style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: !isYt ? FontWeight.bold : FontWeight.w500,
-                      color: !isYt
-                          ? Colors.black
-                          : (isLight ? Colors.black54 : Colors.white70),
+                      fontSize: 12,
+                      fontWeight: !isYt ? FontWeight.w600 : FontWeight.w500,
+                      color: !isYt ? activeTextColor : inactiveTextColor,
                     ),
                   ),
                 ],
               ),
             ),
           ),
+          const SizedBox(width: 2),
           GestureDetector(
             onTap: () {
               if (_searchSourceIndex != 1) {
@@ -757,34 +838,35 @@ extension _TabsUI on _MainScreenState {
                 });
                 if (_searchQuery.isNotEmpty) {
                   _triggerOnlineSearch(_searchQuery);
+                } else {
+                  _loadOnlineTabInitialContent();
                 }
               }
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: isYt ? _activeAccentColor : Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
+                color: isYt ? activeBg : inactiveBg,
+                borderRadius: BorderRadius.circular(11),
+                border: isYt
+                    ? Border.all(color: activeBorder, width: 1.2)
+                    : null,
               ),
               child: Row(
                 children: [
                   Icon(
-                    Icons.music_note,
-                    size: 13,
-                    color: isYt
-                        ? Colors.black
-                        : (isLight ? Colors.black54 : Colors.white70),
+                    Icons.cloud_done_rounded,
+                    size: 15,
+                    color: isYt ? activeTextColor : inactiveTextColor,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 5),
                   Text(
-                    'YT Music',
+                    'Online',
                     style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: isYt ? FontWeight.bold : FontWeight.w500,
-                      color: isYt
-                          ? Colors.black
-                          : (isLight ? Colors.black54 : Colors.white70),
+                      fontSize: 12,
+                      fontWeight: isYt ? FontWeight.w600 : FontWeight.w500,
+                      color: isYt ? activeTextColor : inactiveTextColor,
                     ),
                   ),
                 ],
@@ -852,28 +934,28 @@ extension _TabsUI on _MainScreenState {
                     style: TextStyle(fontSize: 14, color: textColor),
                     decoration: InputDecoration(
                       hintText: _searchSourceIndex == 1
-                          ? 'Search YouTube Music...'
+                          ? 'Search Online Music...'
                           : AppLocalizations.of(context).searchSongs,
                       hintStyle: TextStyle(color: hintColor, fontSize: 13),
                       prefixIcon: Icon(
                         _searchSourceIndex == 1
                             ? Icons.youtube_searched_for
                             : Icons.search,
-                        color: _searchSourceIndex == 1
-                            ? _activeAccentColor
-                            : iconColor,
+                        color: iconColor,
                         size: 20,
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: Icon(Icons.close, color: iconColor, size: 16),
+                              icon: Icon(
+                                Icons.close,
+                                color: iconColor,
+                                size: 16,
+                              ),
                               onPressed: () {
                                 _searchController.clear();
                                 _searchQuery = '';
                                 if (_searchSourceIndex == 1) {
-                                  setState(() {
-                                    _onlineSearchResults = [];
-                                  });
+                                  _loadOnlineTabInitialContent();
                                 } else {
                                   _filterSongs();
                                 }
