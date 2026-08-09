@@ -446,6 +446,9 @@ extension _AudioLibraryScanLogic on _MainScreenState {
   }
 
   Future<Uri?> _getCoverUriForTrack(Track track) async {
+    if (track.isOnline && track.thumbnailUrl != null && track.thumbnailUrl!.isNotEmpty) {
+      return Uri.tryParse(track.thumbnailUrl!);
+    }
     if (_metadataOverrides.containsKey(track.id) &&
         _metadataOverrides[track.id]!['coverPath'] != null) {
       return Uri.file(_metadataOverrides[track.id]!['coverPath']!);

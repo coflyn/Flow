@@ -32,6 +32,74 @@ extension _TabsUI on _MainScreenState {
   }
 
   Widget _buildSongsTab() {
+    if (_searchSourceIndex == 1) {
+      if (_searchQuery.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.music_note_rounded, size: 54, color: _activeAccentColor),
+              const SizedBox(height: 14),
+              const Text(
+                'YouTube Music Search',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Type a title, artist, or song name above to search online',
+                style: TextStyle(color: Colors.white54, fontSize: 13),
+              ),
+            ],
+          ),
+        );
+      }
+      if (_isOnlineSearching) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: CircularProgressIndicator(
+                  color: _activeAccentColor,
+                  strokeWidth: 3,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Searching YouTube Music...',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+            ],
+          ),
+        );
+      }
+      if (_onlineSearchResults.isEmpty) {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.youtube_searched_for, size: 48, color: Colors.white38),
+              SizedBox(height: 12),
+              Text(
+                'No YouTube Music tracks found',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ],
+          ),
+        );
+      }
+      return _buildSongList(
+        _onlineSearchResults,
+        fullQueueList: _onlineSearchResults,
+      );
+    }
+
     List<Track> allSorted = List<Track>.from(_allTracks);
 
     if (_sortBy == 'title') {
@@ -605,6 +673,129 @@ extension _TabsUI on _MainScreenState {
     );
   }
 
+  void _triggerOnlineSearch(String query) {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _onlineSearchResults = [];
+        _isOnlineSearching = false;
+      });
+      return;
+    }
+    setState(() {
+      _isOnlineSearching = true;
+    });
+    InnerTubeService().searchTracks(query).then((results) {
+      if (mounted) {
+        setState(() {
+          _onlineSearchResults = results;
+          _isOnlineSearching = false;
+        });
+      }
+    });
+  }
+
+  Widget _buildSearchSourceSegmentedToggle() {
+    final isLight = isAppLight;
+    final isYt = _searchSourceIndex == 1;
+
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: isLight
+            ? Colors.black.withValues(alpha: 0.06)
+            : const Color(0xFF222222),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () {
+              if (_searchSourceIndex != 0) {
+                setState(() {
+                  _searchSourceIndex = 0;
+                });
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: !isYt ? _activeAccentColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.phone_android,
+                    size: 13,
+                    color: !isYt
+                        ? Colors.black
+                        : (isLight ? Colors.black54 : Colors.white70),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Local',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: !isYt ? FontWeight.bold : FontWeight.w500,
+                      color: !isYt
+                          ? Colors.black
+                          : (isLight ? Colors.black54 : Colors.white70),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              if (_searchSourceIndex != 1) {
+                setState(() {
+                  _searchSourceIndex = 1;
+                });
+                if (_searchQuery.isNotEmpty) {
+                  _triggerOnlineSearch(_searchQuery);
+                }
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isYt ? _activeAccentColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.music_note,
+                    size: 13,
+                    color: isYt
+                        ? Colors.black
+                        : (isLight ? Colors.black54 : Colors.white70),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'YT Music',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: isYt ? FontWeight.bold : FontWeight.w500,
+                      color: isYt
+                          ? Colors.black
+                          : (isLight ? Colors.black54 : Colors.white70),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSearchBar() {
     final isLight = isAppLight;
     final searchBgColor = isLight
@@ -616,78 +807,107 @@ extension _TabsUI on _MainScreenState {
         : Colors.white.withValues(alpha: 0.3);
     final iconColor = isLight ? Colors.black45 : Colors.white54;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 42,
-              decoration: BoxDecoration(
-                color: searchBgColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: TextField(
-                focusNode: _searchFocusNode,
-                controller: _searchController,
-                textAlignVertical: TextAlignVertical.center,
-                textInputAction: TextInputAction.search,
-                onSubmitted: (_) {
-                  _searchFocusNode.unfocus();
-                },
-                onChanged: (val) {
-                  if (_searchDebouncer?.isActive ?? false) {
-                    _searchDebouncer!.cancel();
-                  }
-                  _searchDebouncer = Timer(
-                    const Duration(milliseconds: 300),
-                    () {
-                      _searchQuery = val.trim();
-                      _filterSongs();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: searchBgColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: TextField(
+                    focusNode: _searchFocusNode,
+                    controller: _searchController,
+                    textAlignVertical: TextAlignVertical.center,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (val) {
+                      _searchFocusNode.unfocus();
+                      if (_searchSourceIndex == 1) {
+                        _triggerOnlineSearch(val.trim());
+                      }
                     },
-                  );
-                },
-                style: TextStyle(fontSize: 14, color: textColor),
-                decoration: InputDecoration(
-                  hintText: AppLocalizations.of(context).searchSongs,
-                  hintStyle: TextStyle(color: hintColor, fontSize: 13),
-                  prefixIcon: Icon(Icons.search, color: iconColor, size: 20),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.close, color: iconColor, size: 16),
-                          onPressed: () {
-                            _searchController.clear();
-                            _searchQuery = '';
+                    onChanged: (val) {
+                      if (_searchDebouncer?.isActive ?? false) {
+                        _searchDebouncer!.cancel();
+                      }
+                      _searchDebouncer = Timer(
+                        const Duration(milliseconds: 350),
+                        () {
+                          _searchQuery = val.trim();
+                          if (_searchSourceIndex == 1) {
+                            _triggerOnlineSearch(_searchQuery);
+                          } else {
                             _filterSongs();
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                          }
+                        },
+                      );
+                    },
+                    style: TextStyle(fontSize: 14, color: textColor),
+                    decoration: InputDecoration(
+                      hintText: _searchSourceIndex == 1
+                          ? 'Search YouTube Music...'
+                          : AppLocalizations.of(context).searchSongs,
+                      hintStyle: TextStyle(color: hintColor, fontSize: 13),
+                      prefixIcon: Icon(
+                        _searchSourceIndex == 1
+                            ? Icons.youtube_searched_for
+                            : Icons.search,
+                        color: _searchSourceIndex == 1
+                            ? _activeAccentColor
+                            : iconColor,
+                        size: 20,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.close, color: iconColor, size: 16),
+                              onPressed: () {
+                                _searchController.clear();
+                                _searchQuery = '';
+                                if (_searchSourceIndex == 1) {
+                                  setState(() {
+                                    _onlineSearchResults = [];
+                                  });
+                                } else {
+                                  _filterSongs();
+                                }
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: () => _showSortModal(context),
-            child: Container(
-              height: 42,
-              width: 42,
-              decoration: BoxDecoration(
-                color: searchBgColor,
-                borderRadius: BorderRadius.circular(10),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () => _showSortModal(context),
+                child: Container(
+                  height: 42,
+                  width: 42,
+                  decoration: BoxDecoration(
+                    color: searchBgColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.sort_rounded,
+                    color: isLight ? Colors.black87 : Colors.white70,
+                    size: 20,
+                  ),
+                ),
               ),
-              child: Icon(
-                Icons.sort_rounded,
-                color: isLight ? Colors.black87 : Colors.white70,
-                size: 20,
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

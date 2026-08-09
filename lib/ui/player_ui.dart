@@ -647,6 +647,26 @@ extension _PlayerUI on _MainScreenState {
     int? cacheWidthOverride,
     String? heroTag,
   }) {
+    if (track.isOnline &&
+        track.thumbnailUrl != null &&
+        track.thumbnailUrl!.isNotEmpty) {
+      final networkArtwork = Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(radius),
+          image: DecorationImage(
+            image: NetworkImage(track.thumbnailUrl!),
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+      if (heroTag != null && heroTag.isNotEmpty) {
+        return Hero(tag: heroTag, child: networkArtwork);
+      }
+      return networkArtwork;
+    }
+
     final customPath = _metadataOverrides[track.id]?['coverPath'];
     final artwork = CachedTrackArtwork(
       key: ValueKey("cached_artwork_${track.id}_$size"),

@@ -55,7 +55,15 @@ Download the latest release APKs directly from the [GitHub Releases](https://git
 - **Pixel-Perfect Margin Alignment**: Custom spatial translations (`Transform.translate`) aligning song controls at a precise `24px` horizontal screen margin.
 - **Robust Cache Manager**: Ultra-fast artwork preloading engine with multi-tier retries and anti-null failure mechanisms.
 
-## What's New (v1.0.6)
+## Work in Progress (v1.0.7)
+
+- **YouTube Music (InnerTube) Integration**: Integrated online music search and audio streaming powered by `youtube_explode_dart`. Search tracks dynamically from YouTube Music directly within the Songs tab.
+- **Disk-Buffered Streaming Architecture**: Resolved Android ExoPlayer `(0) Source error` and YouTube CDN HTTP 403 Forbidden blocks by implementing Dart-native background disk buffering (`InnerTubeService.getAudioStreamFilePath`). Audio streams buffer the initial 100KB into temporary device storage (`yt_videoId.m4a`), allowing ExoPlayer to play directly from local disk files with zero network errors, zero Range header conflicts, and instant 0ms playback on repeated listens.
+- **Online Lyrics Synchronization**: Integrated LRCLIB public API (`fetchOnlineLyrics`) for fetching synced and plain LRC lyrics automatically for YouTube Music online tracks.
+- **Combined Header Source Toggle**: Unified `Local` vs `YT Music` search source selector into a sleek, single segmented toggle pill widget (`_buildSearchSourceSegmentedToggle`) seamlessly positioned next to the Settings gear icon in the top header.
+- **Online Artwork Renderer**: Updated `CachedTrackArtwork` and player artwork widgets to render high-resolution network cover images for online YouTube tracks with smooth fallback loading indicators.
+
+## Previous Updates (v1.0.6)
 
 - **Massive Internal Refactoring**: Decomposed monolithic God-Object files into 28 focused `part` files across `lib/ui/`, `lib/logic/`, and `lib/screens/`. `main_audio_logic.dart` (2054 lines) split into 5 domain files, `modals_track_ui.dart` (2258 lines) into 9 UI files, `settings_modals.dart` (2671 lines) into 8 settings files. Zero behavior changes — all 98 methods preserved, `flutter analyze` clean.
 - **Smooth Synced Lyrics Auto-Follow Return Animation**: Resolved stiff, abrupt position snaps when returning to auto-follow mode after user manual scrolling. Replaced zero-delay jumps with a fluid 900ms `Curves.fastOutSlowIn` curve animation, allowing the lyrics view to glide back to the active line naturally. Tap-to-lyric seek glides instantly to the tapped line, and initial load glides smoothly to the active line instead of jumping from the top.
@@ -65,18 +73,6 @@ Download the latest release APKs directly from the [GitHub Releases](https://git
 - **Removed Double-Tap Album Art Favorite**: Double-tapping the album artwork no longer toggles Favorite status — single tap opens Lyrics only, preventing accidental favorites while browsing.
 - **Dynamic Viewport Stagger Animations**: Replaced fixed absolute-index stagger logic with viewport-based count tracking (top 8 visible items) across all tab pills (Songs, Playlists, Artists, Albums). Switching tabs or returning to a scrolled tab now consistently plays cascading slide-up entrance animations for the top visible items regardless of scroll depth.
 - **Fail-Safe Backup & Restore Engine**: Resolved `errno = 13 (Permission Denied)` on Android 10–15 Scoped Storage via multi-tiered fallback paths (Public Downloads → App External Storage → App Documents Directory). Guarantees seamless JSON backups and restores across all Android versions.
-
-## Previous Updates (v1.0.5)
-
-- **Smooth Synced Lyrics View**: Redesigned the synced lyrics viewer with smooth auto-scrolling — the active line glides to the center of the screen with a 600ms ease-out curve, past lines fade out, and the view automatically resumes following after 4 seconds of idle manual scrolling.
-- **Uniform Lyric Typography**: Removed font-size scaling between active and inactive lines so lyrics never visually jump or shift as playback advances — only opacity changes to mark the active line.
-- **Lyrics Behavior Settings**: New toggles in Settings → Lyrics: **Auto-follow Lyrics** (smooth scroll to the active line) and **Hide Past Lyrics** (fade out already-played lines). Both persist instantly without restarting and are fully localized (EN/ID/JA).
-- **Live Smart Playlist Detail Views**: Fixed stale "Last Played" and "Forgotten Gems" detail screens — replaying a track now instantly reorders Last Played and updates membership everywhere, because the view cache key reflects the actual ordered track list instead of a length/count that never changed.
-- **Refined "Forgotten Gems" Threshold**: Updated Forgotten Gems smart playlist filter to strict `playCount <= 1` so songs played 2 or more times are automatically excluded.
-- **Instant Synced Lyrics Re-centering & Tap Protection**: Fixed an issue where reopening or double-tapping lyrics mid-song caused lyrics to disappear until the next line played — the lyrics viewer now instantly jumps (`jumpTo`) to the active lyric line upon opening and ignores accidental double-tap seeks.
-- **Double-Tap Album Art to Favorite**: Double-tapping the album artwork in the Now Playing screen now instantly toggles the track's Favorite status (`_toggleFavorite`).
-- **Accurate "Most Played" Threshold Increments**: Fixed premature play count increments when switching tracks — position stream listeners now require a verified position reset (`_hasResetPosition`) before evaluating the 30-second play count threshold, preventing stale positions of previous tracks from accidentally inflating play counts.
-- **Unified Hidden Tracks & Equalizer Sheet UI**: Redesigned the "Hidden Tracks" and "Equalizer" bottom sheets to seamlessly match Flow's theme design system (supporting Light/Dark modes), adding 42x42 album artwork thumbnails (`QueryArtworkWidget`) and clean pill badges for hidden tracks.
 
 ## Project Structure
 

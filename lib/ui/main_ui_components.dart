@@ -23,32 +23,38 @@ extension _MainUIComponents on _MainScreenState {
                 color: headerTextColor,
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.settings, color: headerTextColor),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SettingsScreen(
-                      onSettingsChanged: _loadSettings,
-                      onRescanLibrary: () {
-                        _loadSettings();
-                        _requestPermissionAndScan();
-                      },
-                      onSetSleepTimer: _startSleepTimer,
-                      onResetData: _resetAppData,
-                      sleepTimerNotifier: _sleepTimerNotifier,
-                      onManageFolders: () => _showFolderScanDialog(context),
-                      onSetSkipSilence: (val) {
-                        setState(() {
-                          _skipSilence = val;
-                        });
-                        _audioPlayer.setSkipSilenceEnabled(val);
-                      },
-                    ),
-                  ),
-                );
-              },
+            Row(
+              children: [
+                _buildSearchSourceSegmentedToggle(),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: Icon(Icons.settings, color: headerTextColor),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SettingsScreen(
+                          onSettingsChanged: _loadSettings,
+                          onRescanLibrary: () {
+                            _loadSettings();
+                            _requestPermissionAndScan();
+                          },
+                          onSetSleepTimer: _startSleepTimer,
+                          onResetData: _resetAppData,
+                          sleepTimerNotifier: _sleepTimerNotifier,
+                          onManageFolders: () => _showFolderScanDialog(context),
+                          onSetSkipSilence: (val) {
+                            setState(() {
+                              _skipSilence = val;
+                            });
+                            _audioPlayer.setSkipSilenceEnabled(val);
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),

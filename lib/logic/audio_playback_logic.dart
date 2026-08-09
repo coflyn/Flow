@@ -75,8 +75,6 @@ extension _AudioPlaybackLogic on _MainScreenState {
           _playingTrack = null;
           return;
         } else {
-          // We are removing the currently playing track.
-          // First, remove it from the queue and shuffle indices.
           _playbackQueue.removeAt(actualRemoveIndex);
 
           _shuffledIndices.remove(actualRemoveIndex);
@@ -86,21 +84,17 @@ extension _AudioPlaybackLogic on _MainScreenState {
             }
           }
 
-          // The next track will now naturally fall into the same index (actualRemoveIndex)
-          // unless it was the very last track in the queue.
           if (actualRemoveIndex >= _playbackQueue.length) {
             _currentIndex = 0;
           } else {
             _currentIndex = actualRemoveIndex;
           }
 
-          // Now play the new track at _currentIndex. This handles updating the player.
           _playTrack(_currentIndex, playImmediately: _isPlaying);
-          return; // Return early because _playTrack will build the audio source.
+          return;
         }
       }
 
-      // If we are removing a track that is NOT currently playing:
       _playbackQueue.removeAt(actualRemoveIndex);
 
       if (actualRemoveIndex < _currentIndex) {
@@ -115,7 +109,6 @@ extension _AudioPlaybackLogic on _MainScreenState {
       }
     });
 
-    // Refresh the window around the current track since queue changed
     _refreshAudioSourceWindow();
   }
 
@@ -154,6 +147,21 @@ extension _AudioPlaybackLogic on _MainScreenState {
       _repeatMode = (_repeatMode + 1) % 3;
       _audioPlayer.setLoopMode(_repeatMode == 2 ? LoopMode.one : LoopMode.off);
     });
+  }
+
+  Future<Uri> _resolveTrackUri(Track track) async {
+    if (track.isOnline && track.videoId != null && track.videoId!.isNotEmpty) {
+      final filePath = await InnerTubeService().getAudioStreamFilePath(
+        track.videoId!,
+      );
+      if (filePath != null && filePath.isNotEmpty) {
+        return Uri.file(filePath);
+      }
+    }
+    if (track.url.startsWith('/')) {
+      return Uri.file(track.url);
+    }
+    return Uri.tryParse(track.url) ?? Uri.parse('');
   }
 
   Future<void> _playTrack(
@@ -218,32 +226,32 @@ extension _AudioPlaybackLogic on _MainScreenState {
 
     _isProgrammaticLoading = true;
     try {
-      final currentUri = track.url.startsWith('/')
-          ? Uri.file(track.url)
-          : (Uri.tryParse(track.url) ?? Uri.parse(''));
+      final currentUri = await _resolveTrackUri(track);
       final currentCover = await _getCoverUriForTrack(track);
       if (requestId != _playRequestId) return;
 
-      final currentSource = AudioSource.uri(
+      final mediaTag = MediaItem(
+        id: track.id,
+        album: track.album.trim().isEmpty ? 'Unknown Album' : track.album,
+        title: track.title.trim().isEmpty ? 'Unknown Title' : track.title,
+        artist: (track.artist.trim().isEmpty || track.artist == '<unknown>')
+            ? lookupAppLocalizations(
+                Locale(FlowStrings.currentLang),
+              ).unknownArtist
+            : track.artist,
+        artUri: currentCover,
+        duration: Duration(milliseconds: track.duration),
+      );
+
+      final AudioSource currentSource = AudioSource.uri(
         currentUri,
-        tag: MediaItem(
-          id: track.id,
-          album: track.album.trim().isEmpty ? 'Unknown Album' : track.album,
-          title: track.title.trim().isEmpty ? 'Unknown Title' : track.title,
-          artist: (track.artist.trim().isEmpty || track.artist == '<unknown>')
-              ? lookupAppLocalizations(
-                  Locale(FlowStrings.currentLang),
-                ).unknownArtist
-              : track.artist,
-          artUri: currentCover,
-          duration: Duration(milliseconds: track.duration),
-        ),
+        tag: mediaTag,
       );
 
       AudioSource source;
       int initialIndex = 0;
 
-      if (_playbackQueue.length <= 1) {
+      if (_playbackQueue.length <= 1 || track.isOnline) {
         source = currentSource;
       } else {
         final List<AudioSource> children = [];
@@ -278,11 +286,9 @@ extension _AudioPlaybackLogic on _MainScreenState {
         }
 
         // Previous track
-        if (prevIndex != -1) {
+        if (prevIndex != -1 && !_playbackQueue[prevIndex].isOnline) {
           final prevTrack = _playbackQueue[prevIndex];
-          final prevUri = prevTrack.url.startsWith('/')
-              ? Uri.file(prevTrack.url)
-              : (Uri.tryParse(prevTrack.url) ?? Uri.parse(''));
+          final prevUri = await _resolveTrackUri(prevTrack);
           final prevCover = await _getCoverUriForTrack(prevTrack);
           if (requestId != _playRequestId) return;
           children.add(
@@ -315,11 +321,9 @@ extension _AudioPlaybackLogic on _MainScreenState {
         children.add(currentSource);
 
         // Next track
-        if (nextIndex != -1) {
+        if (nextIndex != -1 && !_playbackQueue[nextIndex].isOnline) {
           final nextTrack = _playbackQueue[nextIndex];
-          final nextUri = nextTrack.url.startsWith('/')
-              ? Uri.file(nextTrack.url)
-              : (Uri.tryParse(nextTrack.url) ?? Uri.parse(''));
+          final nextUri = await _resolveTrackUri(nextTrack);
           final nextCover = await _getCoverUriForTrack(nextTrack);
           if (requestId != _playRequestId) return;
           children.add(

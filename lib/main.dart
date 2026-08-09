@@ -23,6 +23,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import 'models/track.dart';
 import 'models/lyrics_line.dart';
+import 'services/innertube_service.dart';
 import 'widgets/custom_track_shape.dart';
 
 import 'screens/settings_screen.dart';
@@ -347,6 +348,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final Set<String> _favoriteTrackIds = {};
   final Set<String> _hiddenTrackIds = {};
   String _searchQuery = '';
+  int _searchSourceIndex = 0; // 0: Local, 1: YouTube Music
+  List<Track> _onlineSearchResults = [];
+  bool _isOnlineSearching = false;
   String? _selectedArtistDetail;
   String? _selectedAlbumDetail;
   String? _selectedPlaylistDetail;

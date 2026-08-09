@@ -8,6 +8,10 @@ class Track {
   final List<String> lyrics;
   final int duration;
 
+  final bool isOnline;
+  final String? thumbnailUrl;
+  final String? videoId;
+
   Track({
     required this.id,
     required this.title,
@@ -17,6 +21,9 @@ class Track {
     required this.path,
     required this.lyrics,
     required this.duration,
+    this.isOnline = false,
+    this.thumbnailUrl,
+    this.videoId,
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +36,9 @@ class Track {
       'path': path,
       'lyrics': lyrics,
       'duration': duration,
+      'isOnline': isOnline,
+      'thumbnailUrl': thumbnailUrl,
+      'videoId': videoId,
     };
   }
 
@@ -42,6 +52,9 @@ class Track {
       path: map['path'] ?? '',
       lyrics: List<String>.from(map['lyrics'] ?? []),
       duration: map['duration'] ?? 0,
+      isOnline: map['isOnline'] ?? false,
+      thumbnailUrl: map['thumbnailUrl'],
+      videoId: map['videoId'],
     );
   }
 }
