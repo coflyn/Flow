@@ -131,9 +131,17 @@ extension _TrackOptionsUI on _MainScreenState {
                         await InnerTubeService().removeOnlineTrackFromHistory(
                           track,
                         );
-                        if (_searchQuery.isEmpty && _searchSourceIndex == 1) {
-                          _loadOnlineTabInitialContent();
-                        }
+                        setState(() {
+                          final targetVId = track.videoId ?? track.id;
+                          _onlineHistoryTracks.removeWhere(
+                            (t) =>
+                                t.id == track.id ||
+                                t.id == targetVId ||
+                                t.videoId == targetVId,
+                          );
+                          _isShowingOnlineHistory =
+                              _onlineHistoryTracks.isNotEmpty;
+                        });
                         showFlowToast(msg);
                       },
                     ),

@@ -66,6 +66,12 @@ class InnerTubeService {
     }
   }
 
+  /// Fetches online tracks similar to a given artist.
+  Future<List<Track>> fetchSimilarArtistTracks(String artistName) async {
+    if (artistName.trim().isEmpty || artistName == '<unknown>') return [];
+    return searchTracks('$artistName songs');
+  }
+
   /// Removes an online track from history AND deletes its cached temporary audio file.
   Future<void> removeOnlineTrackFromHistory(Track track) async {
     try {
@@ -200,7 +206,9 @@ class InnerTubeService {
       if (files.length <= 50) return;
 
       // Sort by last modified date (oldest first)
-      files.sort((a, b) => a.lastModifiedSync().compareTo(b.lastModifiedSync()));
+      files.sort(
+        (a, b) => a.lastModifiedSync().compareTo(b.lastModifiedSync()),
+      );
 
       // Keep 30 most recent files, delete oldest
       for (int i = 0; i < files.length - 30; i++) {
@@ -261,7 +269,9 @@ class InnerTubeService {
     );
 
     title = title.replaceAll(clutterRegex, '').trim();
-    title = title.replaceAll(RegExp(r'^[\-\–\—\|\s]+|[\-\–\—\|\s]+$'), '').trim();
+    title = title
+        .replaceAll(RegExp(r'^[\-\–\—\|\s]+|[\-\–\—\|\s]+$'), '')
+        .trim();
 
     if (title.isEmpty) title = rawTitle;
     if (artist.isEmpty) artist = rawAuthor;
@@ -271,17 +281,8 @@ class InnerTubeService {
 
   /// Fetches a list of trending / random popular tracks for empty search state.
   Future<List<Track>> fetchTrendingOrRandomTracks() async {
-    final queries = [
-      'Trending Music',
-      'Top Hits 2026',
-      'Global Top 50',
-      'Popular Pop Songs',
-      'Indonesian Top Hits',
-      'Best Acoustic Hits',
-      'Chill Lofi Beats',
-    ];
-    final startIndex =
-        DateTime.now().millisecondsSinceEpoch % queries.length;
+    final queries = ['Trending Music'];
+    final startIndex = DateTime.now().millisecondsSinceEpoch % queries.length;
 
     for (int i = 0; i < queries.length; i++) {
       final query = queries[(startIndex + i) % queries.length];

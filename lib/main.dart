@@ -401,6 +401,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final FocusNode _searchFocusNode = FocusNode();
   Timer? _searchDebouncer;
   int _onlineSearchRequestId = 0;
+  List<Track> _onlineHistoryTracks = [];
+  List<Track> _onlineQuickPicks = [];
+  List<Track> _similarArtistTracks = [];
+  String _favoriteArtistName = '';
+  List<Map<String, String>> _recommendedArtists = [];
+  bool _isOnlineContentLoaded = false;
+  bool _showMoreQuickPicks = false;
+  int _homeAnimToken = 0;
+  String? _selectedMoodFilter;
   final ImagePicker _imagePicker = ImagePicker();
 
   bool _isPlaying = false;

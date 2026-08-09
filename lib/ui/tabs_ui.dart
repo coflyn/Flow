@@ -49,9 +49,7 @@ extension _TabsUI on _MainScreenState {
               const SizedBox(height: 16),
               Text(
                 _searchQuery.isEmpty
-                    ? (_isShowingOnlineHistory
-                          ? 'Loading Recently Played...'
-                          : 'Loading Trending Music...')
+                    ? 'Loading YouTube Music...'
                     : 'Searching YouTube Music...',
                 style: TextStyle(
                   color: isAppLight ? Colors.black54 : Colors.white70,
@@ -62,7 +60,7 @@ extension _TabsUI on _MainScreenState {
           ),
         );
       }
-      if (_onlineSearchResults.isEmpty) {
+      if (_onlineSearchResults.isEmpty && _onlineQuickPicks.isEmpty) {
         if (_searchQuery.isEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && !_isOnlineSearching) {
@@ -84,48 +82,19 @@ extension _TabsUI on _MainScreenState {
           ),
         );
       }
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (_searchQuery.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 12,
-                bottom: 4,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _isShowingOnlineHistory
-                        ? Icons.history_rounded
-                        : Icons.local_fire_department_rounded,
-                    size: 16,
-                    color: isAppLight ? Colors.black54 : Colors.white70,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    _isShowingOnlineHistory
-                        ? 'Recently Played'
-                        : 'Trending & Recommended',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isAppLight ? Colors.black54 : Colors.white70,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child: _buildSongList(
-              _onlineSearchResults,
-              fullQueueList: _onlineSearchResults,
-            ),
-          ),
-        ],
+
+      if (_searchQuery.isEmpty) {
+        return _FadeInSlideUp(
+          key: ValueKey("online_home_$_homeAnimToken"),
+          animate: true,
+          delay: Duration.zero,
+          child: _buildOnlineHomeView(),
+        );
+      }
+
+      return _buildSongList(
+        _onlineSearchResults,
+        fullQueueList: _onlineSearchResults,
       );
     }
 
@@ -702,40 +671,503 @@ extension _TabsUI on _MainScreenState {
     );
   }
 
-  void _loadOnlineTabInitialContent() {
+  void _loadOnlineTabInitialContent({bool forceReload = false}) {
+    if (!forceReload &&
+        _isOnlineContentLoaded &&
+        _onlineQuickPicks.isNotEmpty) {
+      setState(() {
+        _isOnlineSearching = false;
+      });
+      return;
+    }
+
     final requestId = ++_onlineSearchRequestId;
     setState(() {
       _isOnlineSearching = true;
     });
-    InnerTubeService().getOnlineTrackHistory().then((historyTracks) {
+
+    final historyFuture = InnerTubeService().getOnlineTrackHistory();
+    final quickPicksFuture = InnerTubeService().fetchTrendingOrRandomTracks();
+
+    Future.wait([historyFuture, quickPicksFuture]).then((results) async {
       if (!mounted || _onlineSearchRequestId != requestId) return;
-      if (historyTracks.isNotEmpty) {
-        setState(() {
-          _onlineSearchResults = historyTracks;
-          _isOnlineSearching = false;
-          _isShowingOnlineHistory = true;
-        });
-      } else {
-        _loadTrendingOnlineTracks(requestId);
+      final history = results[0];
+      final quickPicks = results[1];
+
+      String favArtist = '';
+      if (history.isNotEmpty) {
+        final Map<String, int> artistCounts = {};
+        for (final t in history) {
+          if (t.artist.isNotEmpty && t.artist != '<unknown>') {
+            artistCounts[t.artist] = (artistCounts[t.artist] ?? 0) + 1;
+          }
+        }
+        if (artistCounts.isNotEmpty) {
+          final sorted = artistCounts.entries.toList()
+            ..sort((a, b) => b.value.compareTo(a.value));
+          favArtist = sorted.first.key;
+        }
       }
+
+      final List<Map<String, String>> artistsList = [];
+      final Set<String> seenArtists = {};
+      for (final t in [...history, ...quickPicks]) {
+        if (t.artist.isNotEmpty &&
+            t.artist != '<unknown>' &&
+            !seenArtists.contains(t.artist.toLowerCase()) &&
+            t.thumbnailUrl != null) {
+          seenArtists.add(t.artist.toLowerCase());
+          artistsList.add({'name': t.artist, 'imageUrl': t.thumbnailUrl!});
+          if (artistsList.length >= 8) break;
+        }
+      }
+
+      List<Track> similarTracks = [];
+      if (favArtist.isNotEmpty) {
+        try {
+          similarTracks = await InnerTubeService().fetchSimilarArtistTracks(
+            favArtist,
+          );
+        } catch (_) {}
+      }
+
+      if (!mounted || _onlineSearchRequestId != requestId) return;
+
+      setState(() {
+        _onlineHistoryTracks = history;
+        _onlineQuickPicks = quickPicks;
+        _similarArtistTracks = similarTracks;
+        _favoriteArtistName = favArtist;
+        _recommendedArtists = artistsList;
+        _onlineSearchResults = quickPicks;
+        _isOnlineSearching = false;
+        _isOnlineContentLoaded = true;
+        _isShowingOnlineHistory = history.isNotEmpty;
+      });
     });
   }
 
-  void _loadTrendingOnlineTracks([int? existingRequestId]) {
-    final requestId = existingRequestId ?? ++_onlineSearchRequestId;
-    setState(() {
-      _isOnlineSearching = true;
-      _isShowingOnlineHistory = false;
-    });
-    InnerTubeService().fetchTrendingOrRandomTracks().then((results) {
-      if (mounted && _onlineSearchRequestId == requestId) {
-        setState(() {
-          _onlineSearchResults = results;
-          _isOnlineSearching = false;
-          _isShowingOnlineHistory = false;
-        });
-      }
-    });
+  Widget _buildOnlineHomeView() {
+    final isLight = isAppLight;
+    final textColor = isLight ? const Color(0xFF1A1A1A) : Colors.white;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(top: 16, bottom: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Quick picks Section
+          if (_onlineQuickPicks.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Quick picks',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      if (_onlineQuickPicks.isNotEmpty) {
+                        _playTrack(0, sourceList: _onlineQuickPicks);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isLight
+                            ? Colors.black.withValues(alpha: 0.08)
+                            : Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        'Play all',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: textColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            ..._onlineQuickPicks
+                .take(_showMoreQuickPicks ? 12 : 4)
+                .map((t) => _buildOnlineQuickPickItem(t)),
+            if (_onlineQuickPicks.length > 4) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showMoreQuickPicks = !_showMoreQuickPicks;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isLight
+                          ? Colors.black.withValues(alpha: 0.05)
+                          : Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isLight ? Colors.black12 : Colors.white12,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _showMoreQuickPicks ? 'Show less' : 'Load more',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          _showMoreQuickPicks
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          size: 18,
+                          color: textColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+          ],
+
+          // 2. Recently Played Section
+          if (_onlineHistoryTracks.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Recently Played',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 190,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                scrollDirection: Axis.horizontal,
+                itemCount: _onlineHistoryTracks.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 14),
+                itemBuilder: (context, index) {
+                  final track = _onlineHistoryTracks[index];
+                  return _buildOnlineHorizontalTrackCard(
+                    track,
+                    sourceList: _onlineHistoryTracks,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // 3. Similar to [Favorite Artist] Section
+          if (_similarArtistTracks.isNotEmpty &&
+              _favoriteArtistName.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Similar to $_favoriteArtistName',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 190,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                scrollDirection: Axis.horizontal,
+                itemCount: _similarArtistTracks.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 14),
+                itemBuilder: (context, index) {
+                  final track = _similarArtistTracks[index];
+                  return _buildOnlineHorizontalTrackCard(
+                    track,
+                    sourceList: _similarArtistTracks,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // 4. Recommended Artists (Circular Avatar Cards)
+          if (_recommendedArtists.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Recommended Artists',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 125,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                scrollDirection: Axis.horizontal,
+                itemCount: _recommendedArtists.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 16),
+                itemBuilder: (context, index) {
+                  final item = _recommendedArtists[index];
+                  final artistName = item['name']!;
+                  final imageUrl = item['imageUrl']!;
+
+                  return GestureDetector(
+                    onTap: () {
+                      _searchController.text = artistName;
+                      _searchQuery = artistName;
+                      _triggerOnlineSearch(artistName);
+                    },
+                    child: SizedBox(
+                      width: 85,
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 75,
+                            height: 75,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                              image: DecorationImage(
+                                image: NetworkImage(imageUrl),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            artistName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnlineQuickPickItem(Track track) {
+    final isLight = isAppLight;
+    final isPlayingThis = _playingTrack?.id == track.id;
+    final textColor = isPlayingThis
+        ? _activeAccentColor
+        : (isLight ? const Color(0xFF1A1A1A) : Colors.white);
+    final subtextColor = isLight ? Colors.black54 : Colors.white54;
+
+    return InkWell(
+      onTap: () {
+        final idx = _onlineQuickPicks.indexWhere((t) => t.id == track.id);
+        if (idx != -1) {
+          _playTrack(idx, sourceList: _onlineQuickPicks);
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(left: 24, right: 0, top: 8, bottom: 8),
+        child: Row(
+          children: [
+            _buildTrackArtwork(track, size: 52, radius: 8),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    track.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: isPlayingThis
+                          ? FontWeight.bold
+                          : FontWeight.w600,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${track.artist} • ${_formatDuration(Duration(milliseconds: track.duration))}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, color: subtextColor),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.more_vert, color: subtextColor, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () => _showTrackOptions(context, track),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOnlineHorizontalTrackCard(
+    Track track, {
+    List<Track>? sourceList,
+  }) {
+    final isLight = isAppLight;
+    final isPlayingThis = _playingTrack?.id == track.id ||
+        (_playingTrack?.videoId != null &&
+            track.videoId != null &&
+            _playingTrack?.videoId == track.videoId);
+    final textColor = isPlayingThis
+        ? _activeAccentColor
+        : (isLight ? const Color(0xFF1A1A1A) : Colors.white);
+    final subtextColor = isLight ? Colors.black54 : Colors.white54;
+
+    return GestureDetector(
+      onTap: () {
+        if (isPlayingThis) {
+          if (_isPlaying) {
+            _pauseWithFade();
+          } else {
+            _playWithFade();
+          }
+        } else {
+          _playTrack(0, sourceList: [track]);
+        }
+      },
+      onLongPress: () => _showTrackOptions(context, track),
+      child: SizedBox(
+        width: 130,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                _buildTrackArtwork(track, size: 130, radius: 12),
+                if (isPlayingThis)
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: () => _showTrackOptions(context, track),
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.more_vert,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              track.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isPlayingThis ? FontWeight.bold : FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              track.artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: subtextColor),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _triggerOnlineSearch(String query) {
@@ -996,7 +1428,9 @@ extension _TabsUI on _MainScreenState {
   Widget _buildFilterCapsules() {
     final isLight = isAppLight;
     final filters = [
-      AppLocalizations.of(context).songsTitle,
+      _searchSourceIndex == 1
+          ? 'Home'
+          : AppLocalizations.of(context).songsTitle,
       AppLocalizations.of(context).playlists,
       AppLocalizations.of(context).artists,
       AppLocalizations.of(context).albums,
@@ -1015,7 +1449,10 @@ extension _TabsUI on _MainScreenState {
                 onTap: () {
                   if (_currentPageIndex != index) {
                     setState(() {
-                      if (index == 0) _animatedTrackIds.clear();
+                      if (index == 0) {
+                        _animatedTrackIds.clear();
+                        _homeAnimToken++;
+                      }
                       if (index == 1) _animatedPlaylistIds.clear();
                       if (index == 2) _animatedArtistIds.clear();
                       if (index == 3) _animatedAlbumIds.clear();
@@ -1084,6 +1521,7 @@ class _FadeInSlideUp extends StatefulWidget {
   final bool animate;
 
   const _FadeInSlideUp({
+    super.key,
     required this.child,
     required this.delay,
     this.animate = true,

@@ -227,6 +227,33 @@ extension _AudioPlaybackLogic on _MainScreenState {
 
     if (track.isOnline) {
       InnerTubeService().saveOnlineTrackToHistory(track);
+      setState(() {
+        final targetVId = track.videoId ?? track.id;
+        final isHistorySource = sourceList == _onlineHistoryTracks ||
+            (_playbackQueue.isNotEmpty &&
+                _playbackQueue.any(
+                  (t) =>
+                      t.id == track.id ||
+                      (t.videoId != null && t.videoId == targetVId),
+                ));
+
+        _onlineHistoryTracks.removeWhere(
+          (t) =>
+              t.id == track.id ||
+              t.id == targetVId ||
+              t.videoId == targetVId,
+        );
+        _onlineHistoryTracks.insert(0, track);
+        _isShowingOnlineHistory = true;
+
+        if (isHistorySource && sourceList != null) {
+          _playbackQueue = List.from(_onlineHistoryTracks);
+          _currentIndex = 0;
+          if (_isShuffle) {
+            _shuffledIndices = List.generate(_playbackQueue.length, (i) => i);
+          }
+        }
+      });
     }
 
     SharedPreferences.getInstance().then((prefs) {
