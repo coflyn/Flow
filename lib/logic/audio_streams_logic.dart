@@ -38,6 +38,10 @@ extension _AudioStreamsLogic on _MainScreenState {
                 _loadLyricsForTrack(_playingTrack!);
                 _updateDominantColor(_playingTrack!);
               }
+
+              // Restore player volume in case crossfade or natural fade out lowered it to 0.0
+              _audioPlayer.setVolume(_volume > 0 ? _volume : 1.0);
+
               if (!_isProgrammaticLoading) {
                 if (nativeIndex == 2) {
                   _slideWindowInPlace(newQueueIndex, 1);

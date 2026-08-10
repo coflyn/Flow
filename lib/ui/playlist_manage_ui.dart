@@ -326,12 +326,23 @@ extension _PlaylistManageUI on _MainScreenState {
             TextButton(
               onPressed: () {
                 final newName = nameController.text.trim();
-                if (newName.isNotEmpty &&
-                    newName != oldName &&
-                    !_userPlaylists.containsKey(newName)) {
+                final bool isLocal = _userPlaylists.containsKey(oldName);
+                final bool isOnline = _userOnlinePlaylists.containsKey(oldName);
+                final bool exists = _userPlaylists.containsKey(newName) ||
+                    _userOnlinePlaylists.containsKey(newName);
+
+                if (newName.isNotEmpty && newName != oldName && !exists) {
                   setState(() {
-                    final tracks = _userPlaylists.remove(oldName);
-                    _userPlaylists[newName] = tracks!;
+                    if (isLocal) {
+                      final tracks = _userPlaylists.remove(oldName);
+                      if (tracks != null) _userPlaylists[newName] = tracks;
+                      _saveUserPlaylists();
+                    }
+                    if (isOnline) {
+                      final tracks = _userOnlinePlaylists.remove(oldName);
+                      if (tracks != null) _userOnlinePlaylists[newName] = tracks;
+                      InnerTubeService().saveUserOnlinePlaylists(_userOnlinePlaylists);
+                    }
                     if (_playlistCovers.containsKey(oldName)) {
                       _playlistCovers[newName] = _playlistCovers.remove(
                         oldName,
@@ -341,11 +352,10 @@ extension _PlaylistManageUI on _MainScreenState {
                     if (_selectedPlaylistDetail == oldName) {
                       _selectedPlaylistDetail = newName;
                     }
-                    _saveUserPlaylists();
                   });
                   Navigator.pop(context);
                   showFlowToast(AppLocalizations.of(context).playlistRenamed);
-                } else if (_userPlaylists.containsKey(newName)) {
+                } else if (exists) {
                   showFlowToast(
                     AppLocalizations.of(context).playlistNameExists,
                   );

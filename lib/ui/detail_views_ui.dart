@@ -122,6 +122,8 @@ extension _DetailViewsUI on _MainScreenState {
           } else if (_userPlaylists.containsKey(baseName)) {
             final trackIds = _userPlaylists[baseName]!.toSet();
             pSongs = _allTracks.where((t) => trackIds.contains(t.id)).toList();
+          } else if (_userOnlinePlaylists.containsKey(baseName)) {
+            pSongs = _userOnlinePlaylists[baseName]!;
           }
         }
 
@@ -246,10 +248,9 @@ extension _DetailViewsUI on _MainScreenState {
       } else if (type == AppLocalizations.of(context).album) {
         final List<Track> pool = _searchSourceIndex == 1
             ? {
-                ..._onlineSearchResults,
+                if (_onlinePlaylistTracks.containsKey(baseName))
+                  ..._onlinePlaylistTracks[baseName]!,
                 ..._onlineHistoryTracks,
-                ..._onlineQuickPicks,
-                ..._similarArtistTracks,
                 if (_playingTrack != null && _playingTrack!.isOnline)
                   _playingTrack!,
               }.toList()
@@ -784,7 +785,7 @@ extension _DetailViewsUI on _MainScreenState {
               header: header,
               isMostPlayed: title == AppLocalizations.of(context).mostPlayed,
               controller: _detailScrollController,
-              playlistContext: type == 'Playlist' ? title : null,
+              playlistContext: title,
             ),
           ),
           ValueListenableBuilder<double>(

@@ -304,25 +304,41 @@ class InnerTubeService {
   }) async {
     try {
       String targetVId = videoId;
+      if (targetVId.startsWith('yt_')) {
+        targetVId = targetVId.substring(3);
+      }
+
       if (targetVId.startsWith('it_') ||
           targetVId.startsWith('yt_it_') ||
           targetVId.contains(' ') ||
           targetVId.length != 11) {
-        final query = '${title ?? ''} ${artist ?? ''} audio'.trim();
+        final query = '${title ?? ''} ${artist ?? ''}'.trim();
         if (query.isNotEmpty) {
           try {
-            final searchRes = await yt.search.searchContent(query);
-            for (final item in searchRes) {
-              if (item is SearchVideo) {
-                final d = item as dynamic;
-                final String vId = d.id.value as String;
-                if (vId.isNotEmpty) {
+            final searchRes = await yt.search.search('$query music');
+            if (searchRes.isNotEmpty) {
+              final candidateList = List.from(searchRes);
+              candidateList.sort((a, b) {
+                final scoreA = _getChannelPriorityScore(a.author, a.title, query);
+                final scoreB = _getChannelPriorityScore(b.author, b.title, query);
+                return scoreB.compareTo(scoreA);
+              });
+              for (final item in candidateList) {
+                final String vId = item.id.value;
+                if (vId.isNotEmpty && vId.length == 11) {
                   targetVId = vId;
                   break;
                 }
               }
             }
           } catch (_) {}
+        }
+      }
+
+      if (_cachePaths.containsKey(videoId)) {
+        final existing = File(_cachePaths[videoId]!);
+        if (await existing.exists() && (await existing.length()) > 50 * 1024) {
+          return existing.path;
         }
       }
 
@@ -337,6 +353,7 @@ class InnerTubeService {
       final cacheFile = File('${tempDir.path}/yt_$targetVId.m4a');
 
       if (await cacheFile.exists() && (await cacheFile.length()) > 50 * 1024) {
+        _cachePaths[videoId] = cacheFile.path;
         _cachePaths[targetVId] = cacheFile.path;
         return cacheFile.path;
       }
@@ -397,6 +414,7 @@ class InnerTubeService {
 
       await completer.future;
       _cachePaths[videoId] = cacheFile.path;
+      _cachePaths[targetVId] = cacheFile.path;
 
       // Automatically prune oldest cache files if cache exceeds 50 items
       _pruneAudioCacheIfNeeded();
@@ -495,7 +513,7 @@ class InnerTubeService {
 
   /// Fetches a list of trending / random popular tracks for empty search state.
   Future<List<Track>> fetchTrendingOrRandomTracks() async {
-    final queries = ['Trending Music'];
+    final queries = ['Top Songs', 'Trending Music', 'Popular Hits', 'Global Top 50'];
     final startIndex = DateTime.now().millisecondsSinceEpoch % queries.length;
 
     for (int i = 0; i < queries.length; i++) {
@@ -536,7 +554,7 @@ class InnerTubeService {
             final hdArtwork = rawArtwork.replaceAll('100x100bb', '600x600bb');
             final metadata = {
               'artworkUrl': hdArtwork,
-              'album': albumName ?? 'YouTube Music',
+              'album': (albumName != null && albumName.isNotEmpty) ? albumName : 'Single',
             };
             _officialMetadataCache[cacheKey] = metadata;
             return metadata;
@@ -679,7 +697,7 @@ class InnerTubeService {
             id: 'yt_$videoId',
             title: cleaned['title']!,
             artist: cleaned['artist']!,
-            album: 'YouTube Music',
+            album: 'Single',
             url: video.url,
             path: 'youtube:$videoId',
             lyrics: const [],
@@ -852,14 +870,20 @@ class InnerTubeService {
     final List<Track> tracks = [];
     try {
       await for (final video in yt.playlists.getVideos(playlistId)) {
+        if (video.duration != null && video.duration!.inMinutes > 15) {
+          continue;
+        }
+
         final videoId = video.id.value;
         final thumbUrl = 'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg';
+        final cleaned = cleanYouTubeTitleAndArtist(video.title, video.author);
+
         tracks.add(
           Track(
             id: 'yt_$videoId',
-            title: video.title,
-            artist: video.author,
-            album: playlistTitle,
+            title: cleaned['title']!,
+            artist: cleaned['artist']!,
+            album: 'Single',
             url: video.url,
             path: 'youtube:$videoId',
             lyrics: const [],
@@ -892,7 +916,7 @@ class InnerTubeService {
             for (final item in results) {
               final title = item['trackName'] as String? ?? 'Song';
               final artist = item['artistName'] as String? ?? 'Artist';
-              final album = item['collectionName'] as String? ?? playlistTitle;
+              final album = item['collectionName'] as String? ?? 'Single';
               final rawArt = item['artworkUrl100'] as String?;
               final durationMs = item['trackTimeMillis'] as int? ?? 200000;
               String hdArt = '';
@@ -1103,7 +1127,7 @@ class InnerTubeService {
                 id: 'yt_$vId',
                 title: trackTitle,
                 artist: artistName ?? '<unknown>',
-                album: title,
+                album: 'Single',
                 url: 'https://www.youtube.com/watch?v=$vId',
                 path: 'youtube:$vId',
                 lyrics: const [],

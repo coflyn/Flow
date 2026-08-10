@@ -244,7 +244,9 @@ extension _MainUIComponents on _MainScreenState {
                 (a, b) =>
                     (_playCounts[b.id] ?? 0).compareTo(_playCounts[a.id] ?? 0),
               );
-              pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
+              pSongs = pSongs
+                  .where((t) => (_playCounts[t.id] ?? 0) > 0)
+                  .toList();
             } else if (title == AppLocalizations.of(context).forgottenGems) {
               pSongs = _allTracks.reversed
                   .where((t) => (_playCounts[t.id] ?? 0) <= 1)
@@ -253,6 +255,8 @@ extension _MainUIComponents on _MainScreenState {
               pSongs = _allTracks
                   .where((t) => _userPlaylists[title]!.contains(t.id))
                   .toList();
+            } else if (_userOnlinePlaylists.containsKey(title)) {
+              pSongs = _userOnlinePlaylists[title]!;
             }
           }
           _detailColorFuture = _getDetailColor(

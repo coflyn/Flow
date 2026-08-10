@@ -256,6 +256,41 @@ extension _AudioPlaybackLogic on _MainScreenState {
           }
         }
       });
+
+      // Asynchronously enrich track with official iTunes album name if missing or generic
+      Future.microtask(() async {
+        try {
+          final official = await InnerTubeService()
+              .fetchOfficialSongArtworkAndAlbum(track.title, track.artist)
+              .timeout(const Duration(seconds: 2));
+          if (official != null &&
+              official['album'] != null &&
+              official['album']!.isNotEmpty) {
+            final realAlbum = official['album']!;
+            if (realAlbum != 'Single' && realAlbum != track.album) {
+              final updatedTrack = track.copyWith(album: realAlbum);
+              if (mounted) {
+                setState(() {
+                  if (_playingTrack?.id == track.id) {
+                    _playingTrack = updatedTrack;
+                  }
+                  final idx =
+                      _playbackQueue.indexWhere((t) => t.id == track.id);
+                  if (idx != -1) {
+                    _playbackQueue[idx] = updatedTrack;
+                  }
+                  final histIdx = _onlineHistoryTracks
+                      .indexWhere((t) => t.id == track.id);
+                  if (histIdx != -1) {
+                    _onlineHistoryTracks[histIdx] = updatedTrack;
+                    InnerTubeService().saveOnlineTrackToHistory(updatedTrack);
+                  }
+                });
+              }
+            }
+          }
+        } catch (_) {}
+      });
     }
 
     SharedPreferences.getInstance().then((prefs) {
@@ -401,11 +436,12 @@ extension _AudioPlaybackLogic on _MainScreenState {
       final int sessionId = ++_fadeSessionId;
 
       if (_fadeSessionId != sessionId) return;
+      final double targetVol = _volume > 0 ? _volume : 1.0;
+      await _audioPlayer.setVolume(targetVol);
       await _audioPlayer.setAudioSource(source, initialIndex: initialIndex);
 
       if (_fadeSessionId != sessionId) return;
 
-      final double targetVol = _volume > 0 ? _volume : 1.0;
       await _audioPlayer.setVolume(targetVol);
       if (playImmediately) {
         await _audioPlayer.play();
@@ -577,25 +613,29 @@ extension _AudioPlaybackLogic on _MainScreenState {
       _loadLyricsForTrack(track);
       _updateDominantColor(track);
 
+      final double targetVol = _volume > 0 ? _volume : 1.0;
       if (_crossfadeDuration > 0) {
         final int sessionId = ++_fadeSessionId;
         final int steps = 10;
         final int stepDelay = (_crossfadeDuration / steps).round();
         Future.delayed(Duration.zero, () async {
-          await _audioPlayer.setVolume(0.0);
-          for (int i = 1; i <= steps; i++) {
-            if (_fadeSessionId != sessionId) return;
-            await _audioPlayer.setVolume(_volume * (i / steps.toDouble()));
-            if (stepDelay > 0) {
-              await Future.delayed(Duration(milliseconds: stepDelay));
+          try {
+            await _audioPlayer.setVolume(0.0);
+            for (int i = 1; i <= steps; i++) {
+              if (_fadeSessionId != sessionId) break;
+              await _audioPlayer.setVolume(targetVol * (i / steps.toDouble()));
+              if (stepDelay > 0) {
+                await Future.delayed(Duration(milliseconds: stepDelay));
+              }
             }
-          }
-          if (_fadeSessionId == sessionId) {
-            await _audioPlayer.setVolume(_volume);
+          } finally {
+            if (_fadeSessionId == sessionId || _audioPlayer.playing) {
+              await _audioPlayer.setVolume(targetVol);
+            }
           }
         });
       } else {
-        await _audioPlayer.setVolume(_volume);
+        await _audioPlayer.setVolume(targetVol);
       }
 
       SharedPreferences.getInstance().then((prefs) {

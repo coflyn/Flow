@@ -530,20 +530,19 @@ extension _AudioLibraryScanLogic on _MainScreenState {
       return Uri.file(_metadataOverrides[track.id]!['coverPath']!);
     }
     try {
-      final cacheDir = Directory.systemTemp;
-      final cacheFile = File('${cacheDir.path}/album_art_${track.id}.png');
-      if (await cacheFile.exists()) {
-        return Uri.file(cacheFile.path);
+      final diskFile = ArtworkCacheManager.getDiskArtworkFile(track.id);
+      if (diskFile != null && diskFile.lengthSync() > 0) {
+        return Uri.file(diskFile.path);
       }
-      final bytes = await _audioQuery.queryArtwork(
-        int.parse(track.id),
-        ArtworkType.AUDIO,
-        size: 1000,
-        quality: 100,
+      final bytes = await ArtworkCacheManager.fetchAndCacheNativeArtwork(
+        track.id,
+        highResSize: 1000,
       );
-      if (bytes != null) {
-        await cacheFile.writeAsBytes(bytes);
-        return Uri.file(cacheFile.path);
+      if (bytes != null && bytes.isNotEmpty) {
+        final cachedDisk = ArtworkCacheManager.getDiskArtworkFile(track.id);
+        if (cachedDisk != null && cachedDisk.existsSync()) {
+          return Uri.file(cachedDisk.path);
+        }
       }
     } catch (_) {}
     return null;

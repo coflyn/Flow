@@ -1711,10 +1711,6 @@ class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
   }
 
   void _load() {
-    if (widget.size > 100) {
-      return;
-    }
-
     if (widget.customPath != null && widget.customPath!.isNotEmpty) {
       _bytes = null;
       return;
@@ -1722,14 +1718,16 @@ class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
 
     final cached = ArtworkCacheManager.getCachedArtwork(widget.trackId);
     if (cached != null) {
-      _bytes = cached;
+      _bytes = cached.isNotEmpty ? cached : null;
       return;
     }
 
-    ArtworkCacheManager.fetchAndCacheNativeArtwork(widget.trackId).then((
-      bytes,
-    ) {
-      if (mounted && bytes != null) {
+    final reqSize = widget.size > 100 ? 1000 : 300;
+    ArtworkCacheManager.fetchAndCacheNativeArtwork(
+      widget.trackId,
+      highResSize: reqSize,
+    ).then((bytes) {
+      if (mounted && bytes != null && bytes.isNotEmpty) {
         setState(() {
           _bytes = bytes;
         });
@@ -1739,7 +1737,7 @@ class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
 
   @override
   Widget build(BuildContext context) {
-    if (_bytes != null) {
+    if (_bytes != null && _bytes!.isNotEmpty) {
       return Container(
         width: widget.size,
         height: widget.size,
@@ -1776,31 +1774,40 @@ class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
       );
     }
 
-    final int artworkSize = widget.size > 100 ? 1000 : 200;
-    final int artworkQuality = widget.size > 100 ? 100 : 50;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(widget.radius),
-      child: QueryArtworkWidget(
-        id: int.parse(widget.trackId),
-        type: ArtworkType.AUDIO,
-        artworkWidth: widget.size,
-        artworkHeight: widget.size,
-        artworkBorder: BorderRadius.circular(widget.radius),
-        artworkFit: BoxFit.cover,
-        keepOldArtwork: true,
-        size: artworkSize,
-        quality: artworkQuality,
-        artworkQuality: FilterQuality.low,
-        nullArtworkWidget: Container(
-          width: widget.size,
-          height: widget.size,
-          decoration: BoxDecoration(
-            color: Colors.white10,
-            borderRadius: BorderRadius.circular(widget.radius),
+    final diskFile = ArtworkCacheManager.getDiskArtworkFile(widget.trackId);
+    if (diskFile != null && diskFile.lengthSync() > 0) {
+      final ImageProvider diskProvider = widget.size > 100
+          ? FileImage(diskFile)
+          : ResizeImage(
+              FileImage(diskFile),
+              width: (widget.size * 2).toInt().clamp(100, 600),
+            );
+      return Container(
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(widget.radius),
+          image: DecorationImage(
+            image: diskProvider,
+            fit: BoxFit.cover,
           ),
-          child: const Icon(Icons.music_note, color: Colors.white54),
         ),
+      );
+    }
+
+    return Container(
+      width: widget.size,
+      height: widget.size,
+      decoration: BoxDecoration(
+        color: isAppLight
+            ? Colors.black.withValues(alpha: 0.08)
+            : Colors.white10,
+        borderRadius: BorderRadius.circular(widget.radius),
+      ),
+      child: Icon(
+        Icons.music_note,
+        size: widget.size * 0.5,
+        color: isAppLight ? Colors.black45 : Colors.white38,
       ),
     );
   }

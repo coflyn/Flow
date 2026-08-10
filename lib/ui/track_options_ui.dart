@@ -22,6 +22,21 @@ extension _TrackOptionsUI on _MainScreenState {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final isFavorited = _favoriteTrackIds.contains(track.id);
+            final bool isInAlbumOrPlaylistView = _selectedAlbumDetail != null ||
+                _selectedPlaylistDetail != null ||
+                playlistContext != null;
+            final bool isOnlineTrackUnplayed = track.isOnline &&
+                !_onlineHistoryTracks.any(
+                  (t) =>
+                      t.id == track.id ||
+                      (track.videoId != null && t.id == track.videoId) ||
+                      (t.videoId != null && t.videoId == track.id) ||
+                      (track.videoId != null &&
+                          t.videoId != null &&
+                          t.videoId == track.videoId) ||
+                      (t.title.toLowerCase() == track.title.toLowerCase() &&
+                          t.artist.toLowerCase() == track.artist.toLowerCase()),
+                );
             return SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -243,20 +258,60 @@ extension _TrackOptionsUI on _MainScreenState {
                         : (isLight ? Colors.black54 : Colors.white70),
                   ),
                   if (playlistContext != null &&
-                      _userPlaylists.containsKey(playlistContext))
+                      (_userPlaylists.containsKey(playlistContext) ||
+                          _userOnlinePlaylists.containsKey(playlistContext) ||
+                          _onlinePlaylistTracks.containsKey(playlistContext)))
                     _buildOptionItem(
                       Icons.remove_circle_outline,
                       AppLocalizations.of(context).removeFromPlaylist,
                       () async {
                         Navigator.pop(context);
                         setState(() {
-                          _userPlaylists[playlistContext]!.remove(track.id);
+                          if (_userPlaylists.containsKey(playlistContext)) {
+                            _userPlaylists[playlistContext]!.removeWhere(
+                              (tId) => tId == track.id,
+                            );
+                          }
+                          if (_userOnlinePlaylists.containsKey(playlistContext)) {
+                            _userOnlinePlaylists[playlistContext]!.removeWhere(
+                              (t) =>
+                                  t.id == track.id ||
+                                  (t.videoId != null &&
+                                      track.videoId != null &&
+                                      t.videoId == track.videoId) ||
+                                  (t.title.toLowerCase() ==
+                                          track.title.toLowerCase() &&
+                                      t.artist.toLowerCase() ==
+                                          track.artist.toLowerCase()),
+                            );
+                            InnerTubeService().saveUserOnlinePlaylists(
+                              _userOnlinePlaylists,
+                            );
+                          }
+                          if (_onlinePlaylistTracks.containsKey(playlistContext)) {
+                            _onlinePlaylistTracks[playlistContext]!.removeWhere(
+                              (t) =>
+                                  t.id == track.id ||
+                                  (t.videoId != null &&
+                                      track.videoId != null &&
+                                      t.videoId == track.videoId) ||
+                                  (t.title.toLowerCase() ==
+                                          track.title.toLowerCase() &&
+                                      t.artist.toLowerCase() ==
+                                          track.artist.toLowerCase()),
+                            );
+                            InnerTubeService().saveOnlinePlaylistTracksCache(
+                              _onlinePlaylistTracks,
+                            );
+                          }
                         });
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString(
-                          'user_playlists',
-                          jsonEncode(_userPlaylists),
-                        );
+                        if (_userPlaylists.containsKey(playlistContext)) {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString(
+                            'user_playlists',
+                            jsonEncode(_userPlaylists),
+                          );
+                        }
                         _MainScreenState.mainScreenState!
                             ._removeFromQueueAndPlayer(track.id);
                         if (!context.mounted) return;
@@ -266,74 +321,76 @@ extension _TrackOptionsUI on _MainScreenState {
                       },
                       iconColor: Colors.redAccent,
                     ),
-                  _buildOptionItem(
-                    Icons.album_outlined,
-                    AppLocalizations.of(context).goToAlbum,
-                    () {
-                      Navigator.pop(context);
-                      setState(() {
-                        _isPlayerOpen = false;
-                        _selectedAlbumDetail = track.album;
-                        _searchQuery = '';
-                        _searchController.clear();
-                        final pool = track.isOnline
-                            ? {
-                                ..._onlineSearchResults,
-                                ..._onlineHistoryTracks,
-                                ..._onlineQuickPicks,
-                                ..._similarArtistTracks,
-                                track,
-                              }.toList()
-                            : _allTracks;
-                        final albumSongs = pool
-                            .where((t) => t.album == track.album)
-                            .toList();
-                        _detailColorFuture = _getDetailColor(
-                          albumSongs.isNotEmpty ? albumSongs.first : null,
-                        );
-                        _currentPageIndex = 3;
-                        _pageController.animateToPage(
-                          3,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      });
-                    },
-                  ),
-                  _buildOptionItem(
-                    Icons.person_outline,
-                    AppLocalizations.of(context).goToArtist,
-                    () {
-                      Navigator.pop(context);
-                      setState(() {
-                        _isPlayerOpen = false;
-                        _selectedArtistDetail = track.artist;
-                        _searchQuery = '';
-                        _searchController.clear();
-                        final pool = track.isOnline
-                            ? {
-                                ..._onlineSearchResults,
-                                ..._onlineHistoryTracks,
-                                ..._onlineQuickPicks,
-                                ..._similarArtistTracks,
-                                track,
-                              }.toList()
-                            : _allTracks;
-                        final artistSongs = pool
-                            .where((t) => t.artist == track.artist)
-                            .toList();
-                        _detailColorFuture = _getDetailColor(
-                          artistSongs.isNotEmpty ? artistSongs.first : null,
-                        );
-                        _currentPageIndex = 2;
-                        _pageController.animateToPage(
-                          2,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      });
-                    },
-                  ),
+                  if (!isOnlineTrackUnplayed) ...[
+                    _buildOptionItem(
+                      Icons.album_outlined,
+                      AppLocalizations.of(context).goToAlbum,
+                      () {
+                        Navigator.pop(context);
+                        setState(() {
+                          _isPlayerOpen = false;
+                          _selectedAlbumDetail = track.album;
+                          _searchQuery = '';
+                          _searchController.clear();
+                          final pool = track.isOnline
+                              ? {
+                                  ..._onlineSearchResults,
+                                  ..._onlineHistoryTracks,
+                                  ..._onlineQuickPicks,
+                                  ..._similarArtistTracks,
+                                  track,
+                                }.toList()
+                              : _allTracks;
+                          final albumSongs = pool
+                              .where((t) => t.album == track.album)
+                              .toList();
+                          _detailColorFuture = _getDetailColor(
+                            albumSongs.isNotEmpty ? albumSongs.first : null,
+                          );
+                          _currentPageIndex = 3;
+                          _pageController.animateToPage(
+                            3,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        });
+                      },
+                    ),
+                    _buildOptionItem(
+                      Icons.person_outline,
+                      AppLocalizations.of(context).goToArtist,
+                      () {
+                        Navigator.pop(context);
+                        setState(() {
+                          _isPlayerOpen = false;
+                          _selectedArtistDetail = track.artist;
+                          _searchQuery = '';
+                          _searchController.clear();
+                          final pool = track.isOnline
+                              ? {
+                                  ..._onlineSearchResults,
+                                  ..._onlineHistoryTracks,
+                                  ..._onlineQuickPicks,
+                                  ..._similarArtistTracks,
+                                  track,
+                                }.toList()
+                              : _allTracks;
+                          final artistSongs = pool
+                              .where((t) => t.artist == track.artist)
+                              .toList();
+                          _detailColorFuture = _getDetailColor(
+                            artistSongs.isNotEmpty ? artistSongs.first : null,
+                          );
+                          _currentPageIndex = 2;
+                          _pageController.animateToPage(
+                            2,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        });
+                      },
+                    ),
+                  ],
                   if (!track.isOnline) ...[
                     _buildOptionItem(
                       Icons.edit_outlined,
@@ -344,15 +401,17 @@ extension _TrackOptionsUI on _MainScreenState {
                       },
                     ),
                   ],
-                  _buildOptionItem(
-                    Icons.info_outline,
-                    AppLocalizations.of(context).songInfo,
-                    () {
-                      Navigator.pop(context);
-                      _showSongInfoModal(context, track);
-                    },
-                  ),
-                  if (!track.isOnline) ...[
+                  if (!isOnlineTrackUnplayed) ...[
+                    _buildOptionItem(
+                      Icons.info_outline,
+                      AppLocalizations.of(context).songInfo,
+                      () {
+                        Navigator.pop(context);
+                        _showSongInfoModal(context, track);
+                      },
+                    ),
+                  ],
+                  if (!track.isOnline && !isInAlbumOrPlaylistView) ...[
                     _buildOptionItem(
                       Icons.visibility_off_outlined,
                       AppLocalizations.of(context).hideFromLibrary,

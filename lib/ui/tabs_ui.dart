@@ -32,61 +32,33 @@ extension _TabsUI on _MainScreenState {
   }
 
   Widget _buildSongsTab() {
+    final key = "songs_${_searchSourceIndex}_$_songsAnimToken";
+    final bool shouldAnimate = !_visitedTabKeys.contains(key);
+    if (shouldAnimate) {
+      _visitedTabKeys.add(key);
+    }
+
     if (_searchSourceIndex == 1) {
       if (_isOnlineSearching) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: CircularProgressIndicator(
-                  color: _activeAccentColor,
-                  strokeWidth: 3,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _searchQuery.isEmpty
-                    ? 'Loading YouTube Music...'
-                    : 'Searching YouTube Music...',
-                style: TextStyle(
-                  color: isAppLight ? Colors.black54 : Colors.white70,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-        );
+        return _buildOnlineHomeSkeleton();
       }
-      if (_onlineSearchResults.isEmpty && _onlineQuickPicks.isEmpty) {
+      if (!_isOnlineContentLoaded &&
+          _onlineSearchResults.isEmpty &&
+          _onlineQuickPicks.isEmpty) {
         if (_searchQuery.isEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && !_isOnlineSearching) {
+            if (mounted && !_isOnlineSearching && !_isOnlineContentLoaded) {
               _loadOnlineTabInitialContent();
             }
           });
         }
-        return const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.youtube_searched_for, size: 48, color: Colors.white38),
-              SizedBox(height: 12),
-              Text(
-                'No YouTube Music tracks found',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-            ],
-          ),
-        );
+        return _buildOnlineHomeSkeleton();
       }
 
       if (_searchQuery.isEmpty) {
         return _FadeInSlideUp(
-          key: ValueKey("online_home_$_homeAnimToken"),
-          animate: true,
+          key: ValueKey(key),
+          animate: shouldAnimate,
           delay: Duration.zero,
           child: _buildOnlineHomeView(),
         );
@@ -98,51 +70,74 @@ extension _TabsUI on _MainScreenState {
       );
     }
 
-    List<Track> allSorted = List<Track>.from(_allTracks);
+    if (_memoSongsSorted == null ||
+        _memoSongsSortBy != _sortBy ||
+        _memoSongsSearchQuery != _searchQuery ||
+        _memoSongsAllTracksLen != _allTracks.length) {
+      List<Track> allSorted = List<Track>.from(_allTracks);
 
-    if (_sortBy == 'title') {
-      allSorted.sort(
-        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-      );
-    } else if (_sortBy == 'artist') {
-      allSorted.sort(
-        (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
-      );
-    } else if (_sortBy == 'album') {
-      allSorted.sort(
-        (a, b) => a.album.toLowerCase().compareTo(b.album.toLowerCase()),
-      );
-    } else if (_sortBy == 'date_oldest') {
-      allSorted = allSorted.reversed.toList();
-    } else if (_sortBy == 'duration_longest') {
-      allSorted.sort((a, b) => b.duration.compareTo(a.duration));
-    } else if (_sortBy == 'duration_shortest') {
-      allSorted.sort((a, b) => a.duration.compareTo(b.duration));
+      if (_sortBy == 'title') {
+        allSorted.sort(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        );
+      } else if (_sortBy == 'artist') {
+        allSorted.sort(
+          (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
+        );
+      } else if (_sortBy == 'album') {
+        allSorted.sort(
+          (a, b) => a.album.toLowerCase().compareTo(b.album.toLowerCase()),
+        );
+      } else if (_sortBy == 'date_oldest') {
+        allSorted = allSorted.reversed.toList();
+      } else if (_sortBy == 'duration_longest') {
+        allSorted.sort((a, b) => b.duration.compareTo(a.duration));
+      } else if (_sortBy == 'duration_shortest') {
+        allSorted.sort((a, b) => a.duration.compareTo(b.duration));
+      }
+
+      List<Track> displayed = allSorted;
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        displayed = allSorted
+            .where(
+              (t) =>
+                  t.title.toLowerCase().contains(q) ||
+                  t.artist.toLowerCase().contains(q) ||
+                  t.album.toLowerCase().contains(q),
+            )
+            .toList();
+      }
+
+      _memoSongsSorted = allSorted;
+      _memoSongsDisplayed = displayed;
+      _memoSongsSortBy = _sortBy;
+      _memoSongsSearchQuery = _searchQuery;
+      _memoSongsAllTracksLen = _allTracks.length;
     }
 
-    List<Track> displayed = allSorted;
-    if (_searchQuery.isNotEmpty) {
-      displayed = allSorted
-          .where(
-            (t) =>
-                t.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                t.artist.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                t.album.toLowerCase().contains(_searchQuery.toLowerCase()),
-          )
-          .toList();
-    }
-
-    return _buildSongList(
-      displayed,
-      fullQueueList: _searchQuery.isNotEmpty ? allSorted : null,
+    return _FadeInSlideUp(
+      key: ValueKey(key),
+      animate: shouldAnimate,
+      delay: Duration.zero,
+      child: _buildSongList(
+        _memoSongsDisplayed!,
+        fullQueueList: _searchQuery.isNotEmpty ? _memoSongsSorted : null,
+      ),
     );
   }
 
   Widget _buildPlaylistsTab() {
+    final key = "playlists_${_searchSourceIndex}_$_playlistsAnimToken";
+    final bool shouldAnimateTab = !_visitedTabKeys.contains(key);
+    if (shouldAnimateTab) {
+      _visitedTabKeys.add(key);
+    }
+
     if (_searchSourceIndex == 1) {
       return _FadeInSlideUp(
-        key: ValueKey('online_playlists_$_homeAnimToken'),
-        animate: true,
+        key: ValueKey(key),
+        animate: shouldAnimateTab,
         delay: Duration.zero,
         child: _buildOnlinePlaylistsView(),
       );
@@ -243,64 +238,58 @@ extension _TabsUI on _MainScreenState {
       }),
     ];
 
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 12,
-        bottom: _playingTrack != null ? 84 : 12,
+    return _FadeInSlideUp(
+      key: ValueKey(key),
+      animate: shouldAnimateTab,
+      delay: Duration.zero,
+      child: ListView.builder(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 12,
+          bottom: _playingTrack != null ? 84 : 12,
+        ),
+        itemCount: children.length,
+        itemBuilder: (context, index) {
+          final keyStr = "playlist_$index";
+          final shouldAnimate = !_animatedPlaylistIds.contains(keyStr);
+          final count = _animatedPlaylistIds.length;
+          final staggerIndex = count < 8 ? count : 0;
+          if (shouldAnimate) {
+            _animatedPlaylistIds.add(keyStr);
+          }
+          return _FadeInSlideUp(
+            animate: shouldAnimate,
+            delay: Duration(milliseconds: staggerIndex * 35),
+            child: children[index],
+          );
+        },
       ),
-      itemCount: children.length,
-      itemBuilder: (context, index) {
-        final keyStr = "playlist_$index";
-        final shouldAnimate = !_animatedPlaylistIds.contains(keyStr);
-        final count = _animatedPlaylistIds.length;
-        final staggerIndex = count < 8 ? count : 0;
-        if (shouldAnimate) {
-          _animatedPlaylistIds.add(keyStr);
-        }
-        return _FadeInSlideUp(
-          animate: shouldAnimate,
-          delay: Duration(milliseconds: staggerIndex * 35),
-          child: children[index],
-        );
-      },
     );
   }
 
   Future<void> _loadOnlinePlaylistsTabContent() async {
     if (_isOnlinePlaylistsLoaded) return;
+    _isOnlinePlaylistsSearching = true;
 
     final cachedTrending = await InnerTubeService()
         .getOnlineTrendingPlaylistsCache();
-    if (cachedTrending.isNotEmpty && mounted && !_isOnlinePlaylistsLoaded) {
-      setState(() {
-        _onlineTrendingPlaylists = cachedTrending;
-        _isOnlinePlaylistsLoaded = true;
-        _isOnlinePlaylistsSearching = false;
-      });
-    } else {
-      setState(() {
-        _isOnlinePlaylistsSearching = true;
-      });
+    if (cachedTrending.isNotEmpty && mounted) {
+      _onlineTrendingPlaylists = cachedTrending;
     }
 
     try {
       final trending = await InnerTubeService().fetchTrendingPlaylists();
       if (trending.isNotEmpty) {
         InnerTubeService().saveOnlineTrendingPlaylistsCache(trending);
-      }
-      if (mounted) {
-        setState(() {
-          _onlineTrendingPlaylists = trending;
-          _isOnlinePlaylistsLoaded = true;
-          _isOnlinePlaylistsSearching = false;
-        });
+        _onlineTrendingPlaylists = trending;
       }
     } catch (_) {
+    } finally {
       if (mounted) {
         setState(() {
+          _isOnlinePlaylistsLoaded = true;
           _isOnlinePlaylistsSearching = false;
         });
       }
@@ -417,21 +406,11 @@ extension _TabsUI on _MainScreenState {
     final textColor = isLight ? const Color(0xFF1A1A1A) : Colors.white;
     final subtextColor = isLight ? Colors.black54 : Colors.white54;
 
-    if (!_isOnlinePlaylistsLoaded && !_isOnlinePlaylistsSearching) {
-      _loadOnlinePlaylistsTabContent();
-    }
-
-    if (_isOnlinePlaylistsSearching && _onlineTrendingPlaylists.isEmpty) {
-      return Center(
-        child: SizedBox(
-          width: 32,
-          height: 32,
-          child: CircularProgressIndicator(
-            color: _activeAccentColor,
-            strokeWidth: 3,
-          ),
-        ),
-      );
+    if (!_isOnlinePlaylistsLoaded) {
+      if (!_isOnlinePlaylistsSearching) {
+        _loadOnlinePlaylistsTabContent();
+      }
+      return _buildOnlinePlaylistsSkeleton();
     }
 
     final onlineFavorites = _onlineFavoriteTracks;
@@ -671,27 +650,66 @@ extension _TabsUI on _MainScreenState {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildPlaylistCard(
-                  AppLocalizations.of(context).favourites,
-                  onlineFavorites,
-                  const Color(0xFFE91E63),
-                  Icons.favorite,
-                  isOnline: true,
-                ),
-                _buildPlaylistCard(
-                  'Recently Played',
-                  onlineLastPlayed,
-                  const Color(0xFFFF9800),
-                  Icons.history,
-                  isOnline: true,
-                ),
-                _buildPlaylistCard(
-                  AppLocalizations.of(context).mostPlayed,
-                  onlineMostPlayed,
-                  const Color(0xFFF44336),
-                  Icons.local_fire_department,
-                  isOnline: true,
-                ),
+                if (!_isOnlineContentLoaded &&
+                    _onlineHistoryTracks.isEmpty &&
+                    _onlineFavoriteTracks.isEmpty) ...[
+                  for (int i = 0; i < 3; i++) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          const _SkeletonBox(
+                            width: 48,
+                            height: 48,
+                            borderRadius: 24,
+                          ),
+                          const SizedBox(width: 14),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              _SkeletonBox(
+                                width: 140,
+                                height: 14,
+                                borderRadius: 4,
+                              ),
+                              SizedBox(height: 6),
+                              _SkeletonBox(
+                                width: 80,
+                                height: 12,
+                                borderRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ] else ...[
+                  _buildPlaylistCard(
+                    AppLocalizations.of(context).favourites,
+                    onlineFavorites,
+                    const Color(0xFFE91E63),
+                    Icons.favorite,
+                    isOnline: true,
+                  ),
+                  _buildPlaylistCard(
+                    'Recently Played',
+                    onlineLastPlayed,
+                    const Color(0xFFFF9800),
+                    Icons.history,
+                    isOnline: true,
+                  ),
+                  _buildPlaylistCard(
+                    AppLocalizations.of(context).mostPlayed,
+                    onlineMostPlayed,
+                    const Color(0xFFF44336),
+                    Icons.local_fire_department,
+                    isOnline: true,
+                  ),
+                ],
                 if (_userOnlinePlaylists.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Padding(
@@ -803,6 +821,12 @@ extension _TabsUI on _MainScreenState {
   }
 
   Widget _buildArtistsTab() {
+    final key = "artists_${_searchSourceIndex}_$_artistsAnimToken";
+    final bool shouldAnimateTab = !_visitedTabKeys.contains(key);
+    if (shouldAnimateTab) {
+      _visitedTabKeys.add(key);
+    }
+
     final List<Track> activeTrackPool = _searchSourceIndex == 1
         ? {
             ..._onlineHistoryTracks,
@@ -811,309 +835,212 @@ extension _TabsUI on _MainScreenState {
           }.toList()
         : _allTracks;
 
-    final List<String> artists = [];
-    final seenArtists = <String>{};
-
-    if (_sortBy == 'date') {
-      for (final t in activeTrackPool) {
-        if (t.artist.isNotEmpty &&
-            t.artist != '<unknown>' &&
-            seenArtists.add(t.artist)) {
-          artists.add(t.artist);
-        }
-      }
-    } else if (_sortBy == 'date_oldest') {
-      for (final t in activeTrackPool.reversed) {
-        if (t.artist.isNotEmpty &&
-            t.artist != '<unknown>' &&
-            seenArtists.add(t.artist)) {
-          artists.add(t.artist);
-        }
-      }
-    } else if (_sortBy == 'duration_longest') {
-      final Map<String, int> maxDuration = {};
-      for (final t in activeTrackPool) {
-        final current = maxDuration[t.artist] ?? 0;
-        if (t.duration > current) {
-          maxDuration[t.artist] = t.duration;
-        }
-      }
-      final allUnique = activeTrackPool
-          .where((t) => t.artist.isNotEmpty && t.artist != '<unknown>')
-          .map((t) => t.artist)
-          .toSet()
-          .toList();
-      allUnique.sort(
-        (a, b) => (maxDuration[b] ?? 0).compareTo(maxDuration[a] ?? 0),
-      );
-      artists.addAll(allUnique);
-    } else if (_sortBy == 'duration_shortest') {
-      final Map<String, int> minDuration = {};
-      for (final t in activeTrackPool) {
-        final current = minDuration[t.artist] ?? 99999999;
-        if (t.duration < current) {
-          minDuration[t.artist] = t.duration;
-        }
-      }
-      final allUnique = activeTrackPool
-          .where((t) => t.artist.isNotEmpty && t.artist != '<unknown>')
-          .map((t) => t.artist)
-          .toSet()
-          .toList();
-      allUnique.sort(
-        (a, b) => (minDuration[a] ?? 0).compareTo(minDuration[a] ?? 0),
-      );
-      artists.addAll(allUnique);
-    } else {
-      final allUnique =
-          activeTrackPool
-              .where((t) => t.artist.isNotEmpty && t.artist != '<unknown>')
-              .map((t) => t.artist)
-              .toSet()
-              .toList()
-            ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-      artists.addAll(allUnique);
+    if (_searchSourceIndex == 1 && _isOnlineSearching && activeTrackPool.isEmpty) {
+      return _buildOnlineArtistsSkeleton();
     }
 
-    if (_searchQuery.isNotEmpty) {
-      artists.retainWhere(
-        (a) => a.toLowerCase().contains(_searchQuery.toLowerCase()),
-      );
+    if (_memoArtistTracksMap == null ||
+        _memoArtistPoolLen != activeTrackPool.length ||
+        _memoArtistSortBy != _sortBy ||
+        _memoArtistSearchQuery != _searchQuery ||
+        _memoArtistSearchSource != _searchSourceIndex) {
+      final Map<String, List<Track>> artistTracksMap = {};
+      for (final t in activeTrackPool) {
+        if (t.artist.isNotEmpty && t.artist != '<unknown>') {
+          (artistTracksMap[t.artist] ??= []).add(t);
+        }
+      }
+
+      final List<String> artists = [];
+      final seenArtists = <String>{};
+
+      if (_sortBy == 'date') {
+        for (final t in activeTrackPool) {
+          if (t.artist.isNotEmpty &&
+              t.artist != '<unknown>' &&
+              seenArtists.add(t.artist)) {
+            artists.add(t.artist);
+          }
+        }
+      } else if (_sortBy == 'date_oldest') {
+        for (final t in activeTrackPool.reversed) {
+          if (t.artist.isNotEmpty &&
+              t.artist != '<unknown>' &&
+              seenArtists.add(t.artist)) {
+            artists.add(t.artist);
+          }
+        }
+      } else if (_sortBy == 'duration_longest') {
+        final Map<String, int> maxDuration = {};
+        for (final t in activeTrackPool) {
+          final current = maxDuration[t.artist] ?? 0;
+          if (t.duration > current) {
+            maxDuration[t.artist] = t.duration;
+          }
+        }
+        final allUnique = artistTracksMap.keys.toList();
+        allUnique.sort(
+          (a, b) => (maxDuration[b] ?? 0).compareTo(maxDuration[a] ?? 0),
+        );
+        artists.addAll(allUnique);
+      } else if (_sortBy == 'duration_shortest') {
+        final Map<String, int> minDuration = {};
+        for (final t in activeTrackPool) {
+          final current = minDuration[t.artist] ?? 99999999;
+          if (t.duration < current) {
+            minDuration[t.artist] = t.duration;
+          }
+        }
+        final allUnique = artistTracksMap.keys.toList();
+        allUnique.sort(
+          (a, b) => (minDuration[a] ?? 0).compareTo(minDuration[a] ?? 0),
+        );
+        artists.addAll(allUnique);
+      } else {
+        final allUnique = artistTracksMap.keys.toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+        artists.addAll(allUnique);
+      }
+
+      if (_searchQuery.isNotEmpty) {
+        artists.retainWhere(
+          (a) => a.toLowerCase().contains(_searchQuery.toLowerCase()),
+        );
+      }
+
+      final List<MapEntry<String, int>> topArtistCounts = [];
+      artistTracksMap.forEach((name, tracks) {
+        topArtistCounts.add(MapEntry(name, tracks.length));
+      });
+      topArtistCounts.sort((a, b) => b.value.compareTo(a.value));
+      final topArtistsList = topArtistCounts.take(8).map((e) => e.key).toList();
+
+      _memoArtistTracksMap = artistTracksMap;
+      _memoArtistsList = artists;
+      _memoTopArtistsList = topArtistsList;
+      _memoArtistSortBy = _sortBy;
+      _memoArtistSearchQuery = _searchQuery;
+      _memoArtistPoolLen = activeTrackPool.length;
+      _memoArtistSearchSource = _searchSourceIndex;
     }
+
+    final artistTracksMap = _memoArtistTracksMap!;
+    final artists = _memoArtistsList!;
+    final topArtistsList = _memoTopArtistsList!;
 
     final isLight = isAppLight;
     final textColor = isLight ? const Color(0xFF1A1A1A) : Colors.white;
     final subtextColor = isLight ? Colors.black54 : Colors.white54;
 
-    // Calculate Top Artists for top carousel using activeTrackPool (played songs)
-    final List<MapEntry<String, int>> topArtistCounts = [];
-    final Map<String, int> artistSongCounts = {};
-    for (final t in activeTrackPool) {
-      if (t.artist.isNotEmpty && t.artist != '<unknown>') {
-        artistSongCounts[t.artist] = (artistSongCounts[t.artist] ?? 0) + 1;
-      }
-    }
-    topArtistCounts.addAll(
-      artistSongCounts.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value)),
-    );
-    final topArtistsList = topArtistCounts.take(8).map((e) => e.key).toList();
-
-    return Column(
-      children: [
-        // Sub-header with artist count & Grid/List layout switcher
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Row(
-            children: [
-              Text(
-                '${artists.length} ${AppLocalizations.of(context).artist}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: subtextColor,
-                ),
-              ),
-              const Spacer(),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () {
-                    setState(() {
-                      _artistViewMode = _artistViewMode == 'grid'
-                          ? 'list'
-                          : 'grid';
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: isLight
-                          ? Colors.black.withValues(alpha: 0.05)
-                          : Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      _artistViewMode == 'grid'
-                          ? Icons.view_list_rounded
-                          : Icons.grid_view_rounded,
-                      size: 18,
-                      color: _activeAccentColor,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Expanded Artist List/Grid Content
-        Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.only(bottom: _playingTrack != null ? 84 : 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return _FadeInSlideUp(
+      key: ValueKey(key),
+      animate: shouldAnimateTab,
+      delay: Duration.zero,
+      child: Column(
+        children: [
+          // Sub-header with artist count & Grid/List layout switcher
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Row(
               children: [
-                // Top Artists Carousel (when search is empty & >= 3 top artists exist)
-                if (_searchQuery.isEmpty && topArtistsList.length >= 3) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 4,
-                    ),
-                    child: Text(
-                      'Top Artists',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                        letterSpacing: -0.3,
+                Text(
+                  '${artists.length} ${AppLocalizations.of(context).artist}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: subtextColor,
+                  ),
+                ),
+                const Spacer(),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      setState(() {
+                        _artistViewMode = _artistViewMode == 'grid'
+                            ? 'list'
+                            : 'grid';
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: isLight
+                            ? Colors.black.withValues(alpha: 0.05)
+                            : Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        _artistViewMode == 'grid'
+                            ? Icons.view_list_rounded
+                            : Icons.grid_view_rounded,
+                        size: 18,
+                        color: _activeAccentColor,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 140,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      scrollDirection: Axis.horizontal,
-                      itemCount: topArtistsList.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 16),
-                      itemBuilder: (context, index) {
-                        final artistName = topArtistsList[index];
-                        final count = artistSongCounts[artistName] ?? 0;
-                        final firstTrack = activeTrackPool.firstWhere(
-                          (t) => t.artist == artistName,
-                        );
+                ),
+              ],
+            ),
+          ),
 
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedArtistDetail = artistName;
-                              _searchQuery = '';
-                              _searchController.clear();
-                              final artistSongs = activeTrackPool
-                                  .where((t) => t.artist == artistName)
-                                  .toList();
-                              _detailColorFuture = _getDetailColor(
-                                artistSongs.isNotEmpty
-                                    ? artistSongs.first
-                                    : null,
-                              );
-                            });
-                          },
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: _activeAccentColor.withValues(
-                                      alpha: 0.6,
-                                    ),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: _buildTrackArtwork(
-                                  firstTrack,
-                                  size: 76,
-                                  radius: 38,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              SizedBox(
-                                width: 84,
-                                child: Text(
-                                  artistName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: textColor,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '$count songs',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: subtextColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 4,
-                    ),
-                    child: Text(
-                      'All Artists',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                        letterSpacing: -0.3,
+          // Expanded Artist List/Grid Content
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.only(bottom: _playingTrack != null ? 84 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Artists Carousel (when search is empty & >= 3 top artists exist)
+                  if (_searchQuery.isEmpty && topArtistsList.length >= 3) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 4,
+                      ),
+                      child: Text(
+                        'Top Artists',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                          letterSpacing: -0.3,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 140,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: topArtistsList.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 16),
+                        itemBuilder: (context, index) {
+                          final artistName = topArtistsList[index];
+                          final artistSongs = artistTracksMap[artistName] ?? [];
+                          final count = artistSongs.length;
+                          final firstTrack = artistSongs.isNotEmpty
+                              ? artistSongs.first
+                              : Track(
+                                  id: '',
+                                  title: '',
+                                  artist: artistName,
+                                  album: '',
+                                  url: '',
+                                  path: '',
+                                  lyrics: const [],
+                                  duration: 0,
+                                );
 
-                // Grid View OR List View rendering
-                if (_artistViewMode == 'grid')
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.88,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
-                          ),
-                      itemCount: artists.length,
-                      itemBuilder: (context, index) {
-                        final artist = artists[index];
-                        final songCount = activeTrackPool
-                            .where((t) => t.artist == artist)
-                            .length;
-                        final firstTrack = activeTrackPool.firstWhere(
-                          (t) => t.artist == artist,
-                        );
-                        final shouldAnimate = !_animatedArtistIds.contains(
-                          artist,
-                        );
-                        final count = _animatedArtistIds.length;
-                        final staggerIndex = count < 8 ? count : 0;
-                        if (shouldAnimate) {
-                          _animatedArtistIds.add(artist);
-                        }
-
-                        return _FadeInSlideUp(
-                          animate: shouldAnimate,
-                          delay: Duration(milliseconds: staggerIndex * 35),
-                          child: GestureDetector(
+                          return GestureDetector(
                             onTap: () {
                               setState(() {
-                                _selectedArtistDetail = artist;
+                                _selectedArtistDetail = artistName;
                                 _searchQuery = '';
                                 _searchController.clear();
-                                final artistSongs = activeTrackPool
-                                    .where((t) => t.artist == artist)
-                                    .toList();
                                 _detailColorFuture = _getDetailColor(
                                   artistSongs.isNotEmpty
                                       ? artistSongs.first
@@ -1121,149 +1048,294 @@ extension _TabsUI on _MainScreenState {
                                 );
                               });
                             },
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: isLight
-                                    ? Colors.white
-                                    : const Color(0xFF1B1B1E),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: isLight
-                                      ? Colors.black.withValues(alpha: 0.04)
-                                      : Colors.white.withValues(alpha: 0.05),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(
-                                      alpha: isLight ? 0.03 : 0.2,
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: _activeAccentColor.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                      width: 2,
                                     ),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
                                   ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  _buildTrackArtwork(
+                                  child: _buildTrackArtwork(
                                     firstTrack,
-                                    size: 92,
-                                    radius: 46,
+                                    size: 76,
+                                    radius: 38,
                                   ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    artist,
+                                ),
+                                const SizedBox(height: 6),
+                                SizedBox(
+                                  width: 84,
+                                  child: Text(
+                                    artistName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       color: textColor,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '$songCount ${AppLocalizations.of(context).songsCount}',
-                                    style: TextStyle(
-                                      color: subtextColor,
-                                      fontSize: 12,
-                                    ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$count ${AppLocalizations.of(context).songsCount}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: subtextColor,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: artists.length,
-                      itemBuilder: (context, index) {
-                        final artist = artists[index];
-                        final songCount = activeTrackPool
-                            .where((t) => t.artist == artist)
-                            .length;
-                        final firstTrack = activeTrackPool.firstWhere(
-                          (t) => t.artist == artist,
-                        );
-                        final shouldAnimate = !_animatedArtistIds.contains(
-                          artist,
-                        );
-                        final count = _animatedArtistIds.length;
-                        final staggerIndex = count < 8 ? count : 0;
-                        if (shouldAnimate) {
-                          _animatedArtistIds.add(artist);
-                        }
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 4,
+                      ),
+                      child: Text(
+                        'All Artists',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
 
-                        return _FadeInSlideUp(
-                          animate: shouldAnimate,
-                          delay: Duration(milliseconds: staggerIndex * 35),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 4,
+                  // Grid View OR List View rendering
+                  if (_artistViewMode == 'grid')
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.88,
+                              crossAxisSpacing: 14,
+                              mainAxisSpacing: 14,
                             ),
-                            onTap: () {
-                              setState(() {
-                                _selectedArtistDetail = artist;
-                                _searchQuery = '';
-                                _searchController.clear();
-                                final artistSongs = activeTrackPool
-                                    .where((t) => t.artist == artist)
-                                    .toList();
-                                _detailColorFuture = _getDetailColor(
-                                  artistSongs.isNotEmpty
-                                      ? artistSongs.first
-                                      : null,
+                        itemCount: artists.length,
+                        itemBuilder: (context, index) {
+                          final artist = artists[index];
+                          final artistSongs = artistTracksMap[artist] ?? [];
+                          final songCount = artistSongs.length;
+                          final firstTrack = artistSongs.isNotEmpty
+                              ? artistSongs.first
+                              : Track(
+                                  id: '',
+                                  title: '',
+                                  artist: artist,
+                                  album: '',
+                                  url: '',
+                                  path: '',
+                                  lyrics: const [],
+                                  duration: 0,
                                 );
-                              });
-                            },
-                            leading: _buildTrackArtwork(
-                              firstTrack,
-                              size: 48,
-                              radius: 24,
-                            ),
-                            title: Text(
-                              artist,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                                color: textColor,
+                          final shouldAnimate = !_animatedArtistIds.contains(
+                            artist,
+                          );
+                          final count = _animatedArtistIds.length;
+                          final staggerIndex = count < 8 ? count : 0;
+                          if (shouldAnimate) {
+                            _animatedArtistIds.add(artist);
+                          }
+
+                          return _FadeInSlideUp(
+                            animate: shouldAnimate,
+                            delay: Duration(milliseconds: staggerIndex * 35),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedArtistDetail = artist;
+                                  _searchQuery = '';
+                                  _searchController.clear();
+                                  _detailColorFuture = _getDetailColor(
+                                    artistSongs.isNotEmpty
+                                        ? artistSongs.first
+                                        : null,
+                                  );
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isLight
+                                      ? Colors.white
+                                      : const Color(0xFF1B1B1E),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: isLight
+                                        ? Colors.black.withValues(alpha: 0.04)
+                                        : Colors.white.withValues(alpha: 0.05),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: isLight ? 0.03 : 0.2,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _buildTrackArtwork(
+                                      firstTrack,
+                                      size: 92,
+                                      radius: 46,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      artist,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '$songCount ${AppLocalizations.of(context).songsCount}',
+                                      style: TextStyle(
+                                        color: subtextColor,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            subtitle: Text(
-                              '$songCount ${AppLocalizations.of(context).songsCount}',
-                              style: TextStyle(
-                                color: subtextColor,
-                                fontSize: 12,
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: artists.length,
+                        itemBuilder: (context, index) {
+                          final artist = artists[index];
+                          final artistSongs = artistTracksMap[artist] ?? [];
+                          final songCount = artistSongs.length;
+                          final firstTrack = artistSongs.isNotEmpty
+                              ? artistSongs.first
+                              : Track(
+                                  id: '',
+                                  title: '',
+                                  artist: artist,
+                                  album: '',
+                                  url: '',
+                                  path: '',
+                                  lyrics: const [],
+                                  duration: 0,
+                                );
+                          final shouldAnimate = !_animatedArtistIds.contains(
+                            artist,
+                          );
+                          final count = _animatedArtistIds.length;
+                          final staggerIndex = count < 8 ? count : 0;
+                          if (shouldAnimate) {
+                            _animatedArtistIds.add(artist);
+                          }
+
+                          return _FadeInSlideUp(
+                            animate: shouldAnimate,
+                            delay: Duration(milliseconds: staggerIndex * 35),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                              ),
+                              onTap: () {
+                                setState(() {
+                                  _selectedArtistDetail = artist;
+                                  _searchQuery = '';
+                                  _searchController.clear();
+                                  _detailColorFuture = _getDetailColor(
+                                    artistSongs.isNotEmpty
+                                        ? artistSongs.first
+                                        : null,
+                                  );
+                                });
+                              },
+                              leading: _buildTrackArtwork(
+                                firstTrack,
+                                size: 48,
+                                radius: 24,
+                              ),
+                              title: Text(
+                                artist,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: textColor,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '$songCount ${AppLocalizations.of(context).songsCount}',
+                                style: TextStyle(
+                                  color: subtextColor,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              trailing: Icon(
+                                Icons.arrow_forward_ios,
+                                color: isLight ? Colors.black26 : Colors.white24,
+                                size: 14,
                               ),
                             ),
-                            trailing: Icon(
-                              Icons.arrow_forward_ios,
-                              color: isLight ? Colors.black26 : Colors.white24,
-                              size: 14,
-                            ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
+  bool _isValidAlbumName(String albumName) {
+    final l = albumName.toLowerCase().trim();
+    return l.isNotEmpty &&
+        l != '<unknown>' &&
+        l != 'unknown' &&
+        l != 'unknown album' &&
+        l != 'single' &&
+        l != 'singles';
+  }
+
   Widget _buildAlbumsTab() {
+    final key = "albums_${_searchSourceIndex}_$_albumsAnimToken";
+    final bool shouldAnimateTab = !_visitedTabKeys.contains(key);
+    if (shouldAnimateTab) {
+      _visitedTabKeys.add(key);
+    }
+
     final List<Track> activeTrackPool = _searchSourceIndex == 1
         ? {
             ..._onlineHistoryTracks,
@@ -1272,95 +1344,104 @@ extension _TabsUI on _MainScreenState {
           }.toList()
         : _allTracks;
 
-    final List<String> albums = [];
-    final seenAlbums = <String>{};
-
-    if (_sortBy == 'date') {
-      for (final t in activeTrackPool) {
-        if (t.album.isNotEmpty &&
-            t.album != '<unknown>' &&
-            seenAlbums.add(t.album)) {
-          albums.add(t.album);
-        }
-      }
-    } else if (_sortBy == 'date_oldest') {
-      for (final t in activeTrackPool.reversed) {
-        if (t.album.isNotEmpty &&
-            t.album != '<unknown>' &&
-            seenAlbums.add(t.album)) {
-          albums.add(t.album);
-        }
-      }
-    } else if (_sortBy == 'duration_longest') {
-      final Map<String, int> maxDuration = {};
-      for (final t in activeTrackPool) {
-        final current = maxDuration[t.album] ?? 0;
-        if (t.duration > current) {
-          maxDuration[t.album] = t.duration;
-        }
-      }
-      final allUnique = activeTrackPool
-          .where((t) => t.album.isNotEmpty && t.album != '<unknown>')
-          .map((t) => t.album)
-          .toSet()
-          .toList();
-      allUnique.sort(
-        (a, b) => (maxDuration[b] ?? 0).compareTo(maxDuration[a] ?? 0),
-      );
-      albums.addAll(allUnique);
-    } else if (_sortBy == 'duration_shortest') {
-      final Map<String, int> minDuration = {};
-      for (final t in activeTrackPool) {
-        final current = minDuration[t.album] ?? 99999999;
-        if (t.duration < current) {
-          minDuration[t.album] = t.duration;
-        }
-      }
-      final allUnique = activeTrackPool
-          .where((t) => t.album.isNotEmpty && t.album != '<unknown>')
-          .map((t) => t.album)
-          .toSet()
-          .toList();
-      allUnique.sort(
-        (a, b) => (minDuration[a] ?? 0).compareTo(minDuration[b] ?? 0),
-      );
-      albums.addAll(allUnique);
-    } else {
-      final allUnique =
-          activeTrackPool
-              .where((t) => t.album.isNotEmpty && t.album != '<unknown>')
-              .map((t) => t.album)
-              .toSet()
-              .toList()
-            ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-      albums.addAll(allUnique);
+    if (_searchSourceIndex == 1 && _isOnlineSearching && activeTrackPool.isEmpty) {
+      return _buildOnlineAlbumsSkeleton();
     }
 
-    if (_searchQuery.isNotEmpty) {
-      albums.retainWhere(
-        (a) => a.toLowerCase().contains(_searchQuery.toLowerCase()),
-      );
+    if (_memoAlbumTracksMap == null ||
+        _memoAlbumPoolLen != activeTrackPool.length ||
+        _memoAlbumSortBy != _sortBy ||
+        _memoAlbumSearchQuery != _searchQuery ||
+        _memoAlbumSearchSource != _searchSourceIndex) {
+      final Map<String, List<Track>> albumTracksMap = {};
+      for (final t in activeTrackPool) {
+        if (_isValidAlbumName(t.album)) {
+          (albumTracksMap[t.album] ??= []).add(t);
+        }
+      }
+
+      final List<String> albums = [];
+      final seenAlbums = <String>{};
+
+      if (_sortBy == 'date') {
+        for (final t in activeTrackPool) {
+          if (_isValidAlbumName(t.album) && seenAlbums.add(t.album)) {
+            albums.add(t.album);
+          }
+        }
+      } else if (_sortBy == 'date_oldest') {
+        for (final t in activeTrackPool.reversed) {
+          if (_isValidAlbumName(t.album) && seenAlbums.add(t.album)) {
+            albums.add(t.album);
+          }
+        }
+      } else if (_sortBy == 'duration_longest') {
+        final Map<String, int> maxDuration = {};
+        for (final t in activeTrackPool) {
+          final current = maxDuration[t.album] ?? 0;
+          if (t.duration > current) {
+            maxDuration[t.album] = t.duration;
+          }
+        }
+        final allUnique = albumTracksMap.keys.toList();
+        allUnique.sort(
+          (a, b) => (maxDuration[b] ?? 0).compareTo(maxDuration[a] ?? 0),
+        );
+        albums.addAll(allUnique);
+      } else if (_sortBy == 'duration_shortest') {
+        final Map<String, int> minDuration = {};
+        for (final t in activeTrackPool) {
+          final current = minDuration[t.album] ?? 99999999;
+          if (t.duration < current) {
+            minDuration[t.album] = t.duration;
+          }
+        }
+        final allUnique = albumTracksMap.keys.toList();
+        allUnique.sort(
+          (a, b) => (minDuration[a] ?? 0).compareTo(minDuration[a] ?? 0),
+        );
+        albums.addAll(allUnique);
+      } else {
+        final allUnique = albumTracksMap.keys.toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+        albums.addAll(allUnique);
+      }
+
+      if (_searchQuery.isNotEmpty) {
+        albums.retainWhere(
+          (a) => a.toLowerCase().contains(_searchQuery.toLowerCase()),
+        );
+      }
+
+      final List<MapEntry<String, int>> topAlbumCounts = [];
+      albumTracksMap.forEach((name, tracks) {
+        topAlbumCounts.add(MapEntry(name, tracks.length));
+      });
+      topAlbumCounts.sort((a, b) => b.value.compareTo(a.value));
+      final topAlbumsList = topAlbumCounts.take(8).map((e) => e.key).toList();
+
+      _memoAlbumTracksMap = albumTracksMap;
+      _memoAlbumsList = albums;
+      _memoTopAlbumsList = topAlbumsList;
+      _memoAlbumSortBy = _sortBy;
+      _memoAlbumSearchQuery = _searchQuery;
+      _memoAlbumPoolLen = activeTrackPool.length;
+      _memoAlbumSearchSource = _searchSourceIndex;
     }
+
+    final albumTracksMap = _memoAlbumTracksMap!;
+    final albums = _memoAlbumsList!;
+    final topAlbumsList = _memoTopAlbumsList!;
 
     final isLight = isAppLight;
     final textColor = isLight ? const Color(0xFF1A1A1A) : Colors.white;
     final subtextColor = isLight ? Colors.black54 : Colors.white54;
 
-    // Calculate Top Albums for top carousel using activeTrackPool (played songs)
-    final List<MapEntry<String, int>> topAlbumCounts = [];
-    final Map<String, int> albumSongCounts = {};
-    for (final t in activeTrackPool) {
-      if (t.album.isNotEmpty && t.album != '<unknown>') {
-        albumSongCounts[t.album] = (albumSongCounts[t.album] ?? 0) + 1;
-      }
-    }
-    topAlbumCounts.addAll(
-      albumSongCounts.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value)),
-    );
-    final topAlbumsList = topAlbumCounts.take(8).map((e) => e.key).toList();
-
-    return Column(
+    return _FadeInSlideUp(
+      key: ValueKey(key),
+      animate: shouldAnimateTab,
+      delay: Duration.zero,
+      child: Column(
       children: [
         // Sub-header with album count & Grid/List layout switcher
         Padding(
@@ -1444,10 +1525,20 @@ extension _TabsUI on _MainScreenState {
                       separatorBuilder: (_, _) => const SizedBox(width: 16),
                       itemBuilder: (context, index) {
                         final albumName = topAlbumsList[index];
-                        final count = albumSongCounts[albumName] ?? 0;
-                        final firstTrack = activeTrackPool.firstWhere(
-                          (t) => t.album == albumName,
-                        );
+                        final albumSongs = albumTracksMap[albumName] ?? [];
+                        final count = albumSongs.length;
+                        final firstTrack = albumSongs.isNotEmpty
+                            ? albumSongs.first
+                            : Track(
+                                id: '',
+                                title: '',
+                                artist: '',
+                                album: albumName,
+                                url: '',
+                                path: '',
+                                lyrics: const [],
+                                duration: 0,
+                              );
 
                         return GestureDetector(
                           onTap: () {
@@ -1455,13 +1546,8 @@ extension _TabsUI on _MainScreenState {
                               _selectedAlbumDetail = albumName;
                               _searchQuery = '';
                               _searchController.clear();
-                              final albumSongs = activeTrackPool
-                                  .where((t) => t.album == albumName)
-                                  .toList();
                               _detailColorFuture = _getDetailColor(
-                                albumSongs.isNotEmpty
-                                    ? albumSongs.first
-                                    : null,
+                                albumSongs.isNotEmpty ? albumSongs.first : null,
                               );
                             });
                           },
@@ -1564,12 +1650,20 @@ extension _TabsUI on _MainScreenState {
                       itemCount: albums.length,
                       itemBuilder: (context, index) {
                         final album = albums[index];
-                        final songCount = activeTrackPool
-                            .where((t) => t.album == album)
-                            .length;
-                        final firstTrack = activeTrackPool.firstWhere(
-                          (t) => t.album == album,
-                        );
+                        final albumSongs = albumTracksMap[album] ?? [];
+                        final songCount = albumSongs.length;
+                        final firstTrack = albumSongs.isNotEmpty
+                            ? albumSongs.first
+                            : Track(
+                                id: '',
+                                title: '',
+                                artist: '',
+                                album: album,
+                                url: '',
+                                path: '',
+                                lyrics: const [],
+                                duration: 0,
+                              );
                         final shouldAnimate = !_animatedAlbumIds.contains(
                           album,
                         );
@@ -1588,9 +1682,6 @@ extension _TabsUI on _MainScreenState {
                                 _selectedAlbumDetail = album;
                                 _searchQuery = '';
                                 _searchController.clear();
-                                final albumSongs = activeTrackPool
-                                    .where((t) => t.album == album)
-                                    .toList();
                                 _detailColorFuture = _getDetailColor(
                                   albumSongs.isNotEmpty
                                       ? albumSongs.first
@@ -1713,12 +1804,20 @@ extension _TabsUI on _MainScreenState {
                       itemCount: albums.length,
                       itemBuilder: (context, index) {
                         final album = albums[index];
-                        final songCount = activeTrackPool
-                            .where((t) => t.album == album)
-                            .length;
-                        final firstTrack = activeTrackPool.firstWhere(
-                          (t) => t.album == album,
-                        );
+                        final albumSongs = albumTracksMap[album] ?? [];
+                        final songCount = albumSongs.length;
+                        final firstTrack = albumSongs.isNotEmpty
+                            ? albumSongs.first
+                            : Track(
+                                id: '',
+                                title: '',
+                                artist: '',
+                                album: album,
+                                url: '',
+                                path: '',
+                                lyrics: const [],
+                                duration: 0,
+                              );
                         final shouldAnimate = !_animatedAlbumIds.contains(
                           album,
                         );
@@ -1740,9 +1839,6 @@ extension _TabsUI on _MainScreenState {
                                 _selectedAlbumDetail = album;
                                 _searchQuery = '';
                                 _searchController.clear();
-                                final albumSongs = activeTrackPool
-                                    .where((t) => t.album == album)
-                                    .toList();
                                 _detailColorFuture = _getDetailColor(
                                   albumSongs.isNotEmpty
                                       ? albumSongs.first
@@ -1792,6 +1888,7 @@ extension _TabsUI on _MainScreenState {
           ),
         ),
       ],
+    ),
     );
   }
 
@@ -2027,44 +2124,61 @@ extension _TabsUI on _MainScreenState {
         }
       }
 
-      List<Track> similarTracks = [];
-      if (favArtist.isNotEmpty) {
-        try {
-          similarTracks = await InnerTubeService().fetchSimilarArtistTracks(
-            favArtist,
-          );
-        } catch (_) {}
+      // IMMEDIATELY render home content with history & quick picks!
+      if (mounted && _onlineSearchRequestId == requestId) {
+        setState(() {
+          _onlineHistoryTracks = history;
+          _onlineQuickPicks = quickPicks;
+          _favoriteArtistName = favArtist;
+          _recommendedArtists = artistsList;
+          _onlineSearchResults = quickPicks;
+          _isOnlineSearching = false;
+          _isOnlineContentLoaded = true;
+          _isShowingOnlineHistory = history.isNotEmpty;
+        });
       }
 
-      final onlineFavs = await InnerTubeService().getOnlineFavorites();
-      final userOnlinePls = await InnerTubeService().getUserOnlinePlaylists();
-      final cachedPlTracks = await InnerTubeService()
-          .getOnlinePlaylistTracksCache();
-      if (cachedPlTracks.isNotEmpty) {
-        _onlinePlaylistTracks.addAll(cachedPlTracks);
-      }
-      for (final f in onlineFavs) {
-        _favoriteTrackIds.add(f.id);
-        if (f.videoId != null) _favoriteTrackIds.add(f.videoId!);
-      }
+      // Fetch secondary data in background without blocking Home UI loading state
+      Future.microtask(() async {
+        List<Track> similarTracks = [];
+        if (favArtist.isNotEmpty) {
+          try {
+            similarTracks = await InnerTubeService().fetchSimilarArtistTracks(
+              favArtist,
+            );
+          } catch (_) {}
+        }
 
-      if (!mounted || _onlineSearchRequestId != requestId) return;
+        final onlineFavs = await InnerTubeService().getOnlineFavorites();
+        final userOnlinePls = await InnerTubeService().getUserOnlinePlaylists();
+        final cachedPlTracks = await InnerTubeService()
+            .getOnlinePlaylistTracksCache();
 
-      setState(() {
-        _onlineFavoriteTracks.clear();
-        _onlineFavoriteTracks.addAll(onlineFavs);
-        _userOnlinePlaylists.clear();
-        _userOnlinePlaylists.addAll(userOnlinePls);
-        _onlineHistoryTracks = history;
-        _onlineQuickPicks = quickPicks;
-        _similarArtistTracks = similarTracks;
-        _favoriteArtistName = favArtist;
-        _recommendedArtists = artistsList;
-        _onlineSearchResults = quickPicks;
-        _isOnlineSearching = false;
-        _isOnlineContentLoaded = true;
-        _isShowingOnlineHistory = history.isNotEmpty;
+        if (cachedPlTracks.isNotEmpty) {
+          _onlinePlaylistTracks.addAll(cachedPlTracks);
+        }
+        for (final f in onlineFavs) {
+          _favoriteTrackIds.add(f.id);
+          if (f.videoId != null) _favoriteTrackIds.add(f.videoId!);
+        }
+
+        if (mounted && _onlineSearchRequestId == requestId) {
+          setState(() {
+            _onlineFavoriteTracks.clear();
+            _onlineFavoriteTracks.addAll(onlineFavs);
+            _userOnlinePlaylists.clear();
+            _userOnlinePlaylists.addAll(userOnlinePls);
+            _similarArtistTracks = similarTracks;
+          });
+        }
       });
+    }).catchError((err) {
+      if (mounted && _onlineSearchRequestId == requestId) {
+        setState(() {
+          _isOnlineSearching = false;
+          _isOnlineContentLoaded = true;
+        });
+      }
     });
   }
 
@@ -2769,14 +2883,19 @@ extension _TabsUI on _MainScreenState {
             return Expanded(
               child: GestureDetector(
                 onTap: () {
-                  if (_currentPageIndex != index) {
-                    setState(() {
-                      _animatedTrackIds.clear();
-                      _animatedPlaylistIds.clear();
-                      _animatedArtistIds.clear();
-                      _animatedAlbumIds.clear();
+                  setState(() {
+                    if (index == 0) {
+                      _songsAnimToken++;
                       _homeAnimToken++;
-                    });
+                    } else if (index == 1) {
+                      _playlistsAnimToken++;
+                    } else if (index == 2) {
+                      _artistsAnimToken++;
+                    } else if (index == 3) {
+                      _albumsAnimToken++;
+                    }
+                  });
+                  if (_currentPageIndex != index) {
                     _pageController.jumpToPage(index);
                   }
                 },
@@ -2810,6 +2929,252 @@ extension _TabsUI on _MainScreenState {
             );
           }).toList(),
         ),
+      ),
+    );
+  }
+
+  Widget _buildOnlineHomeSkeleton() {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 16, left: 24, right: 24, bottom: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              _SkeletonBox(width: 140, height: 24, borderRadius: 6),
+              _SkeletonBox(width: 70, height: 26, borderRadius: 13),
+            ],
+          ),
+          const SizedBox(height: 16),
+          for (int i = 0; i < 6; i++) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  const _SkeletonBox(width: 52, height: 52, borderRadius: 8),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        _SkeletonBox(width: 180, height: 14, borderRadius: 4),
+                        SizedBox(height: 8),
+                        _SkeletonBox(width: 110, height: 12, borderRadius: 4),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          const _SkeletonBox(width: 160, height: 24, borderRadius: 6),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 150,
+            child: Row(
+              children: const [
+                _SkeletonBox(width: 140, height: 150, borderRadius: 14),
+                SizedBox(width: 14),
+                _SkeletonBox(width: 140, height: 150, borderRadius: 14),
+                SizedBox(width: 14),
+                _SkeletonBox(width: 40, height: 150, borderRadius: 14),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const _SkeletonBox(width: 180, height: 24, borderRadius: 6),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Column(
+                children: [
+                  _SkeletonBox(width: 75, height: 75, borderRadius: 38),
+                  SizedBox(height: 8),
+                  _SkeletonBox(width: 65, height: 12, borderRadius: 4),
+                ],
+              ),
+              Column(
+                children: [
+                  _SkeletonBox(width: 75, height: 75, borderRadius: 38),
+                  SizedBox(height: 8),
+                  _SkeletonBox(width: 65, height: 12, borderRadius: 4),
+                ],
+              ),
+              Column(
+                children: [
+                  _SkeletonBox(width: 75, height: 75, borderRadius: 38),
+                  SizedBox(height: 8),
+                  _SkeletonBox(width: 65, height: 12, borderRadius: 4),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnlinePlaylistsSkeleton() {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 16, bottom: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: _SkeletonBox(width: 180, height: 24, borderRadius: 6),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 190,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 4,
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
+              itemBuilder: (_, _) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  _SkeletonBox(width: 140, height: 140, borderRadius: 12),
+                  SizedBox(height: 8),
+                  _SkeletonBox(width: 110, height: 14, borderRadius: 4),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: _SkeletonBox(width: 140, height: 22, borderRadius: 6),
+          ),
+          const SizedBox(height: 12),
+          for (int i = 0; i < 6; i++) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+              child: Row(
+                children: [
+                  const _SkeletonBox(width: 56, height: 56, borderRadius: 10),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      _SkeletonBox(width: 160, height: 14, borderRadius: 4),
+                      SizedBox(height: 6),
+                      _SkeletonBox(width: 90, height: 12, borderRadius: 4),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnlineArtistsSkeleton() {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 16, left: 24, right: 24, bottom: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SkeletonBox(width: 140, height: 22, borderRadius: 6),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Column(
+                children: [
+                  _SkeletonBox(width: 80, height: 80, borderRadius: 40),
+                  SizedBox(height: 8),
+                  _SkeletonBox(width: 70, height: 12, borderRadius: 4),
+                ],
+              ),
+              Column(
+                children: [
+                  _SkeletonBox(width: 80, height: 80, borderRadius: 40),
+                  SizedBox(height: 8),
+                  _SkeletonBox(width: 70, height: 12, borderRadius: 4),
+                ],
+              ),
+              Column(
+                children: [
+                  _SkeletonBox(width: 80, height: 80, borderRadius: 40),
+                  SizedBox(height: 8),
+                  _SkeletonBox(width: 70, height: 12, borderRadius: 4),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          for (int i = 0; i < 7; i++) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(
+                children: [
+                  const _SkeletonBox(width: 52, height: 52, borderRadius: 26),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      _SkeletonBox(width: 150, height: 14, borderRadius: 4),
+                      SizedBox(height: 6),
+                      _SkeletonBox(width: 80, height: 12, borderRadius: 4),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnlineAlbumsSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, left: 24, right: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SkeletonBox(width: 120, height: 22, borderRadius: 6),
+          const SizedBox(height: 16),
+          Expanded(
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: 0.82,
+              ),
+              itemCount: 6,
+              itemBuilder: (_, _) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Expanded(
+                    child: _SkeletonBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      borderRadius: 16,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  _SkeletonBox(width: 120, height: 14, borderRadius: 4),
+                  SizedBox(height: 4),
+                  _SkeletonBox(width: 70, height: 12, borderRadius: 4),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2915,6 +3280,65 @@ class _FadeInSlideUpState extends State<_FadeInSlideUp> {
         );
       },
       child: widget.child,
+    );
+  }
+}
+
+class _SkeletonBox extends StatefulWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+
+  const _SkeletonBox({
+    required this.width,
+    required this.height,
+    this.borderRadius = 8,
+  });
+
+  @override
+  State<_SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<_SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.08, end: 0.22).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLight = isAppLight;
+    final baseColor = isLight ? Colors.black : Colors.white;
+
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: baseColor.withValues(alpha: _animation.value),
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+          ),
+        );
+      },
     );
   }
 }

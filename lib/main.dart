@@ -62,6 +62,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
+  await ArtworkCacheManager.init();
+
   final prefs = await SharedPreferences.getInstance();
   final playTogether = prefs.getBool('playTogether') ?? false;
   await configureAudioSession(playTogether);
@@ -382,6 +384,29 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   late PageController _pageController;
   int _currentPageIndex = 0;
 
+  // Memoization fields for local tabs optimization
+  List<Track>? _memoSongsSorted;
+  List<Track>? _memoSongsDisplayed;
+  String? _memoSongsSortBy;
+  String? _memoSongsSearchQuery;
+  int? _memoSongsAllTracksLen;
+
+  Map<String, List<Track>>? _memoArtistTracksMap;
+  List<String>? _memoArtistsList;
+  List<String>? _memoTopArtistsList;
+  String? _memoArtistSortBy;
+  String? _memoArtistSearchQuery;
+  int? _memoArtistPoolLen;
+  int? _memoArtistSearchSource;
+
+  Map<String, List<Track>>? _memoAlbumTracksMap;
+  List<String>? _memoAlbumsList;
+  List<String>? _memoTopAlbumsList;
+  String? _memoAlbumSortBy;
+  String? _memoAlbumSearchQuery;
+  int? _memoAlbumPoolLen;
+  int? _memoAlbumSearchSource;
+
   List<String> _lastPlayedTrackIds = [];
   List<String> get _allPlayedTrackIdsOrdered {
     final result = <String>[];
@@ -420,6 +445,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool _isOnlineContentLoaded = false;
   bool _showMoreQuickPicks = false;
   int _homeAnimToken = 0;
+  int _songsAnimToken = 0;
+  int _playlistsAnimToken = 0;
+  int _artistsAnimToken = 0;
+  int _albumsAnimToken = 0;
+  final Set<String> _visitedTabKeys = {};
   String? _selectedMoodFilter;
   final ImagePicker _imagePicker = ImagePicker();
 
