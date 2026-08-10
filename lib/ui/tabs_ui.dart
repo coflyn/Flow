@@ -139,6 +139,15 @@ extension _TabsUI on _MainScreenState {
   }
 
   Widget _buildPlaylistsTab() {
+    if (_searchSourceIndex == 1) {
+      return _FadeInSlideUp(
+        key: ValueKey('online_playlists_$_homeAnimToken'),
+        animate: true,
+        delay: Duration.zero,
+        child: _buildOnlinePlaylistsView(),
+      );
+    }
+
     final favorites = _allTracks
         .where((t) => _favoriteTrackIds.contains(t.id))
         .toList();
@@ -257,6 +266,492 @@ extension _TabsUI on _MainScreenState {
           child: children[index],
         );
       },
+    );
+  }
+
+  Future<void> _loadOnlinePlaylistsTabContent() async {
+    if (_isOnlinePlaylistsLoaded) return;
+    setState(() {
+      _isOnlinePlaylistsSearching = true;
+    });
+
+    try {
+      final trending = await InnerTubeService().fetchTrendingPlaylists();
+      if (mounted) {
+        setState(() {
+          _onlineTrendingPlaylists = trending;
+          _isOnlinePlaylistsLoaded = true;
+          _isOnlinePlaylistsSearching = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isOnlinePlaylistsSearching = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchAndShowOnlinePlaylistDetails(
+    String playlistId,
+    String playlistTitle, {
+    bool isImport = false,
+  }) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isAppLight ? Colors.white : const Color(0xFF1E1E1E),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: _activeAccentColor),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading Playlist...',
+                  style: TextStyle(
+                    color: isAppLight ? Colors.black87 : Colors.white70,
+                    fontSize: 14,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final details = await InnerTubeService().fetchOnlinePlaylistDetails(
+        playlistId,
+        defaultTitle: playlistTitle,
+      );
+      final finalTitle = details['title'] as String;
+      final tracks = details['tracks'] as List<Track>;
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (tracks.isNotEmpty) {
+          setState(() {
+            _cachedDetailKey = null;
+            _onlinePlaylistTracks[finalTitle] = tracks;
+            if (isImport) {
+              _userOnlinePlaylists[finalTitle] = tracks;
+              InnerTubeService().saveUserOnlinePlaylists(_userOnlinePlaylists);
+              showFlowToast('Playlist "$finalTitle" imported to My Playlists');
+            }
+            _selectedPlaylistDetail = finalTitle;
+            _searchQuery = '';
+            _searchController.clear();
+            _detailColorFuture = _getDetailColor(
+              tracks.first,
+              playlistName: finalTitle,
+            );
+          });
+        } else {
+          showFlowToast('Failed to load playlist tracks');
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        showFlowToast('Failed to load playlist');
+      }
+    }
+  }
+
+  Widget _buildOnlinePlaylistsView() {
+    final isLight = isAppLight;
+    final textColor = isLight ? const Color(0xFF1A1A1A) : Colors.white;
+    final subtextColor = isLight ? Colors.black54 : Colors.white54;
+
+    if (!_isOnlinePlaylistsLoaded && !_isOnlinePlaylistsSearching) {
+      _loadOnlinePlaylistsTabContent();
+    }
+
+    if (_isOnlinePlaylistsSearching && _onlineTrendingPlaylists.isEmpty) {
+      return Center(
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: CircularProgressIndicator(
+            color: _activeAccentColor,
+            strokeWidth: 3,
+          ),
+        ),
+      );
+    }
+
+    final onlineFavorites = _onlineFavoriteTracks;
+    final onlineLastPlayed = _onlineHistoryTracks;
+    final List<Track> rawOnlineMostPlayed = List.from(_onlineHistoryTracks);
+    rawOnlineMostPlayed.sort(
+      (a, b) => (_playCounts[b.id] ?? _playCounts[b.videoId] ?? 0).compareTo(
+        _playCounts[a.id] ?? _playCounts[a.videoId] ?? 0,
+      ),
+    );
+    final onlineMostPlayed = rawOnlineMostPlayed
+        .where((t) => (_playCounts[t.id] ?? _playCounts[t.videoId] ?? 0) > 0)
+        .toList();
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.only(
+        top: 16,
+        bottom: _playingTrack != null ? 84 : 32,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Trending Community Playlists Carousel
+          if (_onlineTrendingPlaylists.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Trending Playlists',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 200,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                scrollDirection: Axis.horizontal,
+                itemCount: _onlineTrendingPlaylists.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 14),
+                itemBuilder: (context, index) {
+                  final item = _onlineTrendingPlaylists[index];
+                  final title = item['title'] as String? ?? 'Playlist';
+                  final author = item['author'] as String? ?? 'YouTube Music';
+                  final thumb = item['thumbnailUrl'] as String? ?? '';
+                  final count = item['videoCount'] as int? ?? 0;
+
+                  return GestureDetector(
+                    onTap: () => _fetchAndShowOnlinePlaylistDetails(
+                      item['id'] as String,
+                      title,
+                    ),
+                    child: SizedBox(
+                      width: 140,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: isLight ? Colors.black12 : Colors.white12,
+                              image: thumb.isNotEmpty
+                                  ? DecorationImage(
+                                      image: NetworkImage(thumb),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: thumb.isEmpty
+                                ? const Icon(
+                                    Icons.playlist_play_rounded,
+                                    size: 48,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$count tracks • $author',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: subtextColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // 2. Create / Import Online Playlist Action Cards
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showCreateOnlinePlaylistModal(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            _activeAccentColor.withValues(alpha: 0.22),
+                            _activeAccentColor.withValues(alpha: 0.08),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _activeAccentColor.withValues(alpha: 0.35),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: _activeAccentColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.add_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              'New Playlist',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showImportOnlinePlaylistModal(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            _activeAccentColor.withValues(alpha: 0.22),
+                            _activeAccentColor.withValues(alpha: 0.08),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _activeAccentColor.withValues(alpha: 0.35),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: _activeAccentColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.link_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              'Import URL',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 3. Online Smart Playlists & User Playlists
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildPlaylistCard(
+                  AppLocalizations.of(context).favourites,
+                  onlineFavorites,
+                  const Color(0xFFE91E63),
+                  Icons.favorite,
+                ),
+                _buildPlaylistCard(
+                  'Recently Played',
+                  onlineLastPlayed,
+                  const Color(0xFFFF9800),
+                  Icons.history,
+                ),
+                _buildPlaylistCard(
+                  AppLocalizations.of(context).mostPlayed,
+                  onlineMostPlayed,
+                  const Color(0xFFF44336),
+                  Icons.local_fire_department,
+                ),
+                if (_userOnlinePlaylists.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, bottom: 8),
+                    child: Text(
+                      'My Playlists',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
+                  ..._userOnlinePlaylists.entries.map(
+                    (entry) => _buildPlaylistCard(
+                      entry.key,
+                      entry.value,
+                      _activeAccentColor,
+                      Icons.queue_music,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreateOnlinePlaylistModal(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create Online Playlist'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Playlist Name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                Navigator.pop(ctx);
+                setState(() {
+                  _userOnlinePlaylists[name] = [];
+                });
+                InnerTubeService().saveUserOnlinePlaylists(
+                  _userOnlinePlaylists,
+                );
+                showFlowToast('Playlist "$name" created');
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImportOnlinePlaylistModal(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import Playlist'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Paste YouTube Music Playlist Link / ID',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final input = controller.text.trim();
+              if (input.isNotEmpty) {
+                Navigator.pop(ctx);
+                String plId = input;
+                if (input.contains('list=')) {
+                  final uri = Uri.parse(input);
+                  plId = uri.queryParameters['list'] ?? input;
+                }
+                _fetchAndShowOnlinePlaylistDetails(
+                  plId,
+                  'Imported Playlist',
+                  isImport: true,
+                );
+              }
+            },
+            child: const Text('Import'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -639,7 +1134,13 @@ extension _TabsUI on _MainScreenState {
                       )
                     else
                       Text(
-                        _formatDuration(Duration(milliseconds: track.duration)),
+                        _formatDuration(
+                          Duration(
+                            milliseconds: track.duration > 0
+                                ? track.duration
+                                : 210000,
+                          ),
+                        ),
                         style: TextStyle(
                           color: isAppLight ? Colors.black45 : Colors.white38,
                           fontSize: 12,
@@ -731,9 +1232,20 @@ extension _TabsUI on _MainScreenState {
         } catch (_) {}
       }
 
+      final onlineFavs = await InnerTubeService().getOnlineFavorites();
+      final userOnlinePls = await InnerTubeService().getUserOnlinePlaylists();
+      for (final f in onlineFavs) {
+        _favoriteTrackIds.add(f.id);
+        if (f.videoId != null) _favoriteTrackIds.add(f.videoId!);
+      }
+
       if (!mounted || _onlineSearchRequestId != requestId) return;
 
       setState(() {
+        _onlineFavoriteTracks.clear();
+        _onlineFavoriteTracks.addAll(onlineFavs);
+        _userOnlinePlaylists.clear();
+        _userOnlinePlaylists.addAll(userOnlinePls);
         _onlineHistoryTracks = history;
         _onlineQuickPicks = quickPicks;
         _similarArtistTracks = similarTracks;
@@ -1073,7 +1585,8 @@ extension _TabsUI on _MainScreenState {
     List<Track>? sourceList,
   }) {
     final isLight = isAppLight;
-    final isPlayingThis = _playingTrack?.id == track.id ||
+    final isPlayingThis =
+        _playingTrack?.id == track.id ||
         (_playingTrack?.videoId != null &&
             track.videoId != null &&
             _playingTrack?.videoId == track.videoId);
@@ -1449,13 +1962,11 @@ extension _TabsUI on _MainScreenState {
                 onTap: () {
                   if (_currentPageIndex != index) {
                     setState(() {
-                      if (index == 0) {
-                        _animatedTrackIds.clear();
-                        _homeAnimToken++;
-                      }
-                      if (index == 1) _animatedPlaylistIds.clear();
-                      if (index == 2) _animatedArtistIds.clear();
-                      if (index == 3) _animatedAlbumIds.clear();
+                      _animatedTrackIds.clear();
+                      _animatedPlaylistIds.clear();
+                      _animatedArtistIds.clear();
+                      _animatedAlbumIds.clear();
+                      _homeAnimToken++;
                     });
                     _pageController.jumpToPage(index);
                   }

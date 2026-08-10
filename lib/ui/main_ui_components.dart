@@ -221,33 +221,37 @@ extension _MainUIComponents on _MainScreenState {
           _searchController.clear();
 
           List<Track> pSongs = [];
-          if (title == AppLocalizations.of(context).favourites) {
-            pSongs = _allTracks
-                .where((t) => _favoriteTrackIds.contains(t.id))
-                .toList();
-          } else if (title == AppLocalizations.of(context).recentlyAdded) {
-            pSongs = List.from(_allTracks);
-          } else if (title == AppLocalizations.of(context).lastPlayed) {
-            final trackMap = {for (var t in _allTracks) t.id: t};
-            pSongs = _allPlayedTrackIdsOrdered
-                .where((id) => trackMap.containsKey(id))
-                .map((id) => trackMap[id]!)
-                .toList();
-          } else if (title == AppLocalizations.of(context).mostPlayed) {
-            pSongs = List.from(_allTracks);
-            pSongs.sort(
-              (a, b) =>
-                  (_playCounts[b.id] ?? 0).compareTo(_playCounts[a.id] ?? 0),
-            );
-            pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
-          } else if (title == AppLocalizations.of(context).forgottenGems) {
-            pSongs = _allTracks.reversed
-                .where((t) => (_playCounts[t.id] ?? 0) <= 1)
-                .toList();
-          } else if (_userPlaylists.containsKey(title)) {
-            pSongs = _allTracks
-                .where((t) => _userPlaylists[title]!.contains(t.id))
-                .toList();
+          if (_searchSourceIndex == 1) {
+            pSongs = songs;
+          } else {
+            if (title == AppLocalizations.of(context).favourites) {
+              pSongs = _allTracks
+                  .where((t) => _favoriteTrackIds.contains(t.id))
+                  .toList();
+            } else if (title == AppLocalizations.of(context).recentlyAdded) {
+              pSongs = List.from(_allTracks);
+            } else if (title == AppLocalizations.of(context).lastPlayed) {
+              final trackMap = {for (var t in _allTracks) t.id: t};
+              pSongs = _allPlayedTrackIdsOrdered
+                  .where((id) => trackMap.containsKey(id))
+                  .map((id) => trackMap[id]!)
+                  .toList();
+            } else if (title == AppLocalizations.of(context).mostPlayed) {
+              pSongs = List.from(_allTracks);
+              pSongs.sort(
+                (a, b) =>
+                    (_playCounts[b.id] ?? 0).compareTo(_playCounts[a.id] ?? 0),
+              );
+              pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
+            } else if (title == AppLocalizations.of(context).forgottenGems) {
+              pSongs = _allTracks.reversed
+                  .where((t) => (_playCounts[t.id] ?? 0) <= 1)
+                  .toList();
+            } else if (_userPlaylists.containsKey(title)) {
+              pSongs = _allTracks
+                  .where((t) => _userPlaylists[title]!.contains(t.id))
+                  .toList();
+            }
           }
           _detailColorFuture = _getDetailColor(
             pSongs.isNotEmpty ? pSongs.first : null,
@@ -313,9 +317,7 @@ extension _MainUIComponents on _MainScreenState {
     IconData fallbackIcon,
     bool isFavorites,
   ) {
-    final displayTracks = tracks.take(3).toList();
-
-    if (displayTracks.isEmpty && !isFavorites) {
+    if (tracks.length < 4 && !isFavorites) {
       return Container(
         width: 56,
         height: 56,
@@ -326,6 +328,8 @@ extension _MainUIComponents on _MainScreenState {
         child: Icon(fallbackIcon, color: color, size: 24),
       );
     }
+
+    final displayTracks = tracks.take(3).toList();
 
     Widget topmostWidget;
     if (isFavorites) {

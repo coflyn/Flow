@@ -406,6 +406,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   List<Track> _similarArtistTracks = [];
   String _favoriteArtistName = '';
   List<Map<String, String>> _recommendedArtists = [];
+  List<Map<String, dynamic>> _onlineTrendingPlaylists = [];
+  final List<Map<String, dynamic>> _onlineSearchResultsPlaylists = [];
+  final List<Track> _onlineFavoriteTracks = [];
+  final Map<String, List<Track>> _onlinePlaylistTracks = {};
+  final Map<String, List<Track>> _userOnlinePlaylists = {};
+  bool _isOnlinePlaylistsSearching = false;
+  bool _isOnlinePlaylistsLoaded = false;
   bool _isOnlineContentLoaded = false;
   bool _showMoreQuickPicks = false;
   int _homeAnimToken = 0;

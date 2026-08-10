@@ -150,9 +150,12 @@ extension _AudioPlaybackLogic on _MainScreenState {
   }
 
   Future<Uri> _resolveTrackUri(Track track) async {
-    if (track.isOnline && track.videoId != null && track.videoId!.isNotEmpty) {
+    if (track.isOnline) {
+      final targetVId = track.videoId ?? track.id;
       final filePath = await InnerTubeService().getAudioStreamFilePath(
-        track.videoId!,
+        targetVId,
+        title: track.title,
+        artist: track.artist,
       );
       if (filePath != null && filePath.isNotEmpty) {
         return Uri.file(filePath);
@@ -229,13 +232,7 @@ extension _AudioPlaybackLogic on _MainScreenState {
       InnerTubeService().saveOnlineTrackToHistory(track);
       setState(() {
         final targetVId = track.videoId ?? track.id;
-        final isHistorySource = sourceList == _onlineHistoryTracks ||
-            (_playbackQueue.isNotEmpty &&
-                _playbackQueue.any(
-                  (t) =>
-                      t.id == track.id ||
-                      (t.videoId != null && t.videoId == targetVId),
-                ));
+        final isHistorySource = sourceList == _onlineHistoryTracks;
 
         _onlineHistoryTracks.removeWhere(
           (t) =>
@@ -1051,11 +1048,49 @@ extension _AudioPlaybackLogic on _MainScreenState {
   }
 
   void _toggleFavorite(String trackId) {
+    Track? targetTrack;
+    if (_playingTrack != null &&
+        (_playingTrack!.id == trackId || _playingTrack!.videoId == trackId)) {
+      targetTrack = _playingTrack;
+    } else {
+      final allPool = [
+        ..._allTracks,
+        ..._onlineHistoryTracks,
+        ..._onlineQuickPicks,
+        ..._onlineFavoriteTracks,
+        ..._onlineSearchResults,
+      ];
+      for (final t in allPool) {
+        if (t.id == trackId || (t.videoId != null && t.videoId == trackId)) {
+          targetTrack = t;
+          break;
+        }
+      }
+    }
+
     setState(() {
       if (_favoriteTrackIds.contains(trackId)) {
         _favoriteTrackIds.remove(trackId);
+        if (targetTrack != null && targetTrack.videoId != null) {
+          _favoriteTrackIds.remove(targetTrack.videoId);
+        }
+        if (targetTrack != null && targetTrack.isOnline) {
+          _onlineFavoriteTracks.removeWhere(
+            (t) =>
+                t.id == targetTrack!.id ||
+                (targetTrack.videoId != null && t.videoId == targetTrack.videoId),
+          );
+          InnerTubeService().removeOnlineFavoriteTrack(targetTrack);
+        }
       } else {
         _favoriteTrackIds.add(trackId);
+        if (targetTrack != null && targetTrack.videoId != null) {
+          _favoriteTrackIds.add(targetTrack.videoId!);
+        }
+        if (targetTrack != null && targetTrack.isOnline) {
+          _onlineFavoriteTracks.insert(0, targetTrack);
+          InnerTubeService().saveOnlineFavoriteTrack(targetTrack);
+        }
         final loc = lookupAppLocalizations(Locale(FlowStrings.currentLang));
         if (_playingFromName == loc.favourites) {
           _addTrackToQueueDynamically(trackId);

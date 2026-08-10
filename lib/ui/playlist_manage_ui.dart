@@ -48,20 +48,25 @@ extension _PlaylistManageUI on _MainScreenState {
                     ),
                     onTap: () {
                       Navigator.pop(context);
-                      _showCreatePlaylistModal(
-                        context,
-                        tracksToAdd: tracksToAdd,
-                      );
+                      if (_searchSourceIndex == 1 || (tracksToAdd.isNotEmpty && tracksToAdd.first.isOnline)) {
+                        _showCreateOnlinePlaylistModal(context);
+                      } else {
+                        _showCreatePlaylistModal(
+                          context,
+                          tracksToAdd: tracksToAdd,
+                        );
+                      }
                     },
                   ),
-                  if (_userPlaylists.isNotEmpty)
+                  if ((_searchSourceIndex == 1 || (tracksToAdd.isNotEmpty && tracksToAdd.first.isOnline) ? _userOnlinePlaylists : _userPlaylists).isNotEmpty)
                     Divider(
                       color: isLight
                           ? Colors.black.withValues(alpha: 0.08)
                           : Colors.white10,
                       height: 1,
                     ),
-                  ..._userPlaylists.keys.map((playlistName) {
+                  ...(_searchSourceIndex == 1 || (tracksToAdd.isNotEmpty && tracksToAdd.first.isOnline) ? _userOnlinePlaylists : _userPlaylists).keys.map((playlistName) {
+                    final isOnlineMode = _searchSourceIndex == 1 || (tracksToAdd.isNotEmpty && tracksToAdd.first.isOnline);
                     return ListTile(
                       leading: Icon(
                         Icons.queue_music,
@@ -80,26 +85,41 @@ extension _PlaylistManageUI on _MainScreenState {
                         int addedCount = 0;
                         int skippedCount = 0;
                         setState(() {
-                          for (final track in tracksToAdd) {
-                            if (!_userPlaylists[playlistName]!.contains(
-                              track.id,
-                            )) {
-                              _userPlaylists[playlistName]!.add(track.id);
-                              addedCount++;
-                              if (_MainScreenState
-                                      .mainScreenState!
-                                      ._playingFromName ==
-                                  playlistName) {
-                                _MainScreenState.mainScreenState!
-                                    ._addTrackToQueueDynamically(track.id);
+                          if (isOnlineMode) {
+                            final pl = _userOnlinePlaylists[playlistName]!;
+                            for (final track in tracksToAdd) {
+                              if (!pl.any((t) => t.id == track.id || (track.videoId != null && t.videoId == track.videoId))) {
+                                pl.add(track);
+                                addedCount++;
+                              } else {
+                                skippedCount++;
                               }
-                            } else {
-                              skippedCount++;
                             }
-                          }
-                          if (addedCount > 0) {
-                            _cachedDetailKey = null;
-                            _saveUserPlaylists();
+                            if (addedCount > 0) {
+                              InnerTubeService().saveUserOnlinePlaylists(_userOnlinePlaylists);
+                            }
+                          } else {
+                            for (final track in tracksToAdd) {
+                              if (!_userPlaylists[playlistName]!.contains(
+                                track.id,
+                              )) {
+                                _userPlaylists[playlistName]!.add(track.id);
+                                addedCount++;
+                                if (_MainScreenState
+                                        .mainScreenState!
+                                        ._playingFromName ==
+                                    playlistName) {
+                                  _MainScreenState.mainScreenState!
+                                      ._addTrackToQueueDynamically(track.id);
+                                }
+                              } else {
+                                skippedCount++;
+                              }
+                            }
+                            if (addedCount > 0) {
+                              _cachedDetailKey = null;
+                              _saveUserPlaylists();
+                            }
                           }
                         });
                         Navigator.pop(context);
@@ -351,7 +371,7 @@ extension _PlaylistManageUI on _MainScreenState {
     String title,
     List<Track> songs,
   ) {
-    final isCustomPlaylist = _userPlaylists.containsKey(title);
+    final isCustomPlaylist = _userPlaylists.containsKey(title) || _userOnlinePlaylists.containsKey(title);
     final isLight = isAppLight;
 
     showModalBottomSheet(
@@ -501,6 +521,7 @@ extension _PlaylistManageUI on _MainScreenState {
 
                       setState(() {
                         _userPlaylists.remove(title);
+                        _userOnlinePlaylists.remove(title);
                         _playlistCovers.remove(title);
                         _savePlaylistCovers();
                         if (_selectedPlaylistDetail == title) {
@@ -508,6 +529,7 @@ extension _PlaylistManageUI on _MainScreenState {
                         }
                       });
                       _saveUserPlaylists();
+                      InnerTubeService().saveUserOnlinePlaylists(_userOnlinePlaylists);
                       showFlowToast(
                         lookupAppLocalizations(
                           Locale(FlowStrings.currentLang),

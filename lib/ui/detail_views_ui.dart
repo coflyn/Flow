@@ -37,6 +37,8 @@ extension _DetailViewsUI on _MainScreenState {
           .toString();
     } else if (_userPlaylists.containsKey(baseName)) {
       dynamicKeyPart = _userPlaylists[baseName]?.length.toString() ?? '0';
+    } else if (_userOnlinePlaylists.containsKey(baseName)) {
+      dynamicKeyPart = _userOnlinePlaylists[baseName]?.length.toString() ?? '0';
     }
 
     String baseKey = "${baseName}_${_searchQuery}_${type}_$dynamicKeyPart";
@@ -58,32 +60,64 @@ extension _DetailViewsUI on _MainScreenState {
       Widget? imageWidget;
 
       if (type == 'Playlist') {
-        if (baseName == AppLocalizations.of(context).favourites) {
-          pSongs = _allTracks
-              .where((t) => _favoriteTrackIds.contains(t.id))
-              .toList();
-        } else if (baseName == AppLocalizations.of(context).recentlyAdded) {
-          pSongs = List.from(_allTracks);
-        } else if (baseName == AppLocalizations.of(context).lastPlayed) {
-          final trackMap = {for (var t in _allTracks) t.id: t};
-          pSongs = _allPlayedTrackIdsOrdered
-              .where((id) => trackMap.containsKey(id))
-              .map((id) => trackMap[id]!)
-              .toList();
-        } else if (baseName == AppLocalizations.of(context).mostPlayed) {
-          pSongs = List.from(_allTracks);
-          pSongs.sort(
-            (a, b) =>
-                (_playCounts[b.id] ?? 0).compareTo(_playCounts[a.id] ?? 0),
-          );
-          pSongs = pSongs.where((t) => (_playCounts[t.id] ?? 0) > 0).toList();
-        } else if (baseName == AppLocalizations.of(context).forgottenGems) {
-          pSongs = _allTracks.reversed
-              .where((t) => (_playCounts[t.id] ?? 0) <= 1)
-              .toList();
-        } else if (_userPlaylists.containsKey(baseName)) {
-          final trackIds = _userPlaylists[baseName]!.toSet();
-          pSongs = _allTracks.where((t) => trackIds.contains(t.id)).toList();
+        if (_searchSourceIndex == 1) {
+          if (_onlinePlaylistTracks.containsKey(baseName)) {
+            pSongs = _onlinePlaylistTracks[baseName]!;
+          } else if (_userOnlinePlaylists.containsKey(baseName)) {
+            pSongs = _userOnlinePlaylists[baseName]!;
+          } else if (baseName == AppLocalizations.of(context).favourites || baseName == 'Favourites') {
+            pSongs = _onlineFavoriteTracks;
+          } else if (baseName == AppLocalizations.of(context).lastPlayed || baseName == 'Last Played' || baseName == 'Recently Played') {
+            pSongs = _onlineHistoryTracks;
+          } else if (baseName == AppLocalizations.of(context).mostPlayed || baseName == 'Most Played') {
+            pSongs = List.from(_onlineHistoryTracks);
+            pSongs.sort(
+              (a, b) => (_playCounts[b.id] ?? _playCounts[b.videoId] ?? 0)
+                  .compareTo(_playCounts[a.id] ?? _playCounts[a.videoId] ?? 0),
+            );
+            pSongs = pSongs
+                .where(
+                  (t) => (_playCounts[t.id] ?? _playCounts[t.videoId] ?? 0) > 0,
+                )
+                .toList();
+            if (pSongs.isEmpty) {
+              pSongs = _onlineHistoryTracks.take(20).toList();
+            }
+          } else {
+            pSongs = _onlineFavoriteTracks;
+          }
+        } else {
+          if (baseName == AppLocalizations.of(context).favourites) {
+            pSongs = _allTracks
+                .where((t) => _favoriteTrackIds.contains(t.id))
+                .toList();
+          } else if (baseName == AppLocalizations.of(context).recentlyAdded) {
+            pSongs = List.from(_allTracks);
+          } else if (baseName == AppLocalizations.of(context).lastPlayed) {
+            final trackMap = {for (var t in _allTracks) t.id: t};
+            pSongs = _allPlayedTrackIdsOrdered
+                .where((id) => trackMap.containsKey(id))
+                .map((id) => trackMap[id]!)
+                .toList();
+          } else if (baseName == AppLocalizations.of(context).mostPlayed) {
+            pSongs = List.from(_allTracks);
+            pSongs.sort(
+              (a, b) => (_playCounts[b.id] ?? _playCounts[b.videoId] ?? 0)
+                  .compareTo(_playCounts[a.id] ?? _playCounts[a.videoId] ?? 0),
+            );
+            pSongs = pSongs
+                .where(
+                  (t) => (_playCounts[t.id] ?? _playCounts[t.videoId] ?? 0) > 0,
+                )
+                .toList();
+          } else if (baseName == AppLocalizations.of(context).forgottenGems) {
+            pSongs = _allTracks.reversed
+                .where((t) => (_playCounts[t.id] ?? 0) <= 1)
+                .toList();
+          } else if (_userPlaylists.containsKey(baseName)) {
+            final trackIds = _userPlaylists[baseName]!.toSet();
+            pSongs = _allTracks.where((t) => trackIds.contains(t.id)).toList();
+          }
         }
 
         if (_playlistCovers.containsKey(baseName)) {
@@ -193,12 +227,30 @@ extension _DetailViewsUI on _MainScreenState {
           }
         }
       } else if (type == AppLocalizations.of(context).artist) {
-        pSongs = _allTracks.where((t) => t.artist == baseName).toList();
+        final List<Track> pool = _searchSourceIndex == 1
+            ? {
+                ..._onlineSearchResults,
+                ..._onlineHistoryTracks,
+                ..._onlineQuickPicks,
+                ..._similarArtistTracks,
+                if (_playingTrack != null && _playingTrack!.isOnline) _playingTrack!,
+              }.toList()
+            : _allTracks;
+        pSongs = pool.where((t) => t.artist == baseName).toList();
         imageWidget = pSongs.isNotEmpty
             ? _buildTrackArtwork(pSongs.first, size: 300, radius: 12)
             : const SizedBox(width: 300, height: 300);
       } else if (type == AppLocalizations.of(context).album) {
-        pSongs = _allTracks.where((t) => t.album == baseName).toList();
+        final List<Track> pool = _searchSourceIndex == 1
+            ? {
+                ..._onlineSearchResults,
+                ..._onlineHistoryTracks,
+                ..._onlineQuickPicks,
+                ..._similarArtistTracks,
+                if (_playingTrack != null && _playingTrack!.isOnline) _playingTrack!,
+              }.toList()
+            : _allTracks;
+        pSongs = pool.where((t) => t.album == baseName).toList();
         imageWidget = pSongs.isNotEmpty
             ? _buildTrackArtwork(pSongs.first, size: 300, radius: 12)
             : const SizedBox(width: 300, height: 300);
@@ -212,18 +264,23 @@ extension _DetailViewsUI on _MainScreenState {
             .toList();
       }
 
-      if (_detailSortBy == 'title') {
-        pSongs.sort(
-          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-        );
-      } else if (_detailSortBy == 'artist') {
-        pSongs.sort(
-          (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
-        );
-      } else if (_detailSortBy == 'duration_longest') {
-        pSongs.sort((a, b) => b.duration.compareTo(a.duration));
-      } else if (_detailSortBy == 'duration_shortest') {
-        pSongs.sort((a, b) => a.duration.compareTo(b.duration));
+      final isMostPlayed =
+          baseName == AppLocalizations.of(context).mostPlayed ||
+          baseName == 'Most Played';
+      if (!isMostPlayed) {
+        if (_detailSortBy == 'title') {
+          pSongs.sort(
+            (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+          );
+        } else if (_detailSortBy == 'artist') {
+          pSongs.sort(
+            (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
+          );
+        } else if (_detailSortBy == 'duration_longest') {
+          pSongs.sort((a, b) => b.duration.compareTo(a.duration));
+        } else if (_detailSortBy == 'duration_shortest') {
+          pSongs.sort((a, b) => a.duration.compareTo(b.duration));
+        }
       }
 
       _cachedDetailSongs = pSongs;
@@ -232,7 +289,7 @@ extension _DetailViewsUI on _MainScreenState {
 
     final totalMs = _cachedDetailSongs!.fold<int>(
       0,
-      (sum, t) => sum + t.duration,
+      (sum, t) => sum + (t.duration > 0 ? t.duration : 210000),
     );
     final durationStr = _formatTotalDuration(totalMs);
 
