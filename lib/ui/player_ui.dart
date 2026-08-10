@@ -656,6 +656,15 @@ extension _PlayerUI on _MainScreenState {
     if (track.isOnline &&
         track.thumbnailUrl != null &&
         track.thumbnailUrl!.isNotEmpty) {
+      final String hdThumb = track.thumbnailUrl!
+          .replaceAll(RegExp(r'=w\d+-h\d+'), '=w540-h540')
+          .replaceAll(RegExp(r'=s\d+'), '=s540');
+
+      final double devicePixelRatio =
+          MediaQuery.maybeOf(context)?.devicePixelRatio ?? 2.0;
+      final int targetCacheWidth = cacheWidthOverride ??
+          (size * devicePixelRatio).round().clamp(90, 1080);
+
       final networkArtwork = Container(
         width: size,
         height: size,
@@ -666,16 +675,18 @@ extension _PlayerUI on _MainScreenState {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(radius),
           child: Image.network(
-            track.thumbnailUrl!,
+            hdThumb,
             width: size,
             height: size,
+            cacheWidth: targetCacheWidth,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
               if (track.videoId != null) {
                 return Image.network(
-                  'https://i.ytimg.com/vi/${track.videoId}/hqdefault.jpg',
+                  'https://i.ytimg.com/vi/${track.videoId}/sddefault.jpg',
                   width: size,
                   height: size,
+                  cacheWidth: targetCacheWidth,
                   fit: BoxFit.cover,
                   errorBuilder: (context, e, s) => Container(
                     color: isAppLight

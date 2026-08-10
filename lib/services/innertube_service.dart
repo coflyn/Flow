@@ -32,7 +32,11 @@ class InnerTubeService {
       historyMaps.removeWhere(
         (m) =>
             m['id'] == track.id ||
-            (track.videoId != null && m['videoId'] == track.videoId),
+            (track.videoId != null && m['videoId'] == track.videoId) ||
+            (m['title']?.toString().toLowerCase() ==
+                    track.title.toLowerCase() &&
+                m['artist']?.toString().toLowerCase() ==
+                    track.artist.toLowerCase()),
       );
 
       historyMaps.insert(0, track.toMap());
@@ -158,6 +162,74 @@ class InnerTubeService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final str = prefs.getString('yt_user_online_playlists');
+      if (str == null || str.isEmpty) return {};
+      final Map<String, dynamic> rawMap =
+          jsonDecode(str) as Map<String, dynamic>;
+      final Map<String, List<Track>> result = {};
+      rawMap.forEach((name, trackList) {
+        final List<Track> tracks = [];
+        if (trackList is List) {
+          for (final item in trackList) {
+            try {
+              if (item is Map<String, dynamic>) {
+                tracks.add(Track.fromMap(item));
+              }
+            } catch (_) {}
+          }
+        }
+        result[name] = tracks;
+      });
+      return result;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Saves trending online playlists cache to SharedPreferences.
+  Future<void> saveOnlineTrendingPlaylistsCache(
+    List<Map<String, dynamic>> trending,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('yt_online_trending_cache', jsonEncode(trending));
+    } catch (_) {}
+  }
+
+  /// Retrieves trending online playlists cache from SharedPreferences.
+  Future<List<Map<String, dynamic>>> getOnlineTrendingPlaylistsCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString('yt_online_trending_cache');
+      if (str == null || str.isEmpty) return [];
+      final List<dynamic> rawList = jsonDecode(str) as List<dynamic>;
+      return rawList.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Saves online playlist tracks cache to SharedPreferences.
+  Future<void> saveOnlinePlaylistTracksCache(
+    Map<String, List<Track>> tracksMap,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final Map<String, dynamic> rawMap = {};
+      tracksMap.forEach((name, tracks) {
+        rawMap[name] = tracks.map((t) => t.toMap()).toList();
+      });
+      await prefs.setString(
+        'yt_online_playlist_tracks_cache',
+        jsonEncode(rawMap),
+      );
+    } catch (_) {}
+  }
+
+  /// Retrieves online playlist tracks cache from SharedPreferences.
+  Future<Map<String, List<Track>>> getOnlinePlaylistTracksCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString('yt_online_playlist_tracks_cache');
       if (str == null || str.isEmpty) return {};
       final Map<String, dynamic> rawMap =
           jsonDecode(str) as Map<String, dynamic>;
@@ -1013,7 +1085,12 @@ class InnerTubeService {
             final thumbs =
                 item['thumbnail']['musicThumbnailRenderer']['thumbnail']['thumbnails'];
             if (thumbs != null && thumbs.isNotEmpty) {
-              thumbUrl = thumbs.last['url'];
+              final raw = thumbs.last['url'] as String?;
+              if (raw != null) {
+                thumbUrl = raw
+                    .replaceAll(RegExp(r'=w\d+-h\d+'), '=w540-h540')
+                    .replaceAll(RegExp(r'=s\d+'), '=s540');
+              }
             }
           } catch (_) {}
 
@@ -1032,8 +1109,9 @@ class InnerTubeService {
                 lyrics: const [],
                 duration: durationMs,
                 isOnline: true,
-                thumbnailUrl:
-                    thumbUrl ?? 'https://i.ytimg.com/vi/$vId/hqdefault.jpg',
+                thumbnailUrl: (thumbUrl != null && thumbUrl.isNotEmpty)
+                    ? thumbUrl
+                    : 'https://i.ytimg.com/vi/$vId/sddefault.jpg',
                 videoId: vId,
               ),
             );

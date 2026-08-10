@@ -448,6 +448,25 @@ extension _PlaylistManageUI on _MainScreenState {
                     _showMultiSelectSongsModal(context, candidateTracks: songs);
                   },
                 ),
+                if (songs.any((t) => t.isOnline))
+                  _buildOptionItem(
+                    Icons.download_for_offline_rounded,
+                    'Download All Tracks',
+                    () async {
+                      Navigator.pop(context);
+                      final onlineSongs =
+                          songs.where((t) => t.isOnline).toList();
+                      if (onlineSongs.isEmpty) return;
+                      showFlowToast(
+                        'Downloading ${onlineSongs.length} tracks in background...',
+                      );
+                      for (final song in onlineSongs) {
+                        try {
+                          await _downloadOnlineTrack(song);
+                        } catch (_) {}
+                      }
+                    },
+                  ),
                 _buildOptionItem(
                   Icons.image,
                   AppLocalizations.of(context).editCover,

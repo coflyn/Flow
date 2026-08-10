@@ -13,7 +13,6 @@ extension _AudioStreamsLogic on _MainScreenState {
     });
 
     _audioPlayer.currentIndexStream.listen((nativeIndex) {
-      if (_isProgrammaticLoading) return;
       if (nativeIndex == null) return;
       if (_audioPlayer.audioSource is ConcatenatingAudioSource) {
         final concatenating =
@@ -22,17 +21,29 @@ extension _AudioStreamsLogic on _MainScreenState {
           final mediaItem =
               concatenating.sequence[nativeIndex].tag as MediaItem;
           final trackId = mediaItem.id;
-          if (_playingTrack != null && _playingTrack!.id != trackId) {
+          if (_playingTrack == null || _playingTrack!.id != trackId) {
             final newQueueIndex = _playbackQueue.indexWhere(
               (t) => t.id == trackId,
             );
             if (newQueueIndex != -1) {
-              if (nativeIndex == 2) {
-                _slideWindowInPlace(newQueueIndex, 1);
-              } else if (nativeIndex == 0) {
-                _slideWindowInPlace(newQueueIndex, -1);
-              } else {
-                _playTrack(newQueueIndex, playImmediately: true);
+              if (mounted) {
+                setState(() {
+                  _currentIndex = newQueueIndex;
+                  _playingTrack = _playbackQueue[newQueueIndex];
+                  _lastIncrementedTrackId = null;
+                  _hasResetPosition = false;
+                  _isNaturalFadingOut = false;
+                  _lastActiveLyricsIndex = -1;
+                });
+                _loadLyricsForTrack(_playingTrack!);
+                _updateDominantColor(_playingTrack!);
+              }
+              if (!_isProgrammaticLoading) {
+                if (nativeIndex == 2) {
+                  _slideWindowInPlace(newQueueIndex, 1);
+                } else if (nativeIndex == 0) {
+                  _slideWindowInPlace(newQueueIndex, -1);
+                }
               }
             }
           }
@@ -53,21 +64,21 @@ extension _AudioStreamsLogic on _MainScreenState {
 
     _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
+        _audioPlayer.seek(Duration.zero);
         if (_repeatMode == 2) {
-          _audioPlayer.seek(Duration.zero);
           _audioPlayer.play();
-        } else if (_repeatMode == 1) {
-          _playNext();
         } else {
-          _audioPlayer.pause();
-          _audioPlayer.seek(Duration.zero);
+          _playNext();
         }
       }
     });
 
     _audioPlayer.positionStream.listen((pos) {
       if (pos.inSeconds < 2) {
-        _hasResetPosition = true;
+        if (!_hasResetPosition) {
+          _hasResetPosition = true;
+          _lastIncrementedTrackId = null;
+        }
       }
       if (_playingTrack != null &&
           _hasResetPosition &&
@@ -97,8 +108,11 @@ extension _AudioStreamsLogic on _MainScreenState {
         if (shouldIncrement) {
           _lastIncrementedTrackId = _playingTrack!.id;
           setState(() {
-            _playCounts[_playingTrack!.id] =
-                (_playCounts[_playingTrack!.id] ?? 0) + 1;
+            final trackId = _playingTrack!.id;
+            _playCounts[trackId] = (_playCounts[trackId] ?? 0) + 1;
+            if (_playingTrack!.videoId != null) {
+              _playCounts[_playingTrack!.videoId!] = _playCounts[trackId]!;
+            }
           });
           SharedPreferences.getInstance().then((prefs) {
             prefs.setString('play_counts', jsonEncode(_playCounts));

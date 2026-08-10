@@ -122,25 +122,65 @@ extension _TrackOptionsUI on _MainScreenState {
                         _downloadOnlineTrack(track);
                       },
                     ),
+                  ],
+                  if (track.isOnline &&
+                      _onlineHistoryTracks.any(
+                        (t) =>
+                            t.id == track.id ||
+                            (track.videoId != null && t.id == track.videoId) ||
+                            (t.videoId != null && t.videoId == track.id) ||
+                            (track.videoId != null &&
+                                t.videoId != null &&
+                                t.videoId == track.videoId) ||
+                            (t.title.toLowerCase() ==
+                                    track.title.toLowerCase() &&
+                                t.artist.toLowerCase() ==
+                                    track.artist.toLowerCase()),
+                      )) ...[
                     _buildOptionItem(
                       Icons.history_toggle_off_rounded,
                       AppLocalizations.of(context).removeFromHistory,
                       () async {
-                        final msg = AppLocalizations.of(context).historyRemoved;
+                        final msg =
+                            AppLocalizations.of(context).historyRemoved;
                         Navigator.pop(context);
+
+                        final targetVId = track.videoId ?? track.id;
+                        final bool isCurrentlyPlaying = _playingTrack !=
+                                null &&
+                            (_playingTrack!.id == track.id ||
+                                _playingTrack!.id == targetVId ||
+                                (_playingTrack!.videoId != null &&
+                                    _playingTrack!.videoId == targetVId) ||
+                                (_playingTrack!.title.toLowerCase() ==
+                                        track.title.toLowerCase() &&
+                                    _playingTrack!.artist.toLowerCase() ==
+                                        track.artist.toLowerCase()));
+
                         await InnerTubeService().removeOnlineTrackFromHistory(
                           track,
                         );
+
                         setState(() {
-                          final targetVId = track.videoId ?? track.id;
                           _onlineHistoryTracks.removeWhere(
                             (t) =>
                                 t.id == track.id ||
                                 t.id == targetVId ||
-                                t.videoId == targetVId,
+                                t.videoId == targetVId ||
+                                (t.title.toLowerCase() ==
+                                        track.title.toLowerCase() &&
+                                    t.artist.toLowerCase() ==
+                                        track.artist.toLowerCase()),
                           );
                           _isShowingOnlineHistory =
                               _onlineHistoryTracks.isNotEmpty;
+
+                          if (isCurrentlyPlaying) {
+                            _audioPlayer.stop();
+                            _audioPlayer.seek(Duration.zero);
+                            _playingTrack = null;
+                            _isPlaying = false;
+                          }
                         });
                         showFlowToast(msg);
                       },

@@ -271,12 +271,26 @@ extension _TabsUI on _MainScreenState {
 
   Future<void> _loadOnlinePlaylistsTabContent() async {
     if (_isOnlinePlaylistsLoaded) return;
-    setState(() {
-      _isOnlinePlaylistsSearching = true;
-    });
+
+    final cachedTrending =
+        await InnerTubeService().getOnlineTrendingPlaylistsCache();
+    if (cachedTrending.isNotEmpty && mounted && !_isOnlinePlaylistsLoaded) {
+      setState(() {
+        _onlineTrendingPlaylists = cachedTrending;
+        _isOnlinePlaylistsLoaded = true;
+        _isOnlinePlaylistsSearching = false;
+      });
+    } else {
+      setState(() {
+        _isOnlinePlaylistsSearching = true;
+      });
+    }
 
     try {
       final trending = await InnerTubeService().fetchTrendingPlaylists();
+      if (trending.isNotEmpty) {
+        InnerTubeService().saveOnlineTrendingPlaylistsCache(trending);
+      }
       if (mounted) {
         setState(() {
           _onlineTrendingPlaylists = trending;
@@ -298,6 +312,25 @@ extension _TabsUI on _MainScreenState {
     String playlistTitle, {
     bool isImport = false,
   }) async {
+    final cachedTracks = _onlinePlaylistTracks[playlistId] ??
+        _onlinePlaylistTracks[playlistTitle] ??
+        _userOnlinePlaylists[playlistTitle] ??
+        _userOnlinePlaylists[playlistId];
+
+    if (cachedTracks != null && cachedTracks.isNotEmpty) {
+      setState(() {
+        _cachedDetailKey = null;
+        _selectedPlaylistDetail = playlistTitle;
+        _searchQuery = '';
+        _searchController.clear();
+        _detailColorFuture = _getDetailColor(
+          cachedTracks.first,
+          playlistName: playlistTitle,
+        );
+      });
+      return;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -343,12 +376,19 @@ extension _TabsUI on _MainScreenState {
         if (tracks.isNotEmpty) {
           setState(() {
             _cachedDetailKey = null;
+            _onlinePlaylistTracks[playlistId] = tracks;
+            _onlinePlaylistTracks[playlistTitle] = tracks;
             _onlinePlaylistTracks[finalTitle] = tracks;
             if (isImport) {
               _userOnlinePlaylists[finalTitle] = tracks;
+              _userOnlinePlaylists[playlistTitle] = tracks;
+              _userOnlinePlaylists[playlistId] = tracks;
               InnerTubeService().saveUserOnlinePlaylists(_userOnlinePlaylists);
               showFlowToast('Playlist "$finalTitle" imported to My Playlists');
             }
+            InnerTubeService().saveOnlinePlaylistTracksCache(
+              _onlinePlaylistTracks,
+            );
             _selectedPlaylistDetail = finalTitle;
             _searchQuery = '';
             _searchController.clear();
@@ -1234,6 +1274,11 @@ extension _TabsUI on _MainScreenState {
 
       final onlineFavs = await InnerTubeService().getOnlineFavorites();
       final userOnlinePls = await InnerTubeService().getUserOnlinePlaylists();
+      final cachedPlTracks =
+          await InnerTubeService().getOnlinePlaylistTracksCache();
+      if (cachedPlTracks.isNotEmpty) {
+        _onlinePlaylistTracks.addAll(cachedPlTracks);
+      }
       for (final f in onlineFavs) {
         _favoriteTrackIds.add(f.id);
         if (f.videoId != null) _favoriteTrackIds.add(f.videoId!);

@@ -317,7 +317,7 @@ extension _MainUIComponents on _MainScreenState {
     IconData fallbackIcon,
     bool isFavorites,
   ) {
-    if (tracks.length < 4 && !isFavorites) {
+    if (tracks.isEmpty) {
       return Container(
         width: 56,
         height: 56,

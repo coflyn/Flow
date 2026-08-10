@@ -221,7 +221,10 @@ extension _AudioPlaybackLogic on _MainScreenState {
     if (playImmediately) {
       _fadeSessionId++;
       _audioPlayer.setVolume(0.0);
-      _audioPlayer.stop();
+      try {
+        await _audioPlayer.seek(Duration.zero);
+        await _audioPlayer.stop();
+      } catch (_) {}
     }
 
     _loadLyricsForTrack(track);
@@ -238,7 +241,9 @@ extension _AudioPlaybackLogic on _MainScreenState {
           (t) =>
               t.id == track.id ||
               t.id == targetVId ||
-              t.videoId == targetVId,
+              t.videoId == targetVId ||
+              (t.title.toLowerCase() == track.title.toLowerCase() &&
+                  t.artist.toLowerCase() == track.artist.toLowerCase()),
         );
         _onlineHistoryTracks.insert(0, track);
         _isShowingOnlineHistory = true;
