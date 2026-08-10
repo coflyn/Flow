@@ -372,7 +372,7 @@ class InnerTubeService {
         (chunk) {
           fileSink.add(chunk);
           bytesWritten += chunk.length;
-          if (!isReadyToPlay && bytesWritten >= 100 * 1024) {
+          if (!isReadyToPlay && bytesWritten >= 512 * 1024) {
             isReadyToPlay = true;
             if (!completer.isCompleted) {
               completer.complete();

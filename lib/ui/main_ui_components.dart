@@ -205,8 +205,9 @@ extension _MainUIComponents on _MainScreenState {
     String title,
     List<Track> songs,
     Color color,
-    IconData icon,
-  ) {
+    IconData icon, {
+    bool isOnline = false,
+  }) {
     return ListTile(
       contentPadding: const EdgeInsets.only(
         left: 8,
@@ -217,6 +218,7 @@ extension _MainUIComponents on _MainScreenState {
       onTap: () {
         setState(() {
           _selectedPlaylistDetail = title;
+          _selectedPlaylistIsOnline = isOnline;
           _searchQuery = '';
           _searchController.clear();
 

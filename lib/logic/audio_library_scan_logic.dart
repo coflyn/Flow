@@ -163,6 +163,21 @@ extension _AudioLibraryScanLogic on _MainScreenState {
                     : song.artist!;
                 String album = song.album ?? 'Unknown Album';
 
+                // If MediaStore returns empty or <unknown> title/artist, extract from filename
+                if (title.trim().isEmpty || title.trim() == '<unknown>') {
+                  final String fileName = song.data
+                      .split('/')
+                      .last
+                      .replaceAll(RegExp(r'\.[^.]+$'), '');
+                  if (fileName.contains(' - ')) {
+                    final parts = fileName.split(' - ');
+                    artist = parts[0].trim();
+                    title = parts.sublist(1).join(' - ').trim();
+                  } else if (fileName.isNotEmpty) {
+                    title = fileName;
+                  }
+                }
+
                 if (_metadataOverrides.containsKey(song.id.toString())) {
                   final overrides = _metadataOverrides[song.id.toString()]!;
                   title = overrides['title'] ?? title;
@@ -248,11 +263,23 @@ extension _AudioLibraryScanLogic on _MainScreenState {
           }
         } catch (_) {}
       }
+
       for (final dlTrack in downloadedTracks.reversed) {
+        _allTracks.removeWhere(
+          (t) => t.path == dlTrack.path || t.url == dlTrack.path,
+        );
         if (!_allTracks.any((t) => t.id == dlTrack.id)) {
           _allTracks.insert(0, dlTrack);
         }
       }
+
+      // Purge any remaining blank/corrupted track entries from _allTracks
+      _allTracks.removeWhere(
+        (t) =>
+            t.title.trim().isEmpty ||
+            t.title.trim() == '<unknown>' ||
+            t.title.trim() == 'Unknown Title',
+      );
 
       if (mounted) {
         setState(() {
@@ -435,15 +462,22 @@ extension _AudioLibraryScanLogic on _MainScreenState {
 
       if (customPath != null && File(customPath).existsSync()) {
         imageProvider = ResizeImage(FileImage(File(customPath)), width: 200);
-      } else if (track.isOnline &&
-          track.thumbnailUrl != null &&
+      } else if (track.thumbnailUrl != null &&
           track.thumbnailUrl!.isNotEmpty) {
-        // Downsample network image to tiny 32x32 px so PaletteGenerator processes in <1ms!
-        imageProvider = ResizeImage(
-          NetworkImage(track.thumbnailUrl!),
-          width: 32,
-          height: 32,
-        );
+        if (track.thumbnailUrl!.startsWith('http://') ||
+            track.thumbnailUrl!.startsWith('https://')) {
+          imageProvider = ResizeImage(
+            NetworkImage(track.thumbnailUrl!),
+            width: 32,
+            height: 32,
+          );
+        } else if (File(track.thumbnailUrl!).existsSync()) {
+          imageProvider = ResizeImage(
+            FileImage(File(track.thumbnailUrl!)),
+            width: 64,
+            height: 64,
+          );
+        }
       } else {
         final id = int.tryParse(track.id);
         if (id != null) {
@@ -661,6 +695,14 @@ extension _AudioLibraryScanLogic on _MainScreenState {
       await prefs.setStringList('downloaded_tracks_v1', downloadedListJson);
 
       setState(() {
+        _allTracks.removeWhere(
+          (t) =>
+              t.path == targetAudioPath ||
+              t.url == targetAudioPath ||
+              t.title.trim().isEmpty ||
+              t.title.trim() == '<unknown>' ||
+              t.title.trim() == 'Unknown Title',
+        );
         if (!_allTracks.any((t) => t.id == localTrack.id)) {
           _allTracks.insert(0, localTrack);
         }

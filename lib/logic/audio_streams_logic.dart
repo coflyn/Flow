@@ -64,10 +64,24 @@ extension _AudioStreamsLogic on _MainScreenState {
 
     _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
-        _audioPlayer.seek(Duration.zero);
         if (_repeatMode == 2) {
+          _audioPlayer.seek(Duration.zero);
           _audioPlayer.play();
         } else {
+          if (_playingTrack != null && _playingTrack!.isOnline) {
+            final currentPos = _audioPlayer.position;
+            final trackDuration = Duration(
+              milliseconds: _playingTrack!.duration,
+            );
+            if (trackDuration > const Duration(seconds: 15) &&
+                currentPos < trackDuration - const Duration(seconds: 4)) {
+              Future.delayed(
+                const Duration(milliseconds: 300),
+                () => _audioPlayer.play(),
+              );
+              return;
+            }
+          }
           _playNext();
         }
       }

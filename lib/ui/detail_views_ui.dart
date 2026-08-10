@@ -41,7 +41,8 @@ extension _DetailViewsUI on _MainScreenState {
       dynamicKeyPart = _userOnlinePlaylists[baseName]?.length.toString() ?? '0';
     }
 
-    String baseKey = "${baseName}_${_searchQuery}_${type}_$dynamicKeyPart";
+    String baseKey =
+        "${baseName}_${_searchQuery}_${type}_${_selectedPlaylistIsOnline}_$dynamicKeyPart";
 
     if (_cachedDetailKey != baseKey ||
         _cachedDetailSongs == null ||
@@ -60,16 +61,20 @@ extension _DetailViewsUI on _MainScreenState {
       Widget? imageWidget;
 
       if (type == 'Playlist') {
-        if (_searchSourceIndex == 1) {
+        if (_selectedPlaylistIsOnline) {
           if (_onlinePlaylistTracks.containsKey(baseName)) {
             pSongs = _onlinePlaylistTracks[baseName]!;
           } else if (_userOnlinePlaylists.containsKey(baseName)) {
             pSongs = _userOnlinePlaylists[baseName]!;
-          } else if (baseName == AppLocalizations.of(context).favourites || baseName == 'Favourites') {
+          } else if (baseName == AppLocalizations.of(context).favourites ||
+              baseName == 'Favourites') {
             pSongs = _onlineFavoriteTracks;
-          } else if (baseName == AppLocalizations.of(context).lastPlayed || baseName == 'Last Played' || baseName == 'Recently Played') {
+          } else if (baseName == AppLocalizations.of(context).lastPlayed ||
+              baseName == 'Last Played' ||
+              baseName == 'Recently Played') {
             pSongs = _onlineHistoryTracks;
-          } else if (baseName == AppLocalizations.of(context).mostPlayed || baseName == 'Most Played') {
+          } else if (baseName == AppLocalizations.of(context).mostPlayed ||
+              baseName == 'Most Played') {
             pSongs = List.from(_onlineHistoryTracks);
             pSongs.sort(
               (a, b) => (_playCounts[b.id] ?? _playCounts[b.videoId] ?? 0)
@@ -229,16 +234,14 @@ extension _DetailViewsUI on _MainScreenState {
       } else if (type == AppLocalizations.of(context).artist) {
         final List<Track> pool = _searchSourceIndex == 1
             ? {
-                ..._onlineSearchResults,
                 ..._onlineHistoryTracks,
-                ..._onlineQuickPicks,
-                ..._similarArtistTracks,
-                if (_playingTrack != null && _playingTrack!.isOnline) _playingTrack!,
+                if (_playingTrack != null && _playingTrack!.isOnline)
+                  _playingTrack!,
               }.toList()
             : _allTracks;
         pSongs = pool.where((t) => t.artist == baseName).toList();
         imageWidget = pSongs.isNotEmpty
-            ? _buildTrackArtwork(pSongs.first, size: 300, radius: 12)
+            ? _buildTrackArtwork(pSongs.first, size: 300, radius: 150)
             : const SizedBox(width: 300, height: 300);
       } else if (type == AppLocalizations.of(context).album) {
         final List<Track> pool = _searchSourceIndex == 1
@@ -247,7 +250,8 @@ extension _DetailViewsUI on _MainScreenState {
                 ..._onlineHistoryTracks,
                 ..._onlineQuickPicks,
                 ..._similarArtistTracks,
-                if (_playingTrack != null && _playingTrack!.isOnline) _playingTrack!,
+                if (_playingTrack != null && _playingTrack!.isOnline)
+                  _playingTrack!,
               }.toList()
             : _allTracks;
         pSongs = pool.where((t) => t.album == baseName).toList();

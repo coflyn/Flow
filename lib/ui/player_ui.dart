@@ -653,12 +653,21 @@ extension _PlayerUI on _MainScreenState {
     int? cacheWidthOverride,
     String? heroTag,
   }) {
-    if (track.isOnline &&
-        track.thumbnailUrl != null &&
+    if (track.thumbnailUrl != null &&
         track.thumbnailUrl!.isNotEmpty) {
-      final String hdThumb = track.thumbnailUrl!
-          .replaceAll(RegExp(r'=w\d+-h\d+'), '=w540-h540')
-          .replaceAll(RegExp(r'=s\d+'), '=s540');
+      String hdThumb = track.thumbnailUrl!;
+      if (hdThumb.contains('googleusercontent.com') ||
+          hdThumb.contains('ggpht.com')) {
+        hdThumb = hdThumb
+            .replaceAll(RegExp(r'=w\d+-h\d+.*'), '=w512-h512-l90-rj')
+            .replaceAll(RegExp(r'=s\d+.*'), '=w512-h512-l90-rj')
+            .replaceAll(RegExp(r'=w\d+.*'), '=w512-h512-l90-rj');
+      } else if (hdThumb.contains('i.ytimg.com')) {
+        hdThumb = hdThumb
+            .replaceAll('/default.jpg', '/hq720.jpg')
+            .replaceAll('/mqdefault.jpg', '/hq720.jpg')
+            .replaceAll('/sddefault.jpg', '/hq720.jpg');
+      }
 
       final double devicePixelRatio =
           MediaQuery.maybeOf(context)?.devicePixelRatio ?? 2.0;

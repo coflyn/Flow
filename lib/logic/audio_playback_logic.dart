@@ -179,6 +179,8 @@ extension _AudioPlaybackLogic on _MainScreenState {
     _searchFocusNode.unfocus();
     FocusScope.of(context).unfocus();
 
+    _isTransitioningTrack = true;
+
     bool queueMatches = _playbackQueue.length == listToPlay.length;
     if (queueMatches && sourceList != null) {
       for (int i = 0; i < _playbackQueue.length; i++) {
@@ -220,9 +222,7 @@ extension _AudioPlaybackLogic on _MainScreenState {
 
     if (playImmediately) {
       _fadeSessionId++;
-      _audioPlayer.setVolume(0.0);
       try {
-        await _audioPlayer.seek(Duration.zero);
         await _audioPlayer.stop();
       } catch (_) {}
     }
@@ -405,7 +405,8 @@ extension _AudioPlaybackLogic on _MainScreenState {
 
       if (_fadeSessionId != sessionId) return;
 
-      await _audioPlayer.setVolume(_volume);
+      final double targetVol = _volume > 0 ? _volume : 1.0;
+      await _audioPlayer.setVolume(targetVol);
       if (playImmediately) {
         await _audioPlayer.play();
       }
@@ -439,6 +440,7 @@ extension _AudioPlaybackLogic on _MainScreenState {
     } finally {
       if (requestId == _playRequestId) {
         _isProgrammaticLoading = false;
+        _isTransitioningTrack = false;
       }
     }
   }

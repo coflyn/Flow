@@ -353,9 +353,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   List<Track> _onlineSearchResults = [];
   bool _isOnlineSearching = false;
   bool _isShowingOnlineHistory = false;
+  bool _isTransitioningTrack = false;
   String? _selectedArtistDetail;
   String? _selectedAlbumDetail;
   String? _selectedPlaylistDetail;
+  bool _selectedPlaylistIsOnline = false;
+  String _artistViewMode = 'grid'; // 'grid' or 'list'
+  String _albumViewMode = 'grid'; // 'grid' or 'list'
 
   final Set<String> _multiSelectedTrackIds = {};
 
