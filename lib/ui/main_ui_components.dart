@@ -427,7 +427,7 @@ extension _MainUIComponents on _MainScreenState {
                     ..._shuffledIndices.sublist(0, pos),
                   ];
                 } else {
-                  effectiveIndices = _shuffledIndices;
+                  effectiveIndices = List.from(_shuffledIndices);
                 }
               } else {
                 effectiveIndices = [
@@ -443,9 +443,9 @@ extension _MainUIComponents on _MainScreenState {
                   _shuffledIndices.length == _playbackQueue.length) {
                 int pos = _shuffledIndices.indexOf(_currentIndex);
                 if (pos != -1) {
-                  effectiveIndices = _shuffledIndices.sublist(pos);
+                  effectiveIndices = List.from(_shuffledIndices.sublist(pos));
                 } else {
-                  effectiveIndices = _shuffledIndices;
+                  effectiveIndices = List.from(_shuffledIndices);
                 }
               } else {
                 effectiveIndices = List.generate(
@@ -454,6 +454,9 @@ extension _MainUIComponents on _MainScreenState {
                 );
               }
             }
+            effectiveIndices = effectiveIndices
+                .where((i) => i >= 0 && i < _playbackQueue.length)
+                .toList();
 
             return Column(
               children: [
@@ -517,15 +520,17 @@ extension _MainUIComponents on _MainScreenState {
                       setModalState(() {
                         final item = effectiveIndices.removeAt(oldIndex);
                         effectiveIndices.insert(newIndex, item);
+                        reorderUpNext(effectiveIndices);
                       });
-                      reorderUpNext(effectiveIndices);
                     },
                     itemBuilder: (context, idx) {
                       final realIndex = effectiveIndices[idx];
+                      if (realIndex < 0 || realIndex >= _playbackQueue.length) {
+                        return SizedBox(key: ValueKey('empty_$idx'));
+                      }
                       final track = _playbackQueue[realIndex];
                       final isCurrent = realIndex == _currentIndex;
-                      return ListTile(
-                        key: ValueKey('up_next_${track.id}_$realIndex'),
+                      final tile = ListTile(
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 24,
                         ),
@@ -574,6 +579,35 @@ extension _MainUIComponents on _MainScreenState {
                           Navigator.pop(context);
                           _playTrack(realIndex);
                         },
+                      );
+
+                      if (isCurrent) {
+                        return Container(
+                          key: ValueKey('up_next_${track.id}_$realIndex'),
+                          child: tile,
+                        );
+                      }
+
+                      return Dismissible(
+                        key: ValueKey('up_next_${track.id}_$realIndex'),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 24),
+                          color: Colors.redAccent.withValues(alpha: 0.8),
+                          child: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
+                          ),
+                        ),
+                        onDismissed: (direction) {
+                          _removeFromQueueAndPlayer(track.id);
+                          setModalState(() {});
+                          if (_playbackQueue.isEmpty) {
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: tile,
                       );
                     },
                   ),

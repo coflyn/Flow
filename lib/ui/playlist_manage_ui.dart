@@ -190,82 +190,162 @@ extension _PlaylistManageUI on _MainScreenState {
   }) {
     final TextEditingController nameController = TextEditingController();
     final isLight = isAppLight;
-    showDialog(
+    final loc = AppLocalizations.of(context);
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: isLight
-              ? const Color(0xFFF0F0F3)
-              : const Color(0xFF282828),
-          title: Text(
-            AppLocalizations.of(context).newPlaylist,
-            style: TextStyle(
-              color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-              fontFamily: getFontFamily(_activeFont),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: isLight ? const Color(0xFFFAF9F6) : const Color(0xFF1E1E1E),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isLight ? Colors.black26 : Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _activeAccentColor.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.queue_music_rounded,
+                        color: _activeAccentColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        loc.newPlaylist,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isLight
+                        ? Colors.black.withValues(alpha: 0.04)
+                        : Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isLight ? Colors.black12 : Colors.white12,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: nameController,
+                    autofocus: true,
+                    textAlignVertical: TextAlignVertical.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                      fontFamily: getFontFamily(_activeFont),
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      hintText: loc.playlistNamePlaceholder,
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: isLight ? Colors.black38 : Colors.white38,
+                        fontFamily: getFontFamily(_activeFont),
+                      ),
+                      border: InputBorder.none,
+                      prefixIcon: Icon(
+                        Icons.edit_note_rounded,
+                        color: _activeAccentColor,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(
+                        loc.cancel,
+                        style: TextStyle(
+                          color: isLight ? Colors.black54 : Colors.white54,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _activeAccentColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                      onPressed: () {
+                        final name = nameController.text.trim();
+                        if (name.isNotEmpty && !_userPlaylists.containsKey(name)) {
+                          setState(() {
+                            _userPlaylists[name] = tracksToAdd != null
+                                ? tracksToAdd.map((t) => t.id).toList()
+                                : [];
+                            _cachedDetailKey = null;
+                            _saveUserPlaylists();
+                          });
+                          Navigator.pop(ctx);
+                          showFlowToast(
+                            loc.playlistCreatedFormat.replaceFirst('[placeholder]', name),
+                          );
+                        }
+                      },
+                      child: Text(
+                        loc.create,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
           ),
-          content: TextField(
-            controller: nameController,
-            style: TextStyle(
-              color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-              fontFamily: getFontFamily(_activeFont),
-            ),
-            decoration: InputDecoration(
-              hintText: AppLocalizations.of(context).playlistNamePlaceholder,
-              hintStyle: TextStyle(
-                color: isLight ? Colors.black38 : Colors.white54,
-                fontFamily: getFontFamily(_activeFont),
-              ),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: isLight ? Colors.black12 : Colors.white24,
-                ),
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: _activeAccentColor),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                AppLocalizations.of(context).cancel,
-                style: TextStyle(
-                  color: isLight ? Colors.black45 : Colors.white54,
-                  fontFamily: getFontFamily(_activeFont),
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                if (name.isNotEmpty && !_userPlaylists.containsKey(name)) {
-                  setState(() {
-                    _userPlaylists[name] = tracksToAdd != null
-                        ? tracksToAdd.map((t) => t.id).toList()
-                        : [];
-                    _cachedDetailKey = null;
-                    _saveUserPlaylists();
-                  });
-                  Navigator.pop(context);
-                  showFlowToast(
-                    AppLocalizations.of(
-                      context,
-                    ).playlistCreatedFormat.replaceFirst('[placeholder]', name),
-                  );
-                }
-              },
-              child: Text(
-                AppLocalizations.of(context).createPlaylist.split(' ')[0],
-                style: TextStyle(
-                  color: _activeAccentColor,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: getFontFamily(_activeFont),
-                ),
-              ),
-            ),
-          ],
         );
       },
     );
@@ -276,101 +356,181 @@ extension _PlaylistManageUI on _MainScreenState {
       text: oldName,
     );
     final isLight = isAppLight;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: isLight
-              ? const Color(0xFFF0F0F3)
-              : const Color(0xFF282828),
-          title: Text(
-            AppLocalizations.of(context).renamePlaylist,
-            style: TextStyle(
-              color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-              fontFamily: getFontFamily(_activeFont),
-            ),
-          ),
-          content: TextField(
-            controller: nameController,
-            style: TextStyle(
-              color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
-              fontFamily: getFontFamily(_activeFont),
-            ),
-            decoration: InputDecoration(
-              hintText: AppLocalizations.of(context).playlistNamePlaceholder,
-              hintStyle: TextStyle(
-                color: isLight ? Colors.black38 : Colors.white54,
-                fontFamily: getFontFamily(_activeFont),
-              ),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: isLight ? Colors.black12 : Colors.white24,
-                ),
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: _activeAccentColor),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                AppLocalizations.of(context).cancel,
-                style: TextStyle(
-                  color: isLight ? Colors.black45 : Colors.white54,
-                  fontFamily: getFontFamily(_activeFont),
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                final newName = nameController.text.trim();
-                final bool isLocal = _userPlaylists.containsKey(oldName);
-                final bool isOnline = _userOnlinePlaylists.containsKey(oldName);
-                final bool exists = _userPlaylists.containsKey(newName) ||
-                    _userOnlinePlaylists.containsKey(newName);
+    final loc = AppLocalizations.of(context);
 
-                if (newName.isNotEmpty && newName != oldName && !exists) {
-                  setState(() {
-                    if (isLocal) {
-                      final tracks = _userPlaylists.remove(oldName);
-                      if (tracks != null) _userPlaylists[newName] = tracks;
-                      _saveUserPlaylists();
-                    }
-                    if (isOnline) {
-                      final tracks = _userOnlinePlaylists.remove(oldName);
-                      if (tracks != null) _userOnlinePlaylists[newName] = tracks;
-                      InnerTubeService().saveUserOnlinePlaylists(_userOnlinePlaylists);
-                    }
-                    if (_playlistCovers.containsKey(oldName)) {
-                      _playlistCovers[newName] = _playlistCovers.remove(
-                        oldName,
-                      )!;
-                      _savePlaylistCovers();
-                    }
-                    if (_selectedPlaylistDetail == oldName) {
-                      _selectedPlaylistDetail = newName;
-                    }
-                  });
-                  Navigator.pop(context);
-                  showFlowToast(AppLocalizations.of(context).playlistRenamed);
-                } else if (exists) {
-                  showFlowToast(
-                    AppLocalizations.of(context).playlistNameExists,
-                  );
-                }
-              },
-              child: Text(
-                AppLocalizations.of(context).save,
-                style: TextStyle(
-                  color: _activeAccentColor,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: getFontFamily(_activeFont),
-                ),
-              ),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: isLight ? const Color(0xFFFAF9F6) : const Color(0xFF1E1E1E),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isLight ? Colors.black26 : Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _activeAccentColor.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.edit_rounded,
+                        color: _activeAccentColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        loc.renamePlaylist,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isLight
+                        ? Colors.black.withValues(alpha: 0.04)
+                        : Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isLight ? Colors.black12 : Colors.white12,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: nameController,
+                    autofocus: true,
+                    textAlignVertical: TextAlignVertical.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                      fontFamily: getFontFamily(_activeFont),
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      hintText: loc.playlistNamePlaceholder,
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: isLight ? Colors.black38 : Colors.white38,
+                        fontFamily: getFontFamily(_activeFont),
+                      ),
+                      border: InputBorder.none,
+                      prefixIcon: Icon(
+                        Icons.drive_file_rename_outline_rounded,
+                        color: _activeAccentColor,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(
+                        loc.cancel,
+                        style: TextStyle(
+                          color: isLight ? Colors.black54 : Colors.white54,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _activeAccentColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                      onPressed: () {
+                        final newName = nameController.text.trim();
+                        final bool isLocal = _userPlaylists.containsKey(oldName);
+                        final bool isOnline = _userOnlinePlaylists.containsKey(oldName);
+                        final bool exists = _userPlaylists.containsKey(newName) ||
+                            _userOnlinePlaylists.containsKey(newName);
+
+                        if (newName.isNotEmpty && newName != oldName && !exists) {
+                          setState(() {
+                            if (isLocal) {
+                              final tracks = _userPlaylists.remove(oldName);
+                              if (tracks != null) _userPlaylists[newName] = tracks;
+                              _saveUserPlaylists();
+                            }
+                            if (isOnline) {
+                              final tracks = _userOnlinePlaylists.remove(oldName);
+                              if (tracks != null) _userOnlinePlaylists[newName] = tracks;
+                              InnerTubeService().saveUserOnlinePlaylists(_userOnlinePlaylists);
+                            }
+                            if (_playlistCovers.containsKey(oldName)) {
+                              _playlistCovers[newName] = _playlistCovers.remove(
+                                oldName,
+                              )!;
+                              _savePlaylistCovers();
+                            }
+                            if (_selectedPlaylistDetail == oldName) {
+                              _selectedPlaylistDetail = newName;
+                            }
+                          });
+                          Navigator.pop(ctx);
+                          showFlowToast(loc.playlistRenamed);
+                        } else if (exists) {
+                          showFlowToast(loc.playlistNameExists);
+                        }
+                      },
+                      child: Text(
+                        loc.save,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
         );
       },
     );

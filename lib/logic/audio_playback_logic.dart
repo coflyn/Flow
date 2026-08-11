@@ -124,18 +124,28 @@ extension _AudioPlaybackLogic on _MainScreenState {
         List<Track> newQueue = [];
         if (_repeatMode == 1) {
           for (int idx in newEffectiveIndices) {
-            newQueue.add(_playbackQueue[idx]);
+            if (idx >= 0 && idx < _playbackQueue.length) {
+              newQueue.add(_playbackQueue[idx]);
+            }
           }
-          _playbackQueue = newQueue;
-          _currentIndex = 0;
+          if (newQueue.isNotEmpty) {
+            _playbackQueue = newQueue;
+            _currentIndex = 0;
+          }
         } else {
           for (int i = 0; i < _currentIndex; i++) {
-            newQueue.add(_playbackQueue[i]);
+            if (i >= 0 && i < _playbackQueue.length) {
+              newQueue.add(_playbackQueue[i]);
+            }
           }
           for (int idx in newEffectiveIndices) {
-            newQueue.add(_playbackQueue[idx]);
+            if (idx >= 0 && idx < _playbackQueue.length) {
+              newQueue.add(_playbackQueue[idx]);
+            }
           }
-          _playbackQueue = newQueue;
+          if (newQueue.isNotEmpty) {
+            _playbackQueue = newQueue;
+          }
         }
       }
       _refreshAudioSourceWindow();
@@ -207,6 +217,7 @@ extension _AudioPlaybackLogic on _MainScreenState {
       _playingTrack = track;
       _lastIncrementedTrackId = null;
       _hasResetPosition = false;
+      _trackPlayStartTime = DateTime.now();
       _isNaturalFadingOut = false;
       _lastActiveLyricsIndex = -1;
       if (_isShuffle && !queueMatches && sourceList != null) {

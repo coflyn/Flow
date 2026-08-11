@@ -177,13 +177,12 @@ extension _EditMetadataUI on _MainScreenState {
                           if (_metadataOverrides.containsKey(track.id))
                             TextButton(
                               onPressed: () async {
+                               final loc = AppLocalizations.of(context);
                                 setState(() {
                                   _metadataOverrides.remove(track.id);
                                   _cachedDetailKey = null;
                                 });
-                                final msg = AppLocalizations.of(
-                                  context,
-                                ).metadataReset;
+                                final msg = loc.metadataReset;
                                 await _saveMetadataOverrides();
                                 await _requestPermissionAndScan();
 
@@ -258,6 +257,7 @@ extension _EditMetadataUI on _MainScreenState {
                               foregroundColor: Colors.white,
                             ),
                             onPressed: () async {
+                              final loc = AppLocalizations.of(context);
                               setState(() {
                                 _metadataOverrides[track.id] = {
                                   'title': titleController.text.trim(),
@@ -335,7 +335,9 @@ extension _EditMetadataUI on _MainScreenState {
                                   if (mounted) setState(() {});
                                 },
                               );
-                              showFlowToast("Metadata updated locally");
+                              showFlowToast(
+                                loc.metadataUpdatedLocal,
+                              );
                             },
                             child: Text(
                               AppLocalizations.of(context).save,

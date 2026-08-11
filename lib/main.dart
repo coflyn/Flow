@@ -274,7 +274,7 @@ class MainScreen extends StatefulWidget {
     if (mainScreenState != null) {
       final sessionId = mainScreenState!.player.androidAudioSessionId ?? 0;
       if (sessionId == 0) {
-        showFlowToast("Please play a song first to use the Equalizer!");
+        showFlowToast(AppLocalizations.of(context).playSongFirstEq);
       } else {
         mainScreenState!._showEqualizerSheet(context);
       }
@@ -341,6 +341,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   String _playingFromName = 'All Songs';
   String? _lastIncrementedTrackId;
   bool _hasResetPosition = false;
+  DateTime? _trackPlayStartTime;
 
   List<Track> _playbackQueue = [];
   List<int> _shuffledIndices = [];

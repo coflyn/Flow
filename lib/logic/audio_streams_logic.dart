@@ -32,6 +32,7 @@ extension _AudioStreamsLogic on _MainScreenState {
                   _playingTrack = _playbackQueue[newQueueIndex];
                   _lastIncrementedTrackId = null;
                   _hasResetPosition = false;
+                  _trackPlayStartTime = DateTime.now();
                   _isNaturalFadingOut = false;
                   _lastActiveLyricsIndex = -1;
                 });
@@ -92,14 +93,19 @@ extension _AudioStreamsLogic on _MainScreenState {
     });
 
     _audioPlayer.positionStream.listen((pos) {
+      final now = DateTime.now();
+      final isStaleClickFrame = _trackPlayStartTime != null &&
+          now.difference(_trackPlayStartTime!) < const Duration(seconds: 3);
+
       if (pos.inSeconds < 2) {
-        if (!_hasResetPosition) {
-          _hasResetPosition = true;
+        _hasResetPosition = true;
+        if (_lastIncrementedTrackId != null && pos.inMilliseconds < 1200) {
           _lastIncrementedTrackId = null;
         }
       }
       if (_playingTrack != null &&
           _hasResetPosition &&
+          !isStaleClickFrame &&
           _lastIncrementedTrackId != _playingTrack!.id) {
         final duration = _audioPlayer.duration ?? Duration.zero;
         final trackDuration = Duration(milliseconds: _playingTrack!.duration);

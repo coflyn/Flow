@@ -202,7 +202,9 @@ class InnerTubeService {
       final str = prefs.getString('yt_online_trending_cache');
       if (str == null || str.isEmpty) return [];
       final List<dynamic> rawList = jsonDecode(str) as List<dynamic>;
-      return rawList.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+      return rawList
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
     } catch (_) {
       return [];
     }
@@ -319,8 +321,16 @@ class InnerTubeService {
             if (searchRes.isNotEmpty) {
               final candidateList = List.from(searchRes);
               candidateList.sort((a, b) {
-                final scoreA = _getChannelPriorityScore(a.author, a.title, query);
-                final scoreB = _getChannelPriorityScore(b.author, b.title, query);
+                final scoreA = _getChannelPriorityScore(
+                  a.author,
+                  a.title,
+                  query,
+                );
+                final scoreB = _getChannelPriorityScore(
+                  b.author,
+                  b.title,
+                  query,
+                );
                 return scoreB.compareTo(scoreA);
               });
               for (final item in candidateList) {
@@ -494,9 +504,9 @@ class InnerTubeService {
       }
     }
 
-    // 3. Remove common YouTube clutter tags from title
+    // 3. Comprehensive YouTube clutter tag cleaner (matching [4K Remaster], (Official Music Video), (HD), etc.)
     final clutterRegex = RegExp(
-      r'[\(\[\{]\s*(?:official\s*(?:music\s*)?(?:video|audio|lyric\s*video|visualizer|mv)?|lyric(?:s)?|audio|video|hd|4k|mv|remastered(?:\s*\d{4})?|full\s*song)\s*[\)\]\}]|(?:\s*[\-\|]\s*)?(?:official\s*(?:music\s*)?(?:video|audio|lyric\s*video)|lyric\s*video|visualizer)\b',
+      r'[\(\[\{]\s*.*?(?:official|video|audio|lyric|visualizer|visualiser|remaster|hd|4k|mv|hq|full\s*song|topic).*?[\)\]\}]|(?:\s*[\-\|]\s*)?(?:official\s*(?:music\s*|lyric\s*)?(?:video|audio|lyric\s*video)|lyric\s*video|visualizer|visualiser)\b',
       caseSensitive: false,
     );
 
@@ -513,7 +523,12 @@ class InnerTubeService {
 
   /// Fetches a list of trending / random popular tracks for empty search state.
   Future<List<Track>> fetchTrendingOrRandomTracks() async {
-    final queries = ['Top Songs', 'Trending Music', 'Popular Hits', 'Global Top 50'];
+    final queries = [
+      'Top Songs',
+      'Trending Music',
+      'Popular Hits',
+      'Global Top 50',
+    ];
     final startIndex = DateTime.now().millisecondsSinceEpoch % queries.length;
 
     for (int i = 0; i < queries.length; i++) {
@@ -554,7 +569,11 @@ class InnerTubeService {
             final hdArtwork = rawArtwork.replaceAll('100x100bb', '600x600bb');
             final metadata = {
               'artworkUrl': hdArtwork,
-              'album': (albumName != null && albumName.isNotEmpty) ? albumName : 'Single',
+              'album': (albumName != null && albumName.isNotEmpty)
+                  ? albumName
+                  : 'Single',
+              'officialTitle': first['trackName']?.toString() ?? title,
+              'officialArtist': first['artistName']?.toString() ?? artist,
             };
             _officialMetadataCache[cacheKey] = metadata;
             return metadata;
@@ -607,6 +626,14 @@ class InnerTubeService {
         authorLower.contains('sounds') ||
         authorLower.contains('wav')) {
       score -= 30;
+    }
+
+    // 6. Boost score if video title contains the target song title
+    final cleanTargetTitle = queryLower.contains(' - ')
+        ? queryLower.split(' - ').last.trim()
+        : queryLower;
+    if (cleanTargetTitle.length > 2 && titleLower.contains(cleanTargetTitle)) {
+      score += 70;
     }
 
     return score;
@@ -962,11 +989,130 @@ class InnerTubeService {
     return 0;
   }
 
+  Future<Map<String, dynamic>> fetchSpotifyPlaylistDetails(
+    String inputUrl, {
+    String defaultTitle = 'Spotify Playlist',
+  }) async {
+    String title = defaultTitle;
+    final List<Track> tracks = [];
+
+    try {
+      String embedUrl = inputUrl.trim();
+      final playlistMatch = RegExp(
+        r'playlist/([a-zA-Z0-9]+)',
+      ).firstMatch(inputUrl);
+      final albumMatch = RegExp(r'album/([a-zA-Z0-9]+)').firstMatch(inputUrl);
+
+      if (playlistMatch != null) {
+        embedUrl =
+            'https://open.spotify.com/embed/playlist/${playlistMatch.group(1)}';
+      } else if (albumMatch != null) {
+        embedUrl =
+            'https://open.spotify.com/embed/album/${albumMatch.group(1)}';
+      }
+
+      final response = await http
+          .get(
+            Uri.parse(embedUrl),
+            headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            },
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        // Multi-tier title extraction
+        final ogTitleMatch =
+            RegExp(
+              r'<meta property="og:title" content="([^"]+)"',
+            ).firstMatch(response.body) ??
+            RegExp(r'<title>([^<]+)</title>').firstMatch(response.body);
+        if (ogTitleMatch != null) {
+          final rawTitle = ogTitleMatch
+              .group(1)
+              ?.replaceAll(' - playlist by | Spotify', '')
+              .replaceAll(' | Spotify', '')
+              .trim();
+          if (rawTitle != null &&
+              rawTitle.isNotEmpty &&
+              !rawTitle.contains('Web Player')) {
+            title = rawTitle;
+          }
+        }
+
+        final match = RegExp(
+          r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
+        ).firstMatch(response.body);
+        if (match != null) {
+          final data = jsonDecode(match.group(1)!);
+          final entity =
+              data['props']?['pageProps']?['state']?['data']?['entity'];
+          if (entity != null) {
+            final parsedTitle = entity['title'] ?? entity['name'];
+            if (parsedTitle != null && parsedTitle.toString().isNotEmpty) {
+              title = parsedTitle.toString();
+            }
+
+            final trackList = entity['trackList'] as List? ?? [];
+            final trackItems = trackList.toList();
+            final Set<String> addedTrackIds = {};
+
+            // Search tracks in controlled parallel batches of 6 with 10s timeout & deduplication
+            for (int i = 0; i < trackItems.length; i += 6) {
+              final batch = trackItems.sublist(
+                i,
+                (i + 6 > trackItems.length) ? trackItems.length : i + 6,
+              );
+              final batchResults = await Future.wait(
+                batch.map((item) async {
+                  if (item is Map) {
+                    final trackTitle =
+                        item['title']?.toString() ??
+                        item['name']?.toString() ??
+                        '';
+                    final artistName = item['subtitle']?.toString() ?? '';
+                    if (trackTitle.isNotEmpty) {
+                      final query = artistName.isNotEmpty
+                          ? '$artistName - $trackTitle'
+                          : trackTitle;
+                      try {
+                        final searchResults = await searchTracks(
+                          query,
+                        ).timeout(const Duration(seconds: 10));
+                        if (searchResults.isNotEmpty) {
+                          return searchResults.first;
+                        }
+                      } catch (_) {}
+                    }
+                  }
+                  return null;
+                }),
+              );
+              for (final res in batchResults) {
+                if (res != null && !addedTrackIds.contains(res.id)) {
+                  addedTrackIds.add(res.id);
+                  tracks.add(res);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    return {'title': title, 'tracks': tracks};
+  }
+
   Future<Map<String, dynamic>> fetchOnlinePlaylistDetails(
     String playlistId, {
     String defaultTitle = 'Imported Playlist',
   }) async {
     String cleanId = playlistId.trim();
+    if (cleanId.contains('spotify.com')) {
+      return fetchSpotifyPlaylistDetails(cleanId, defaultTitle: defaultTitle);
+    }
+
     if (cleanId.contains('list=')) {
       final uri = Uri.parse(cleanId);
       cleanId = uri.queryParameters['list'] ?? cleanId;

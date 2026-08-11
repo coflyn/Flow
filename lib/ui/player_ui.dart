@@ -357,6 +357,7 @@ extension _PlayerUI on _MainScreenState {
   }
 
   Widget _buildPlainLyricsView(Track currentTrack) {
+    final loc = AppLocalizations.of(context);
     if (_currentLyricsPlain == null || _currentLyricsPlain!.trim().isEmpty) {
       return Center(
         child: Column(
@@ -365,14 +366,14 @@ extension _PlayerUI on _MainScreenState {
             const Icon(Icons.lyrics_outlined, color: Colors.white30, size: 48),
             const SizedBox(height: 12),
             Text(
-              'No lyrics found online.',
+              loc.noLyricsOnline,
               style: TextStyle(color: Colors.white54, fontSize: 14),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () => _showManualLyricsEditor(currentTrack),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Lyrics Manually'),
+              label: Text(loc.addLyricsManually),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _activeAccentColor,
                 foregroundColor: Colors.white,
@@ -414,9 +415,7 @@ extension _PlayerUI on _MainScreenState {
       text: _currentLyricsPlain ?? '',
     );
     final offsetController = TextEditingController(
-      text: _lyricsOffsetSec == 0.0
-          ? '0'
-          : _lyricsOffsetSec.toStringAsFixed(1),
+      text: _lyricsOffsetSec == 0.0 ? '0' : _lyricsOffsetSec.toStringAsFixed(1),
     );
 
     SharedPreferences.getInstance().then((prefs) {
@@ -447,7 +446,7 @@ extension _PlayerUI on _MainScreenState {
             borderRadius: BorderRadius.circular(20),
           ),
           title: Text(
-            'Edit/Add Lyrics',
+            AppLocalizations.of(context).editAddLyrics,
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           content: SizedBox(
@@ -504,7 +503,8 @@ extension _PlayerUI on _MainScreenState {
                     for (final step in [-0.5, -0.1, 0.1, 0.5])
                       OutlinedButton(
                         onPressed: () {
-                          final current = double.tryParse(
+                          final current =
+                              double.tryParse(
                                 offsetController.text.replaceAll(',', '.'),
                               ) ??
                               0.0;
@@ -516,15 +516,15 @@ extension _PlayerUI on _MainScreenState {
                             horizontal: 14,
                             vertical: 6,
                           ),
-                          side: BorderSide(
-                            color: Colors.white24,
-                          ),
+                          side: BorderSide(color: Colors.white24),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         child: Text(
-                          step > 0 ? '+${step.toStringAsFixed(1)}s' : '${step.toStringAsFixed(1)}s',
+                          step > 0
+                              ? '+${step.toStringAsFixed(1)}s'
+                              : '${step.toStringAsFixed(1)}s',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 12,
@@ -575,7 +575,7 @@ extension _PlayerUI on _MainScreenState {
                     }
                   },
                   icon: const Icon(Icons.search, size: 18),
-                  label: const Text('Search on Google'),
+                  label: Text(AppLocalizations.of(context).searchOnGoogle),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white10,
                     foregroundColor: Colors.white,
@@ -606,7 +606,8 @@ extension _PlayerUI on _MainScreenState {
                 } else {
                   await prefs.setString(manualKey, text);
                 }
-                final offsetVal = double.tryParse(
+                final offsetVal =
+                    double.tryParse(
                       offsetController.text.replaceAll(',', '.'),
                     ) ??
                     0.0;
@@ -653,8 +654,7 @@ extension _PlayerUI on _MainScreenState {
     int? cacheWidthOverride,
     String? heroTag,
   }) {
-    if (track.thumbnailUrl != null &&
-        track.thumbnailUrl!.isNotEmpty) {
+    if (track.thumbnailUrl != null && track.thumbnailUrl!.isNotEmpty) {
       String hdThumb = track.thumbnailUrl!;
       if (hdThumb.contains('googleusercontent.com') ||
           hdThumb.contains('ggpht.com')) {
@@ -671,7 +671,8 @@ extension _PlayerUI on _MainScreenState {
 
       final double devicePixelRatio =
           MediaQuery.maybeOf(context)?.devicePixelRatio ?? 2.0;
-      final int targetCacheWidth = cacheWidthOverride ??
+      final int targetCacheWidth =
+          cacheWidthOverride ??
           (size * devicePixelRatio).round().clamp(90, 1080);
 
       final networkArtwork = Container(
@@ -1132,7 +1133,9 @@ extension _PlayerUI on _MainScreenState {
                                     color: Colors.white70,
                                     size: 26,
                                   ),
-                                  tooltip: 'Edit Lyrics',
+                                  tooltip: AppLocalizations.of(
+                                    context,
+                                  ).editAddLyrics,
                                   onPressed: () =>
                                       _showManualLyricsEditor(currentTrack),
                                 )
@@ -1787,10 +1790,7 @@ class _CachedTrackArtworkState extends State<CachedTrackArtwork> {
         height: widget.size,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(widget.radius),
-          image: DecorationImage(
-            image: diskProvider,
-            fit: BoxFit.cover,
-          ),
+          image: DecorationImage(image: diskProvider, fit: BoxFit.cover),
         ),
       );
     }

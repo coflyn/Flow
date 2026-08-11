@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Android-lightgrey)
 ![i18n](https://img.shields.io/badge/i18n-EN%20%7C%20ID%20%7C%20JA-blueviolet)
 
-Flow is a clean, modern offline music player for Android built with Flutter. It offers a smooth listening experience with synced lyrics, customizable themes, and smart playlist management.
+Flow is a clean, modern offline & online music player for Android built with Flutter. It offers a smooth listening experience with YouTube Music integration, synced lyrics, offline track downloader, customizable themes, and smart playlist management.
 
 ## Previews
 
@@ -30,6 +30,13 @@ Download the latest release APKs directly from the [GitHub Releases](https://git
 
 ## Features
 
+- **YouTube Music (InnerTube) Integration**: Seamless online music search and audio streaming powered by `youtube_explode_dart`. Search tracks dynamically from YouTube Music directly within the Songs tab with intelligent channel authority priority scoring.
+- **Online Playlists Hub & Trending Community Playlists**: Dedicated Online Playlists tab displaying top YouTube Music community playlists (_Billboard Top 100_, _Pop Music Hits_, _Top Songs_, etc.), custom online playlists, YouTube playlist URL importer, and Online Smart Playlists (_Favourites_, _Last Played_, _Most Played_).
+- **YouTube Music Home Page Layout**: Structured online home view featuring **Quick Picks** (with _Play all_ pill & expandable list), **Recently Played** carousel, **Similar Artists** recommendations, and **Top Recommended Artists** circular avatars.
+- **Offline Track Downloader**: 1-tap offline downloader (`_downloadOnlineTrack`) for YouTube Music online tracks. Saves `.m4a` audio files directly to the public device storage directory (`Music/Flow/`) with clean metadata filenames (`Artist - Title.m4a`), HD album covers, and persistent local library registration for 100% offline playback across app restarts.
+- **Disk-Buffered Audio Streaming Engine & Auto Cache Pruning**: High-performance background disk buffering for online audio streams (`yt_videoId.m4a`) for instant 0ms playback repeats with an automatic 50-track cache pruner to prevent device storage bloat.
+- **Pulsing Skeleton Loading System**: High-fidelity Spotify-like pulsing skeleton loading placeholders (`_SkeletonBox`) tailored for YouTube Music Home sections, Trending Playlists, and dedicated vertical search result lists (`_buildOnlineSearchSkeleton`).
+- **Redesigned Artists & Albums Tabs**: Multi-layout switcher (Grid View vs List View), Top Artists/Albums horizontal carousels, 360° Circular Avatars, 2-column Album grids, and played online content isolation.
 - **Local Audio Scanning & Deduplication**: Queries audio files from scoped device storage with strict file path deduplication (`seenPaths.add(song.data)`), filtering out MediaStore ghost entries.
 - **Smart Playlists Engine**: Dynamically aggregates tracks into _Favourites_, _Recently Added_, _Last Played_, _Most Played_, and _Forgotten Gems_ lists based on play statistics and recency.
 - **Custom User Playlists**: Create, rename, and manage custom playlists. Batch add multiple songs using **Hold-to-Select (Multi-Select)** mode. Personalize playlists with custom gallery artwork.
@@ -55,63 +62,18 @@ Download the latest release APKs directly from the [GitHub Releases](https://git
 - **Pixel-Perfect Margin Alignment**: Custom spatial translations (`Transform.translate`) aligning song controls at a precise `24px` horizontal screen margin.
 - **Robust Cache Manager**: Ultra-fast artwork preloading engine with multi-tier retries and anti-null failure mechanisms.
 
-## Work in Progress
+## Work In Progress
 
-- **YouTube Music (InnerTube) Integration**: Integrated online music search and audio streaming powered by `youtube_explode_dart`. Search tracks dynamically from YouTube Music directly within the Songs tab.
-- **Dedicated Online Playlists Tab & Trending Community Playlists**: Added a dedicated Online Playlists tab displaying top YouTube Music community playlists (_Billboard Top 100_, _Pop Music Hits_, _Top Songs_, etc.) with up to 300 tracks per playlist (`limit=300`), horizontal scrolling carousel of 140x140px square artwork cards, Create Playlist, Import Playlist URL, and Online Smart Playlists (_Favourites_, _Last Played_, _Most Played_).
-- **InnerTube WEB_REMIX Playlist Import Engine**: Integrated YouTube Music InnerTube WEB*REMIX `browseId: 'VL$plId'` playlist scraper (`fetchOnlinePlaylistDetails`). Correctly extracts original YouTube playlist titles (e.g. *"galau inggris"\_), real track durations via `_parseDurationStringToMs` (fixing `0 sec` header duration & `00:00` track item bugs), and 100% real track lists, automatically saving imported playlists under **`My Playlists`** persistently in local storage across app restarts.
-- **Redesigned Artists Tab & Played Online Artists Engine**: Transformed the Artists tab with a **Grid View vs List View layout switcher**, **Top Artists horizontal carousel**, **360° Circular Artist Avatars**, and **Played Online Artists Engine** (Top Artists, All Artists, and Artist Detail Views all strictly evaluate played online songs from `_onlineHistoryTracks`).
-- **Redesigned Albums Tab & Played Online Albums Engine**: Transformed the Albums tab with a **Grid View vs List View layout switcher**, **Top Albums horizontal carousel**, **2-column Album Grid view**, **Modern Album List view**, and **Played Online Albums Engine** (Top Albums, All Albums, and Album Detail Views all strictly evaluate played online songs from `_onlineHistoryTracks`).
-- **60FPS UI Performance & Pill-Tap Scoped Entrance Animations**: Replaced nested O(N\*M) track scans in Artists & Albums tabs with O(1) Map lookups (`artistTracksMap`, `albumTracksMap`), eliminating scroll micro-lag. Scoped `_FadeInSlideUp` stagger animations strictly to pill tab taps, preventing repetitive page re-animations during left/right swipe gestures.
-- **Official Online Album Metadata Enrichment Engine**: Replaced playlist title album defaults with `'Single'`, and added on-the-fly iTunes API metadata enrichment in `_playTrack` to dynamically replace generic online album names with 100% real official album titles (_Head in the Clouds II_, _Positions_, etc.) in real time.
-- **Online Stream Buffer Protection Engine (Fix Online Skipping)**: Increased stream buffer threshold to 512KB and added real completion duration validation (`currentPos >= trackDuration - 4s`). Eliminates premature cache EOF stream skipping (A ➔ B ➔ C), ensuring Online Song B plays smoothly to completion before moving to Song C.
-- **Repeat One Most Played & History Removal Engine**: Reset `_lastIncrementedTrackId` when tracks loop back to `00:00` so Repeat One mode increments `_playCounts` on every loop. Filtered **Remove from History** so it only appears on tracks actually present in history, and automatically stops playback (`stop()`) if the active song is removed from history.
-- **Dynamic 3 Mini Card Overlapping Artwork Stack**: Updated `_buildStackedArtwork` in `main_ui_components.dart` so all playlists with tracks (1, 2, or 3+ songs) dynamically render sleek 3-stacked mini card overlapping artwork covers instead of displaying a placeholder icon when under 4 tracks.
-- **Online Audio Stream Timestamp Reset Engine**: Resolved online track skipping bug (where Song A completing caused Song B's timestamp to remain at the end and skip straight to Song C). Added instant position reset (`seek(Duration.zero)`) before async network stream URL resolution, guaranteeing every next online track starts playing cleanly from `00:00`.
-- **Persistent 0ms Online Playlists & Tracks Caching Engine**: Online trending playlists (`yt_online_trending_cache`) and track lists (`yt_online_playlist_tracks_cache`) are now cached persistently on disk. Entering Flow loads trending playlists instantly (0ms latency), and tapping any previously opened or imported playlist opens detail view IMMEDIATELY without showing loading spinners.
-- **Unified Local & Online Audio Auto-Advance Engine**: Synchronized UI state updates (`_playingTrack` & `_currentIndex`) on local `ConcatenatingAudioSource` sequence changes so artwork, title, and lyrics update in 100% real-time sync with audio playback, while enabling uninterrupted auto-advance (`_playNext()`) for online track queues upon track completion.
-- **540x540 HD Artwork Upgrade & Smooth Performance Engine**: Upgraded online thumbnail resolutions from low-res 60x60 ("burik") to crystal-clear 540x540 HD resolution (`=w540-h540`), and added target `cacheWidth` decoding to `Image.network` in `_buildTrackArtwork` for 60fps buttery smooth playlist scrolling.
-- **Title + Artist History Deduplication**: Added case-insensitive Title + Artist matching to `saveOnlineTrackToHistory` and `_onlineHistoryTracks.removeWhere`, preventing duplicate songs in Recently Played when playing tracks from different sources.
-- **Glassmorphic 2-Column Action Cards**: Redesigned Create & Import Playlist buttons into sleek 2-column glassmorphic gradient action cards (_New Playlist_ & _Import URL_) with vibrant accent borders, circular icon badges, and tap feedback.
-- **Pill Tab Entrance Animation**: Added `ValueKey` tab switching entrance triggers for the Online Playlists tab, smoothly playing the `_FadeInSlideUp` animation every time the user taps the Playlists pill tab.
-- **Persistent Online Favourites & Most Played Engine (`yt_online_favorites`)**: Liking online tracks (❤️) persistently saves them to local storage under `yt_online_favorites` across app launches. The Online _Most Played_ smart playlist ranks online tracks strictly by play count frequency (`_playCounts` descending).
-- **Unified Standard Flow Detail View for Online Playlists**: Tapping any online playlist (Trending Playlists, Online Favourites, Last Played, Most Played, or Custom Online Playlists) opens the full **Standard Flow Detail View** complete with a 300x300 artwork header (or 4-grid collage), curator details, track count, total duration, Play All, Shuffle, and full song list.
-- **Smart iTunes API Fallback & 100 Songs Fetching (`limit=100`)**: Guarantees 100% successful track fetching by fallback querying the iTunes Song Search API when YouTube playlist endpoints return empty or restricted lists. Fetches up to 100 full tracks with high-resolution 600x600 HD album artwork.
-- **On-Demand YouTube Video Stream Resolver (`(0) Source Error` Fix)**: Resolved Android ExoPlayer `(0) Source error` during online playlist playback by dynamically resolving non-standard track IDs to official 11-character YouTube video streams (`yt.search.searchContent`) on-demand when playing tracks.
-- **Locked Most Played Sorting**: Fixed Most Played sorting across both Local and Online modes by locking track order strictly to `_playCounts` descending and protecting it against generic detail view re-sorting overrides, ensuring top played songs (e.g., 11 plays) are locked at Rank #1.
-- **Strict 4-Cover Playlist Artwork Threshold**: Enforced a strict 4-track threshold (`tracks.length >= 4`) for stacked artwork collages in playlist cards. Playlists with fewer than 4 tracks maintain clean fallback circle icons (_Fire icon for Most Played_, _History icon for Last Played_, etc.).
-- **Clean Un-underlined Loading Dialog**: Wrapped modal loading overlays with `Material(type: MaterialType.transparency)` and `TextDecoration.none`, eliminating Flutter default yellow underline artifacts under loading text.
-- **Disk-Buffered Streaming Architecture & Auto Cache Pruning**: Resolved Android ExoPlayer `(0) Source error` and YouTube CDN HTTP 403 Forbidden blocks by implementing Dart-native background disk buffering (`InnerTubeService.getAudioStreamFilePath`). Audio streams buffer initial data into temporary storage (`yt_videoId.m4a`) for instant 0ms playback on repeats, with an **automatic cache pruner** (`_pruneAudioCacheIfNeeded`) that caps temporary audio storage at 50 tracks to guarantee zero storage bloat.
-- **Accurate 32x32 Downsampled Dynamic Color Extraction**: Implemented ultra-fast 100% accurate visual color extraction (`_updateDominantColor`) for online tracks using 32x32 px downsampled network images (`ResizeImage(NetworkImage(...), width: 32, height: 32)`). Reduces pixel processing overhead from 1,000,000 to just 1,024 pixels (<1ms CPU time), extracting 100% true visual colors (Cyan, Red, Blue) asynchronously in a background microtask with zero UI tap latency.
-- **Channel Authority Priority Scoring System**: Intelligent search ranking engine (`_getChannelPriorityScore`) that scores YouTube search candidates by channel authority. Official `- Topic` record label uploads (+100 pts) and verified Official Artist / VEVO channels (+80 pts) automatically receive Rank #1 priority over generic fan re-upload channels.
-- **YouTube Music Home Page Layout Engine**: Redesigned the Online Songs tab homepage layout. When search query is empty, displays 4 structured sections:
-  1. **`Quick picks`**: Recommended top tracks with 52x52px rounded artwork, track title, artist • duration metadata, options menu, a **`Play all`** pill button, and an expandable **`Load more` / `Show less`** button.
-  2. **`Recently Played`**: Horizontal scrolling carousel of 130x130px square artwork cards with play icon overlays for active tracks and 3-dots context menu options for online tracks persisted in `yt_online_history`.
-  3. **`Similar to [Favorite Artist]`**: Dynamic recommendation carousel powered by `fetchSimilarArtistTracks` for the user's most listened artist.
-  4. **`Recommended Artists`**: Horizontal scrolling carousel of **75x75px Circular Avatar Cards** for top artists, allowing 1-tap artist search exploration.
-- **Clean Uncluttered Horizontal Artwork Cards & Smart Active State Overlay**: Removed static play icon overlays on inactive horizontal artwork cards (_Recently Played_, _Similar to Artist_), rendering pure 130x130px album art. Actively playing cards dynamically present a semi-transparent dark circle with interactive **Play/Pause (▶/⏸)** controls, bold accent text styling, and 1-tap playback toggling.
-- **Single-Track Playback Scoping for Recommendation Carousels**: Optimized carousel item tap handlers in recommendation sections to queue strictly the selected single track (`sourceList: [track]`), keeping the Up Next queue focused and preventing unexpected carousel queue auto-advancements.
-- **Far-Right Aligned Options Menu**: Fine-tuned Quick Picks list item padding (`right: 0`), perfectly aligning 3-dots action buttons (`⋮`) flush to the right edge with top header controls.
-- **Real-Time 0ms Recently Played State Update**: Automatically updates `_onlineHistoryTracks` and pushes newly played online tracks to the top of the **Recently Played** carousel in real time (**0ms**) without requiring page reloads or tab switches.
-- **Accurate Duration Unit Formatting**: Fixed duration calculations in `_buildOnlineQuickPickItem` by passing milliseconds (`Duration(milliseconds: track.duration)`), displaying precise track durations (e.g., `3:45`, `4:12`).
-- **Interactive 3-Dots & Long-Press Card Options**: Integrated top-right 3-dots overlay buttons and long-press gestures on horizontal artwork cards to trigger the track options context menu (_Download, Remove from History, Add to Playlist, Sleep Timer_).
-- **Dynamic Online Pill Label ("Home") & Fade-In Transition**: Automatically switches the first tab pill label to **`Home`** when in Online mode and animates the homepage view with a smooth `_FadeInSlideUp` transition.
-- **Fast Non-Blocking Load & 3.5s Timeout Safety**: Optimized initial online content loading to render Quick Picks and Recently Played immediately while fetching similar artist recommendations asynchronously, with a 3.5-second timeout guard preventing infinite loading states.
-- **Instant Memory Caching (0ms Load Delay)**: Implemented `_isOnlineContentLoaded` memory caching for online home sections. Switching between `Local` and `Online` modes, navigating tabs, or clearing search query instantly restores the home view in **0ms** with zero loading spinners or redundant network re-fetches.
-- **Race-Free Search Request Guarding**: Integrated `_onlineSearchRequestId` session token tracking across all online search methods (`_triggerOnlineSearch`, `_loadOnlineTabInitialContent`). Outdated asynchronous network search responses (e.g. earlier keystrokes) are silently discarded, eliminating search result overwrites and unwanted page reloads.
-- **Offline Track Download Manager**: Integrated one-tap offline downloader (`_downloadOnlineTrack`) for YouTube Music online tracks. Saves `.m4a` audio files directly to the public device storage directory (`Music/Flow/`) with clean metadata filenames (`Artist - Title.m4a`) and zero extra `.jpg` cover files, registering clean metadata into the local library so downloaded tracks appear instantly in the Songs tab and play 100% offline across app restarts.
-- **Remove from Recently Played & Cache Purger**: Added `removeOnlineTrackFromHistory` option with standard neutral icon styling. Deletes selected tracks from `yt_online_history` and automatically purges associated temporary audio cache files (`yt_videoId.m4a`) from storage and memory.
-- **Online Detail Routing (Go to Album & Go to Artist)**: Enabled 3-dots track options menu "Go to Album" and "Go to Artist" actions for online tracks, querying the online track pool (`_onlineSearchResults`, `_onlineHistoryTracks`, `_onlineQuickPicks`, `_similarArtistTracks`) while maintaining complete isolation from local MP3 files.
-- **Streamlined Track Options & Online Playlist Removal**: Context menu automatically hides local file operations (_Hide from Library, Delete from Device_) when viewing tracks inside Album and Playlist detail views to prevent accidental file deletion. Enables **Remove from Playlist** for user online playlists and cached online playlists.
-- **Multilingual i10n Localization Updates**: Expanded ARB localization files (`app_en.arb`, `app_id.arb`, `app_id.arb`) with download and history management strings (`downloadTrack`, `downloadingTrack`, `downloadSuccess`, `alreadyDownloaded`, `downloadFailed`, `removeFromHistory`, `historyRemoved`).
-- **Now Playing Keyboard Dismissal Fix**: Fixed soft keyboard pop-up bugs by automatically unfocusing search nodes (`_searchFocusNode.unfocus()`) on mini player, full-screen player, and track list interactions.
-- **Modern Pulsing Skeleton Loading System**: Replaced plain circular progress spinners across all YouTube Music views (_Home, Playlists, Artists, Albums_) with smooth, pulsing skeleton loading placeholders (`_SkeletonBox`), bringing a premium Spotify-like loading experience.
-- **Instant Zero-Flicker M4A Artwork Disk Cache Engine**: Synchronously initializes the artwork cache directory (`ArtworkCacheManager.init`) prior to frame 0 in `main()`, paired with an `ArtworkType.ALBUM` fallback when `AUDIO` artwork is missing. Completely eliminates M4A/AAC cover flickering on app startup.
-- **Volume-Restored Auto-Advance & Crossfade Engine**: Enclosed volume transitions in a strict `try...finally` block inside `_slideWindowInPlace` and `currentIndexStream.listen`, guaranteeing audio volume automatically restores to `_volume` on natural track transitions and crossfade interrupts, preventing silent next track playback.
-- **Instant Non-Blocking Home Load & Infinite Skeleton Safeguard**: Unblocked initial Home tab loading immediately upon history and quick picks return, adding `!_isOnlineContentLoaded` safeguards and multi-fallback search queries (`Top Songs`, `Trending Music`, `Popular Hits`) to eliminate infinite re-entrant search loops on Home.
-- **1x Initial Tab Entrance Animation & Pill Tap Re-Trigger Engine**: Smooth `_FadeInSlideUp` entrance animations play once upon initial tab visit, remain static during horizontal swipe gestures, and re-trigger dynamically when tapping header capsule buttons.
-- **Precision YouTube Stream Audio Resolution (`yt_` Prefix Fix)**: Fixed video ID prefix parsing in `getAudioStreamFilePath` to stream exact 11-char YouTube audio streams without unwanted fallback searches, guaranteeing 100% audio sync for Trending Playlists and Quick Picks.
-- **Online Albums Played Track Isolation & Generic Filter**: Online album views and details now strictly isolate tracks the user has actually played, filtering out generic album tags (`Single`, `Unknown Album`) and unplayed random search clutter.
+- **YouTube Music (InnerTube) Online Integration**: Seamless online music search and audio streaming powered by `youtube_explode_dart`. Dynamically search tracks, albums, artists, and community playlists directly within the app.
+- **Online Playlists Hub & Spotify / YouTube Importer**: Dedicated Online Playlists tab featuring top YouTube Music community playlists (_Billboard Top 100_, _Pop Music Hits_, _Top Songs_, etc.), **Spotify & YouTube Music Playlist URL Importer**, and Online Smart Playlists (_Favourites_, _Last Played_, _Most Played_).
+- **Redesigned Playlist Modals**: Sleek rounded Bottom Sheet modals for Create Playlist, Import Playlist, and Rename Playlist.
+- **YouTube Music Home Page Layout**: Structured online home view featuring _Quick Picks_ (with _Play all_ pill & expandable list), _Recently Played_ carousel, _Similar Artists_ recommendations, and _Top Recommended Artists_ circular avatars.
+- **Offline Track Downloader & Local Library Registration**: 1-tap offline downloader (`_downloadOnlineTrack`) saving `.m4a` audio files to public storage (`Music/Flow/`) with clean metadata filenames (`Artist - Title.m4a`), HD album covers, and persistent local library registration for 100% offline playback.
+- **100% Complete Internationalization (i18n)**: Comprehensive localization across English, Indonesian, and Japanese (`app_en.arb`, `app_id.arb`, `app_ja.arb`) covering all 441 keys, dialogs, toasts, search inputs, tooltips, crop tools, and UI components.
+- **Redesigned Artists & Albums Tabs**: Multi-layout switcher (Grid View vs List View), Top Artists/Albums horizontal carousels, 360° Circular Avatars, 2-column Album grids, and played online content filtering.
+- **Pulsing Skeleton Loading System**: High-fidelity pulsing skeleton loading placeholders (`_SkeletonBox`) tailored for YouTube Music Home sections, Trending Playlists, and dedicated vertical search result lists (`_buildOnlineSearchSkeleton`).
+- **Disk-Buffered Audio Streaming Engine**: High-performance background disk buffering (`yt_videoId.m4a`) with automatic 50-track cache pruner for instant 0ms playback repeats without storage bloat.
+- **1x Tab Entrance Animations & Pill Tap Re-Trigger Engine**: Smooth stagger entrance animations playing once per tab visit, remaining static during horizontal swipe gestures, and re-triggering dynamically when tapping header capsule buttons.
 
 ## Previous Updates (v1.0.6)
 
@@ -128,32 +90,34 @@ Download the latest release APKs directly from the [GitHub Releases](https://git
 
 The project has been refactored into a highly modular, decoupled architecture using Dart's `part` and `part of` directives, keeping local state synchronization lightweight and seamless:
 
-- **`lib/main.dart`**: Root application entry, boot sequence initialization, and core Scaffold state container. Now elegantly stripped of massive logic blocks for a clean ~700 line entrypoint.
-- **`lib/logic/audio_playback_logic.dart`**: Playback queue transformations, smooth seek, repeat modes, and dynamic lyric fetching. (split from `main_audio_logic.dart`)
+- **`lib/main.dart`**: Root application entry, boot sequence initialization, and core Scaffold state container.
+- **`lib/services/innertube_service.dart`**: YouTube Music (InnerTube) API service handling online search, playlist parsing, recommendations, disk buffering, and stream URL resolution.
+- **`lib/logic/audio_playback_logic.dart`**: Playback queue transformations, smooth seek, repeat modes, and dynamic lyric fetching.
 - **`lib/logic/audio_settings_logic.dart`**: Settings persistence, sleep timer, and detail-color extraction.
 - **`lib/logic/audio_streams_logic.dart`**: Audio stream wiring and playback state synchronization.
-- **`lib/logic/audio_library_scan_logic.dart`**: Library scanning, permission flow, and startup update checks.
+- **`lib/logic/audio_library_scan_logic.dart`**: Library scanning, offline downloader, permission flow, and startup update checks.
 - **`lib/logic/audio_equalizer_logic.dart`**: Saved equalizer session restore.
 - **`lib/ui/main_ui_components.dart`**: Core skeletal UI renderers extracted from the main tree, including custom headers, empty states, and dynamic playlist grid covers.
 - **`lib/ui/player_ui.dart`**: Fullscreen adaptive music player UI. Houses physics-based swipe-down gestures, sliding mini players, and dynamic palette-based gradients.
 - **`lib/ui/detail_views_ui.dart`**: Dynamic detail overlays for Artists, Albums, and custom/default Playlists.
-- **`lib/ui/tabs_ui.dart`**: Viewport page layouts hosting horizontal swipable tabs (Songs list, Playlist cards, Artist list, Album cards) and the standard search system.
-- **`lib/ui/track_options_ui.dart` / `edit_metadata_ui.dart` / `sort_ui.dart` / `sort_modal_ui.dart` / `detail_sort_ui.dart`**: Track option modals, metadata editor, and sort/detail-sort sheets. (split from `modals_track_ui.dart`)
-- **`lib/ui/song_info_ui.dart` / `cover_picker_ui.dart` / `song_cover_picker_ui.dart` / `ringtone_cutter_ui.dart`**: Song info, cover selection, and ringtone cutter modals. (split from `modals_track_ui.dart`)
-- **`lib/ui/playlist_edit_songs_ui.dart` / `playlist_manage_ui.dart`**: Playlist song editing and management CRUD modals. (split from `modals_playlist_ui.dart`)
-- **`lib/ui/sleep_timer_ui.dart` / `folder_scan_ui.dart` / `modals_utility_ui.dart` / `equalizer_sheet_ui.dart`**: Sleep timer, folder scan, and equalizer sheet modals. (split from `modals_utility_ui.dart`)
-- **`lib/screens/settings_screen.dart` & split settings modals** (`settings_sleep_timer.dart`, `settings_backup_restore.dart`, `settings_hidden_tracks.dart`, `settings_threshold_ui.dart`, `settings_typography_ui.dart`, `settings_theme_accent_ui.dart`, `settings_theme_mode_ui.dart`, `settings_language_density_ui.dart`): A standalone, polished Material 3 settings hub entirely decoupled from monolithic implementations, utilizing isolated component builders and dedicated modal controllers.
-- **`lib/widgets/settings/settings_ui_components.dart`**: Modularized stateless building blocks for the Settings screen (Section Headers, Premium Cards, Switch Tiles, List Tiles).
-- **`lib/providers/settings_provider.dart`**: Riverpod state management providers for reactive settings updates across the app.
+- **`lib/ui/tabs_ui.dart`**: Viewport page layouts hosting horizontal swipable tabs (Home/Songs list, Playlist cards, Artist list, Album cards), online search skeleton, and search engine.
+- **`lib/ui/track_options_ui.dart` / `edit_metadata_ui.dart` / `sort_ui.dart` / `sort_modal_ui.dart` / `detail_sort_ui.dart`**: Track option context menus, metadata editor, and sort/detail-sort sheets.
+- **`lib/ui/song_info_ui.dart` / `cover_picker_ui.dart` / `song_cover_picker_ui.dart` / `ringtone_cutter_ui.dart`**: Song info, cover selection, and ringtone cutter modals.
+- **`lib/ui/playlist_edit_songs_ui.dart` / `playlist_manage_ui.dart`**: Playlist song editing and management CRUD modals.
+- **`lib/ui/sleep_timer_ui.dart` / `folder_scan_ui.dart` / `modals_utility_ui.dart` / `equalizer_sheet_ui.dart`**: Sleep timer, folder scan, and equalizer sheet modals.
+- **`lib/screens/settings_screen.dart` & split settings modals** (`settings_sleep_timer.dart`, `settings_backup_restore.dart`, `settings_hidden_tracks.dart`, `settings_threshold_ui.dart`, `settings_typography_ui.dart`, `settings_theme_accent_ui.dart`, `settings_theme_mode_ui.dart`, `settings_language_density_ui.dart`): Standalone, polished Material 3 settings hub decoupled from monolithic implementations.
+- **`lib/widgets/settings/settings_ui_components.dart`**: Modularized stateless building blocks for the Settings screen.
+- **`lib/providers/settings_provider.dart`**: Riverpod state management providers for reactive settings updates.
 - **`lib/services/audio_handler.dart`**: OS-level audio intent interception and background service hooks (`MyAudioHandler`).
 - **`lib/utils/artwork_cache_manager.dart`**: Ultra-fast multi-tier background artwork preloading and memory caching engine.
 - **`lib/utils/image_cropper_util.dart`**: Native and pure Flutter 1:1 and 9:16 aspect ratio image cropping utilities.
-- **`lib/utils/globals.dart`**: Centralized dependency injection for global state `ValueNotifiers`, theme configuration tools, and app-wide Toast notification helpers.
+- **`lib/utils/globals.dart`**: Centralized dependency injection for global state `ValueNotifiers`, theme configuration tools, and Toast helpers.
 - **`lib/l10n/`**: Type-safe Flutter `AppLocalizations` ARB files (`app_en.arb`, `app_id.arb`, `app_ja.arb`) for full English, Indonesian, and Japanese internationalization.
 
 ## Dependencies
 
 - **`just_audio`**: High-performance local and streaming audio playback engine.
+- **`youtube_explode_dart`**: YouTube Music InnerTube API integration engine for online track search, streaming, and playlist scraping.
 - **`audio_service`**: OS-level audio session backgrounding and system tray locking controls using MediaSession APIs.
 - **`on_audio_query`**: Scoped querying of local media storage structures.
 - **`permission_handler`**: Runtime operating system authorization checks (Storage/Notification).
@@ -175,12 +139,47 @@ The project has been refactored into a highly modular, decoupled architecture us
 - **Gradle & Kotlin**: Android Gradle Plugin 8.+ with Kotlin Built-in compiler options (`JVM 17`).
 - **Split Release Command**: Build optimized target-architecture APKs using `flutter build apk --release --split-per-abi`.
 
-## Development Notes
+## Contributing
 
-- When running on Android 13 or higher, ensure that the application is granted the `READ_MEDIA_AUDIO` permission for proper library scanning. The application uses `content://` URIs to support scoped storage natively.
-- Make sure to use JDK 17 for compiling the Android build due to updated Kotlin and Gradle Plugin (`build.gradle.kts`) requirements.
-- Native Android methods (Equalizer, Mono Audio, Ringtone export) are bridged via MethodChannels in `MainActivity.kt`.
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create! Any contributions you make are **greatly appreciated**.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## Localization
+
+Flow supports multiple languages out of the box:
+
+- 🇺🇸 **English** (`app_en.arb`)
+- 🇮🇩 **Indonesian** (`app_id.arb`)
+- 🇯🇵 **Japanese** (`app_ja.arb`)
+
+Feel free to submit a Pull Request to add translations for your language!
+
+## Credits & Acknowledgements
+
+Flow is made possible thanks to the following open-source projects and libraries:
+
+- [just_audio](https://pub.dev/packages/just_audio) & [audio_service](https://pub.dev/packages/audio_service) by Ryan Heise
+- [youtube_explode_dart](https://pub.dev/packages/youtube_explode_dart) by Hexer10
+- [Flutter](https://flutter.dev) framework by Google
+- All open-source package authors and contributors in the Flutter ecosystem.
+
+## Support
+
+If you love using **Flow Audio Player**, consider supporting development:
+
+- ⭐️ Star the repository on GitHub
+- 💬 Share Flow with your friends & fellow music lovers
+- 🎁 Support the developer on [SociaBuzz](https://sociabuzz.com/coflyn)
+
+## Disclaimer
+
+Flow is an open-source client application designed for personal local and online audio playback. Flow does not host, store, or claim ownership of any third-party media content or copyright-protected material. All online audio streams and metadata belong to their respective copyright holders.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 (GPL-3.0). See the [LICENSE](LICENSE) file for more details.
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See the [LICENSE](LICENSE) file for more details.

@@ -500,7 +500,7 @@ extension _DetailViewsUI on _MainScreenState {
                               onPressed: () {
                                 _showEditPlaylistSongsModal(context, title);
                               },
-                              tooltip: 'Edit Playlist',
+                              tooltip: AppLocalizations.of(context).editPlaylistTitle,
                             ),
                           IconButton(
                             icon: Icon(
@@ -511,7 +511,7 @@ extension _DetailViewsUI on _MainScreenState {
                             onPressed: () {
                               _showDetailSortModal(context);
                             },
-                            tooltip: 'Sort Songs',
+                            tooltip: AppLocalizations.of(context).sortBy,
                           ),
                         ],
                       ),

@@ -40,6 +40,9 @@ extension _TabsUI on _MainScreenState {
 
     if (_searchSourceIndex == 1) {
       if (_isOnlineSearching) {
+        if (_searchQuery.trim().isNotEmpty) {
+          return _buildOnlineSearchSkeleton();
+        }
         return _buildOnlineHomeSkeleton();
       }
       if (!_isOnlineContentLoaded &&
@@ -51,8 +54,9 @@ extension _TabsUI on _MainScreenState {
               _loadOnlineTabInitialContent();
             }
           });
+          return _buildOnlineHomeSkeleton();
         }
-        return _buildOnlineHomeSkeleton();
+        return _buildOnlineSearchSkeleton();
       }
 
       if (_searchQuery.isEmpty) {
@@ -301,13 +305,14 @@ extension _TabsUI on _MainScreenState {
     String playlistTitle, {
     bool isImport = false,
   }) async {
+    final loc = AppLocalizations.of(context);
     final cachedTracks =
         _onlinePlaylistTracks[playlistId] ??
         _onlinePlaylistTracks[playlistTitle] ??
         _userOnlinePlaylists[playlistTitle] ??
         _userOnlinePlaylists[playlistId];
 
-    if (cachedTracks != null && cachedTracks.isNotEmpty) {
+    if (!isImport && cachedTracks != null && cachedTracks.isNotEmpty) {
       setState(() {
         _cachedDetailKey = null;
         _selectedPlaylistDetail = playlistTitle;
@@ -329,10 +334,12 @@ extension _TabsUI on _MainScreenState {
         child: Material(
           type: MaterialType.transparency,
           child: Container(
-            padding: const EdgeInsets.all(24),
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            constraints: const BoxConstraints(maxWidth: 320),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
             decoration: BoxDecoration(
               color: isAppLight ? Colors.white : const Color(0xFF1E1E1E),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -343,8 +350,24 @@ extension _TabsUI on _MainScreenState {
                   'Loading Playlist...',
                   style: TextStyle(
                     color: isAppLight ? Colors.black87 : Colors.white70,
-                    fontSize: 14,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: getFontFamily(_activeFont),
                     decoration: TextDecoration.none,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    loc.playlistImportLoadingTip,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: isAppLight ? Colors.black54 : Colors.white54,
+                      fontSize: 12,
+                      fontFamily: getFontFamily(_activeFont),
+                      decoration: TextDecoration.none,
+                    ),
                   ),
                 ),
               ],
@@ -367,15 +390,15 @@ extension _TabsUI on _MainScreenState {
         if (tracks.isNotEmpty) {
           setState(() {
             _cachedDetailKey = null;
-            _onlinePlaylistTracks[playlistId] = tracks;
-            _onlinePlaylistTracks[playlistTitle] = tracks;
             _onlinePlaylistTracks[finalTitle] = tracks;
+            _onlinePlaylistTracks[playlistId] = tracks;
             if (isImport) {
+              _userOnlinePlaylists.remove(playlistId);
               _userOnlinePlaylists[finalTitle] = tracks;
-              _userOnlinePlaylists[playlistTitle] = tracks;
-              _userOnlinePlaylists[playlistId] = tracks;
               InnerTubeService().saveUserOnlinePlaylists(_userOnlinePlaylists);
-              showFlowToast('Playlist "$finalTitle" imported to My Playlists');
+              showFlowToast(
+                loc.playlistImportedFormat.replaceAll('[placeholder]', finalTitle),
+              );
             }
             InnerTubeService().saveOnlinePlaylistTracksCache(
               _onlinePlaylistTracks,
@@ -390,19 +413,20 @@ extension _TabsUI on _MainScreenState {
             );
           });
         } else {
-          showFlowToast('Failed to load playlist tracks');
+          showFlowToast(loc.failedToLoadPlaylistTracks);
         }
       }
     } catch (_) {
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-        showFlowToast('Failed to load playlist');
+        showFlowToast(loc.failedToLoadPlaylist);
       }
     }
   }
 
   Widget _buildOnlinePlaylistsView() {
     final isLight = isAppLight;
+    final loc = AppLocalizations.of(context);
     final textColor = isLight ? const Color(0xFF1A1A1A) : Colors.white;
     final subtextColor = isLight ? Colors.black54 : Colors.white54;
 
@@ -439,7 +463,7 @@ extension _TabsUI on _MainScreenState {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                'Trending Playlists',
+                loc.trendingPlaylists,
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -531,21 +555,18 @@ extension _TabsUI on _MainScreenState {
                     onTap: () => _showCreateOnlinePlaylistModal(context),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        vertical: 14,
+                        vertical: 13,
                         horizontal: 16,
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            _activeAccentColor.withValues(alpha: 0.22),
-                            _activeAccentColor.withValues(alpha: 0.08),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        color: isLight
+                            ? Colors.black.withValues(alpha: 0.04)
+                            : Colors.white.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: _activeAccentColor.withValues(alpha: 0.35),
+                          color: isLight
+                              ? Colors.black12
+                              : Colors.white.withValues(alpha: 0.10),
                           width: 1,
                         ),
                       ),
@@ -555,25 +576,26 @@ extension _TabsUI on _MainScreenState {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: _activeAccentColor,
+                              color: _activeAccentColor.withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.add_rounded,
-                              color: Colors.white,
+                              color: _activeAccentColor,
                               size: 16,
                             ),
                           ),
                           const SizedBox(width: 10),
                           Flexible(
                             child: Text(
-                              'New Playlist',
+                              loc.newPlaylist,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: textColor,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                           ),
@@ -588,21 +610,18 @@ extension _TabsUI on _MainScreenState {
                     onTap: () => _showImportOnlinePlaylistModal(context),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        vertical: 14,
+                        vertical: 13,
                         horizontal: 16,
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            _activeAccentColor.withValues(alpha: 0.22),
-                            _activeAccentColor.withValues(alpha: 0.08),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        color: isLight
+                            ? Colors.black.withValues(alpha: 0.04)
+                            : Colors.white.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: _activeAccentColor.withValues(alpha: 0.35),
+                          color: isLight
+                              ? Colors.black12
+                              : Colors.white.withValues(alpha: 0.10),
                           width: 1,
                         ),
                       ),
@@ -612,25 +631,26 @@ extension _TabsUI on _MainScreenState {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: _activeAccentColor,
+                              color: _activeAccentColor.withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.link_rounded,
-                              color: Colors.white,
+                              color: _activeAccentColor,
                               size: 16,
                             ),
                           ),
                           const SizedBox(width: 10),
                           Flexible(
                             child: Text(
-                              'Import URL',
+                              loc.importUrl,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: textColor,
+                                fontFamily: getFontFamily(_activeFont),
                               ),
                             ),
                           ),
@@ -696,7 +716,7 @@ extension _TabsUI on _MainScreenState {
                     isOnline: true,
                   ),
                   _buildPlaylistCard(
-                    'Recently Played',
+                    loc.recentlyPlayed,
                     onlineLastPlayed,
                     const Color(0xFFFF9800),
                     Icons.history,
@@ -715,7 +735,7 @@ extension _TabsUI on _MainScreenState {
                   Padding(
                     padding: const EdgeInsets.only(left: 8, bottom: 8),
                     child: Text(
-                      'My Playlists',
+                      loc.myPlaylists,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -743,80 +763,332 @@ extension _TabsUI on _MainScreenState {
 
   void _showCreateOnlinePlaylistModal(BuildContext context) {
     final controller = TextEditingController();
-    showDialog(
+    final loc = AppLocalizations.of(context);
+    final isLight = isAppLight;
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create Online Playlist'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Playlist Name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
           ),
-          TextButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                Navigator.pop(ctx);
-                setState(() {
-                  _userOnlinePlaylists[name] = [];
-                });
-                InnerTubeService().saveUserOnlinePlaylists(
-                  _userOnlinePlaylists,
-                );
-                showFlowToast('Playlist "$name" created');
-              }
-            },
-            child: const Text('Create'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: isLight ? const Color(0xFFFAF9F6) : const Color(0xFF1E1E1E),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isLight ? Colors.black26 : Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _activeAccentColor.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.playlist_add_rounded,
+                        color: _activeAccentColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        loc.createOnlinePlaylist,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isLight
+                        ? Colors.black.withValues(alpha: 0.04)
+                        : Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isLight ? Colors.black12 : Colors.white12,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    autofocus: true,
+                    textAlignVertical: TextAlignVertical.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                      fontFamily: getFontFamily(_activeFont),
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      hintText: loc.playlistNamePlaceholder,
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: isLight ? Colors.black38 : Colors.white38,
+                        fontFamily: getFontFamily(_activeFont),
+                      ),
+                      border: InputBorder.none,
+                      prefixIcon: Icon(
+                        Icons.edit_note_rounded,
+                        color: _activeAccentColor,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(
+                        loc.cancel,
+                        style: TextStyle(
+                          color: isLight ? Colors.black54 : Colors.white54,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _activeAccentColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                      onPressed: () {
+                        final name = controller.text.trim();
+                        if (name.isNotEmpty) {
+                          Navigator.pop(ctx);
+                          setState(() {
+                            _userOnlinePlaylists[name] = [];
+                          });
+                          InnerTubeService().saveUserOnlinePlaylists(
+                            _userOnlinePlaylists,
+                          );
+                          showFlowToast(
+                            loc.playlistCreatedFormat.replaceAll('[placeholder]', name),
+                          );
+                        }
+                      },
+                      child: Text(
+                        loc.create,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   void _showImportOnlinePlaylistModal(BuildContext context) {
     final controller = TextEditingController();
-    showDialog(
+    final loc = AppLocalizations.of(context);
+    final isLight = isAppLight;
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Import Playlist'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Paste YouTube Music Playlist Link / ID',
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: isLight ? const Color(0xFFFAF9F6) : const Color(0xFF1E1E1E),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isLight ? Colors.black26 : Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _activeAccentColor.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.cloud_download_rounded,
+                        color: _activeAccentColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        loc.importPlaylist,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isLight
+                        ? Colors.black.withValues(alpha: 0.04)
+                        : Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isLight ? Colors.black12 : Colors.white12,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    autofocus: true,
+                    textAlignVertical: TextAlignVertical.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                      fontFamily: getFontFamily(_activeFont),
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      hintText: loc.pastePlaylistLinkHint,
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: isLight ? Colors.black38 : Colors.white38,
+                        fontFamily: getFontFamily(_activeFont),
+                      ),
+                      border: InputBorder.none,
+                      prefixIcon: Icon(
+                        Icons.link_rounded,
+                        color: _activeAccentColor,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(
+                        loc.cancel,
+                        style: TextStyle(
+                          color: isLight ? Colors.black54 : Colors.white54,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _activeAccentColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                      onPressed: () async {
+                        final input = controller.text.trim();
+                        if (input.isNotEmpty) {
+                          Navigator.pop(ctx);
+                          await Future.delayed(const Duration(milliseconds: 300));
+                          if (!mounted) return;
+                          String plId = input;
+                          if (input.contains('list=')) {
+                            try {
+                              final uri = Uri.parse(input);
+                              plId = uri.queryParameters['list'] ?? input;
+                            } catch (_) {}
+                          }
+                          _fetchAndShowOnlinePlaylistDetails(
+                            plId,
+                            loc.importedPlaylist,
+                            isImport: true,
+                          );
+                        }
+                      },
+                      child: Text(
+                        loc.importAction,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: getFontFamily(_activeFont),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
-          TextButton(
-            onPressed: () {
-              final input = controller.text.trim();
-              if (input.isNotEmpty) {
-                Navigator.pop(ctx);
-                String plId = input;
-                if (input.contains('list=')) {
-                  final uri = Uri.parse(input);
-                  plId = uri.queryParameters['list'] ?? input;
-                }
-                _fetchAndShowOnlinePlaylistDetails(
-                  plId,
-                  'Imported Playlist',
-                  isImport: true,
-                );
-              }
-            },
-            child: const Text('Import'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -2184,6 +2456,7 @@ extension _TabsUI on _MainScreenState {
 
   Widget _buildOnlineHomeView() {
     final isLight = isAppLight;
+    final loc = AppLocalizations.of(context);
     final textColor = isLight ? const Color(0xFF1A1A1A) : Colors.white;
 
     return SingleChildScrollView(
@@ -2200,7 +2473,7 @@ extension _TabsUI on _MainScreenState {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Quick picks',
+                    loc.quickPicks,
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -2226,7 +2499,7 @@ extension _TabsUI on _MainScreenState {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
-                        'Play all',
+                        loc.playAll,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -2270,7 +2543,7 @@ extension _TabsUI on _MainScreenState {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _showMoreQuickPicks ? 'Show less' : 'Load more',
+                          _showMoreQuickPicks ? loc.showLess : loc.loadMore,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -2299,7 +2572,7 @@ extension _TabsUI on _MainScreenState {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                'Recently Played',
+                loc.recentlyPlayed,
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -2334,7 +2607,7 @@ extension _TabsUI on _MainScreenState {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                'Similar to $_favoriteArtistName',
+                loc.similarToArtist.replaceAll('[placeholder]', _favoriteArtistName),
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -2368,7 +2641,7 @@ extension _TabsUI on _MainScreenState {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                'Recommended Artists',
+                loc.recommendedArtists,
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -2630,6 +2903,7 @@ extension _TabsUI on _MainScreenState {
 
   Widget _buildSearchSourceSegmentedToggle() {
     final isLight = isAppLight;
+    final loc = AppLocalizations.of(context);
     final isYt = _searchSourceIndex == 1;
 
     final activeBg = isLight
@@ -2686,7 +2960,7 @@ extension _TabsUI on _MainScreenState {
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    'Local',
+                    loc.localSource,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: !isYt ? FontWeight.w600 : FontWeight.w500,
@@ -2730,7 +3004,7 @@ extension _TabsUI on _MainScreenState {
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    'Online',
+                    loc.onlineSource,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: isYt ? FontWeight.w600 : FontWeight.w500,
@@ -2748,6 +3022,7 @@ extension _TabsUI on _MainScreenState {
 
   Widget _buildSearchBar() {
     final isLight = isAppLight;
+    final loc = AppLocalizations.of(context);
     final searchBgColor = isLight
         ? Colors.black.withValues(alpha: 0.05)
         : const Color(0xFF161616);
@@ -2802,8 +3077,8 @@ extension _TabsUI on _MainScreenState {
                     style: TextStyle(fontSize: 14, color: textColor),
                     decoration: InputDecoration(
                       hintText: _searchSourceIndex == 1
-                          ? 'Search Online Music...'
-                          : AppLocalizations.of(context).searchSongs,
+                          ? loc.searchOnlineMusic
+                          : loc.searchSongs,
                       hintStyle: TextStyle(color: hintColor, fontSize: 13),
                       prefixIcon: Icon(
                         _searchSourceIndex == 1
@@ -2929,6 +3204,55 @@ extension _TabsUI on _MainScreenState {
             );
           }).toList(),
         ),
+      ),
+    );
+  }
+
+  Widget _buildOnlineSearchSkeleton() {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 16,
+        bottom: _playingTrack != null ? 84 : 24,
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < 9; i++) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                children: [
+                  const _SkeletonBox(width: 52, height: 52, borderRadius: 8),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SkeletonBox(
+                          width: (140 + (i % 3) * 35).toDouble(),
+                          height: 14,
+                          borderRadius: 4,
+                        ),
+                        const SizedBox(height: 8),
+                        _SkeletonBox(
+                          width: (90 + (i % 4) * 20).toDouble(),
+                          height: 12,
+                          borderRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const _SkeletonBox(width: 36, height: 12, borderRadius: 4),
+                  const SizedBox(width: 12),
+                  const _SkeletonBox(width: 16, height: 16, borderRadius: 8),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

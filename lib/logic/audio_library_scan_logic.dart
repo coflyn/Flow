@@ -163,18 +163,32 @@ extension _AudioLibraryScanLogic on _MainScreenState {
                     : song.artist!;
                 String album = song.album ?? 'Unknown Album';
 
-                // If MediaStore returns empty or <unknown> title/artist, extract from filename
+                final String fileName = song.data
+                    .split('/')
+                    .last
+                    .replaceAll(RegExp(r'\.[^.]+$'), '');
+
+                final bool isUnknownArtist =
+                    artist.trim().isEmpty ||
+                    artist == '<unknown>' ||
+                    artist == AppLocalizations.of(context).unknownArtist;
+
                 if (title.trim().isEmpty || title.trim() == '<unknown>') {
-                  final String fileName = song.data
-                      .split('/')
-                      .last
-                      .replaceAll(RegExp(r'\.[^.]+$'), '');
                   if (fileName.contains(' - ')) {
                     final parts = fileName.split(' - ');
                     artist = parts[0].trim();
                     title = parts.sublist(1).join(' - ').trim();
                   } else if (fileName.isNotEmpty) {
                     title = fileName;
+                  }
+                } else if (isUnknownArtist) {
+                  final String stringToParse = title.contains(' - ')
+                      ? title
+                      : fileName;
+                  if (stringToParse.contains(' - ')) {
+                    final parts = stringToParse.split(' - ');
+                    artist = parts[0].trim();
+                    title = parts.sublist(1).join(' - ').trim();
                   }
                 }
 
@@ -265,8 +279,17 @@ extension _AudioLibraryScanLogic on _MainScreenState {
       }
 
       for (final dlTrack in downloadedTracks.reversed) {
+        final dlFileName = dlTrack.path.split('/').last.toLowerCase();
         _allTracks.removeWhere(
-          (t) => t.path == dlTrack.path || t.url == dlTrack.path,
+          (t) =>
+              t.path.toLowerCase() == dlTrack.path.toLowerCase() ||
+              t.url == dlTrack.path ||
+              t.path.toLowerCase().endsWith(dlFileName) ||
+              (t.title.toLowerCase() == dlTrack.title.toLowerCase() &&
+                  (t.artist.toLowerCase() == dlTrack.artist.toLowerCase() ||
+                      t.artist ==
+                          AppLocalizations.of(context).unknownArtist)) ||
+              (dlTrack.videoId != null && t.id == 'dl_${dlTrack.videoId}'),
         );
         if (!_allTracks.any((t) => t.id == dlTrack.id)) {
           _allTracks.insert(0, dlTrack);
@@ -462,8 +485,7 @@ extension _AudioLibraryScanLogic on _MainScreenState {
 
       if (customPath != null && File(customPath).existsSync()) {
         imageProvider = ResizeImage(FileImage(File(customPath)), width: 200);
-      } else if (track.thumbnailUrl != null &&
-          track.thumbnailUrl!.isNotEmpty) {
+      } else if (track.thumbnailUrl != null && track.thumbnailUrl!.isNotEmpty) {
         if (track.thumbnailUrl!.startsWith('http://') ||
             track.thumbnailUrl!.startsWith('https://')) {
           imageProvider = ResizeImage(
@@ -522,7 +544,9 @@ extension _AudioLibraryScanLogic on _MainScreenState {
   }
 
   Future<Uri?> _getCoverUriForTrack(Track track) async {
-    if (track.isOnline && track.thumbnailUrl != null && track.thumbnailUrl!.isNotEmpty) {
+    if (track.isOnline &&
+        track.thumbnailUrl != null &&
+        track.thumbnailUrl!.isNotEmpty) {
       return Uri.tryParse(track.thumbnailUrl!);
     }
     if (_metadataOverrides.containsKey(track.id) &&
@@ -623,10 +647,12 @@ extension _AudioLibraryScanLogic on _MainScreenState {
         musicDir.createSync(recursive: true);
       }
 
-      String safeTitle =
-          track.title.replaceAll(RegExp(r'[\\/:*?"<>|]'), '').trim();
-      String safeArtist =
-          track.artist.replaceAll(RegExp(r'[\\/:*?"<>|]'), '').trim();
+      String safeTitle = track.title
+          .replaceAll(RegExp(r'[\\/:*?"<>|]'), '')
+          .trim();
+      String safeArtist = track.artist
+          .replaceAll(RegExp(r'[\\/:*?"<>|]'), '')
+          .trim();
       if (safeTitle.isEmpty) safeTitle = 'Downloaded Song';
 
       final fileName = (safeArtist.isNotEmpty && safeArtist != '<unknown>')
@@ -664,10 +690,9 @@ extension _AudioLibraryScanLogic on _MainScreenState {
         id: localTrackId,
         title: track.title,
         artist: track.artist,
-        album:
-            track.album.trim().isEmpty || track.album == 'YouTube Music'
-                ? 'Downloaded'
-                : track.album,
+        album: track.album.trim().isEmpty || track.album == 'YouTube Music'
+            ? 'Downloaded'
+            : track.album,
         url: targetAudioPath,
         path: targetAudioPath,
         lyrics: const [],
@@ -694,10 +719,13 @@ extension _AudioLibraryScanLogic on _MainScreenState {
       await prefs.setStringList('downloaded_tracks_v1', downloadedListJson);
 
       setState(() {
+        final dlFileName = targetAudioPath.split('/').last.toLowerCase();
         _allTracks.removeWhere(
           (t) =>
-              t.path == targetAudioPath ||
+              t.path.toLowerCase() == targetAudioPath.toLowerCase() ||
               t.url == targetAudioPath ||
+              t.path.toLowerCase().endsWith(dlFileName) ||
+              (t.title.toLowerCase() == localTrack.title.toLowerCase()) ||
               t.title.trim().isEmpty ||
               t.title.trim() == '<unknown>' ||
               t.title.trim() == 'Unknown Title',
@@ -706,6 +734,9 @@ extension _AudioLibraryScanLogic on _MainScreenState {
           _allTracks.insert(0, localTrack);
         }
       });
+
+      final serialized = _allTracks.map((t) => t.toMap()).toList();
+      await prefs.setString('cached_tracks_list', jsonEncode(serialized));
 
       showFlowToast(
         loc.downloadSuccess.replaceAll('[placeholder]', track.title),

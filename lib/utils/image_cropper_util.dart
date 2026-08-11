@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:crop_image/crop_image.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flow/l10n/app_localizations.dart';
 import 'globals.dart';
 
 class ImageCropperUtil {
@@ -188,7 +189,7 @@ class _CustomCropScreenState extends State<_CustomCropScreen> {
                       child: Row(
                         children: [
                           _buildAspectRatioButton(
-                            'Custom',
+                            AppLocalizations.of(context).cropCustom,
                             null,
                             Icons.crop_free,
                           ),
@@ -239,7 +240,7 @@ class _CustomCropScreenState extends State<_CustomCropScreen> {
                           onPressed: () => Navigator.pop(context, null),
                         ),
                         Text(
-                          'Crop',
+                          AppLocalizations.of(context).cropTitle,
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
